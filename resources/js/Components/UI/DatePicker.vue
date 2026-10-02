@@ -298,6 +298,8 @@ const clearDate = () => {
     emit("change", "");
 };
 
+const openUpward = ref(false);
+
 const toggleOpen = () => {
     if (props.disabled) return;
     if (!isOpen.value) {
@@ -305,6 +307,11 @@ const toggleOpen = () => {
         if (d) {
             viewYear.value = d.getFullYear();
             viewMonth.value = d.getMonth();
+        }
+        if (datepickerRef.value) {
+            const rect = datepickerRef.value.getBoundingClientRect();
+            // If space below is less than 360px and there is space above, open upward
+            openUpward.value = window.innerHeight - rect.bottom < 360 && rect.top > 360;
         }
     }
     isOpen.value = !isOpen.value;
@@ -434,7 +441,8 @@ onBeforeUnmount(() => {
         >
             <div
                 v-if="isOpen"
-                class="absolute left-0 top-full mt-1.5 z-50 w-[300px] bg-white rounded-2xl border border-slate-200 shadow-xl p-3.5 space-y-3"
+                class="absolute left-0 z-50 w-[300px] bg-white rounded-2xl border border-slate-200 shadow-xl p-3.5 space-y-3"
+                :class="openUpward ? 'bottom-full mb-1.5' : 'top-full mt-1.5'"
             >
                 <!-- Navigation Header -->
                 <div class="flex items-center justify-between gap-1 pb-1.5 border-b border-slate-100">

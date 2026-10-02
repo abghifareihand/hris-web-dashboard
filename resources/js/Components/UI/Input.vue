@@ -14,6 +14,10 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    clearable: {
+        type: Boolean,
+        default: false,
+    },
     prefix: {
         type: String,
         default: '',
@@ -52,7 +56,12 @@ const props = defineProps({
     },
 });
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue', 'clear']);
+
+const clear = () => {
+    emit('update:modelValue', isCurrency.value ? 0 : '');
+    emit('clear');
+};
 
 const sizeClass = computed(() => {
     switch (props.size) {
@@ -190,8 +199,31 @@ const onKeyDown = (event) => {
                     sizeClass,
                     { 'border-danger-500': error },
                     effectivePrefix ? '!pl-9' : '',
+                    clearable && modelValue ? '!pr-9' : '',
                 ]"
             />
+            <button
+                v-if="clearable && modelValue && !disabled"
+                type="button"
+                @click="clear"
+                class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer focus:outline-hidden"
+                title="Hapus"
+                aria-label="Hapus"
+            >
+                <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M6 18L18 6M6 6l12 12"
+                    />
+                </svg>
+            </button>
         </div>
         <p v-if="help && !error" class="form-help">
             {{ help }}

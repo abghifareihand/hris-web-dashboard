@@ -57,12 +57,10 @@ const handleChange = (event) => {
 
 <template>
     <label
-        :for="id"
-        class="inline-flex items-center gap-2.5 cursor-pointer select-none group"
+        class="relative inline-flex items-center gap-2.5 cursor-pointer select-none group"
         :class="{ 'opacity-50 !cursor-not-allowed': disabled }"
     >
         <input
-            :id="id"
             type="checkbox"
             :checked="isChecked"
             :value="value"
