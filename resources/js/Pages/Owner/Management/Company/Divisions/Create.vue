@@ -25,7 +25,26 @@ const submit = () => {
 
     <div class="w-full space-y-6">
         <!-- Page Header -->
-        <div class="flex items-center justify-between">
+        <div class="flex items-start gap-3.5 sm:gap-4">
+            <Link
+                :href="route('owner.management.company.divisions.index')"
+                class="group inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white border border-slate-200/80 text-slate-600 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-50 shadow-xs transition-all shrink-0 mt-0.5"
+                title="Kembali ke Daftar Divisi"
+            >
+                <svg
+                    class="w-5 h-5 transition-transform duration-200 group-hover:-translate-x-0.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                    />
+                </svg>
+            </Link>
             <div>
                 <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
                     Tambah Divisi Baru
@@ -34,9 +53,6 @@ const submit = () => {
                     Atur nama divisi serta preferensi aturan presensi.
                 </p>
             </div>
-            <Link :href="route('owner.management.company.divisions.index')">
-                <Button variant="secondary">Kembali</Button>
-            </Link>
         </div>
 
         <form @submit.prevent="submit" class="space-y-6">
