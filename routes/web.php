@@ -144,11 +144,13 @@ Route::middleware('auth')->group(function () {
 
                 // Swap Personal
                 Route::get('/swap-personal', [ScheduleController::class, 'swapPersonal'])->name('swap-personal.index');
+                Route::get('/swap-personal/{id}', [ScheduleController::class, 'showSwapPersonal'])->name('swap-personal.show');
                 Route::post('/swap-personal/{id}/approve', [ScheduleController::class, 'approveSwapPersonal'])->name('swap-personal.approve');
                 Route::post('/swap-personal/{id}/reject', [ScheduleController::class, 'rejectSwapPersonal'])->name('swap-personal.reject');
 
                 // Swap Team
                 Route::get('/swap-team', [ScheduleController::class, 'swapTeam'])->name('swap-team.index');
+                Route::get('/swap-team/{id}', [ScheduleController::class, 'showSwapTeam'])->name('swap-team.show');
                 Route::post('/swap-team/{id}/approve', [ScheduleController::class, 'approveSwapTeam'])->name('swap-team.approve');
                 Route::post('/swap-team/{id}/reject', [ScheduleController::class, 'rejectSwapTeam'])->name('swap-team.reject');
             });

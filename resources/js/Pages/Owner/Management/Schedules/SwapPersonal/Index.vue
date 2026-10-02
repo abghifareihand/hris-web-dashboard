@@ -1,6 +1,6 @@
 <script setup>
 import { ref, reactive } from "vue";
-import { Head, router } from "@inertiajs/vue3";
+import { Head, Link, router } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import Button from "@/Components/UI/Button.vue";
 import Input from "@/Components/UI/Input.vue";
@@ -40,7 +40,13 @@ const filters = reactive({
     status: props.filters.status || "",
     branch_id: props.filters.branch_id || "",
     division_id: props.filters.division_id || "",
+    sort: props.filters.sort || "desc",
 });
+
+const sortOptions = [
+    { value: "desc", label: "Terbaru" },
+    { value: "asc", label: "Terlama" },
+];
 
 const selectedSwap = ref(null);
 const isApproveModalOpen = ref(false);
@@ -55,6 +61,7 @@ const applyFilters = () => {
             status: filters.status || undefined,
             branch_id: filters.branch_id || undefined,
             division_id: filters.division_id || undefined,
+            sort: filters.sort !== "desc" ? filters.sort : undefined,
         },
         {
             preserveState: true,
@@ -82,6 +89,7 @@ const resetFilters = () => {
     filters.status = "";
     filters.branch_id = "";
     filters.division_id = "";
+    filters.sort = "desc";
     applyFilters();
 };
 
@@ -90,7 +98,8 @@ const hasActiveFilters = () => {
         filters.search ||
         filters.status ||
         filters.branch_id ||
-        filters.division_id,
+        filters.division_id ||
+        (filters.sort && filters.sort !== "desc"),
     );
 };
 
@@ -237,7 +246,7 @@ const statusOptions = [
 
             <div class="p-6 space-y-4">
                 <!-- Dropdown Row -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <!-- Status Filter -->
                     <div>
                         <Select
@@ -279,6 +288,16 @@ const statusOptions = [
                             @change="onFilterChange"
                         />
                     </div>
+
+                    <!-- Sort Filter -->
+                    <div>
+                        <Select
+                            label="Urutkan"
+                            v-model="filters.sort"
+                            :options="sortOptions"
+                            @change="onFilterChange"
+                        />
+                    </div>
                 </div>
 
                 <!-- Search Field -->
@@ -299,7 +318,6 @@ const statusOptions = [
                 'Karyawan',
                 'Tanggal Semula',
                 'Tanggal Tujuan',
-                'Alasan Tukar',
                 'Status',
                 '',
             ]"
@@ -312,11 +330,31 @@ const statusOptions = [
                 >
                     <!-- Employee -->
                     <td class="px-5 py-3.5">
-                        <div class="font-semibold text-slate-800">
-                            {{ item.employee?.name || "-" }}
-                        </div>
-                        <div class="text-xs text-slate-400 mt-0.5">
-                            {{ item.employee?.branch?.name || "-" }} &bull; {{ item.employee?.division?.name || "-" }}
+                        <div class="flex items-center gap-3">
+                            <img
+                                v-if="item.employee?.user?.avatar"
+                                :src="item.employee.user.avatar.startsWith('http') || item.employee.user.avatar.startsWith('/') ? item.employee.user.avatar : `/storage/${item.employee.user.avatar}`"
+                                :alt="item.employee?.name"
+                                class="w-9 h-9 rounded-full object-cover shrink-0 border border-slate-200"
+                            />
+                            <div
+                                v-else
+                                class="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs"
+                            >
+                                {{ item.employee?.name?.charAt(0).toUpperCase() }}
+                            </div>
+                            <div class="min-w-0">
+                                <div
+                                    class="font-semibold text-slate-800 truncate"
+                                >
+                                    {{ item.employee?.name || "-" }}
+                                </div>
+                                <div
+                                    class="text-xs text-slate-500 truncate flex items-center gap-1.5 mt-0.5"
+                                >
+                                    <span>{{ item.employee?.branch?.name || "-" }} &bull; {{ item.employee?.division?.name || "-" }}</span>
+                                </div>
+                            </div>
                         </div>
                     </td>
 
@@ -330,11 +368,6 @@ const statusOptions = [
                         {{ formatDate(item.target_work_date) }}
                     </td>
 
-                    <!-- Reason -->
-                    <td class="px-5 py-3.5 text-xs text-slate-600 max-w-xs truncate" :title="item.reason">
-                        {{ item.reason || "-" }}
-                    </td>
-
                     <!-- Status -->
                     <td class="px-5 py-3.5 whitespace-nowrap">
                         <Badge :variant="statusVariant(item.status)" size="sm">
@@ -344,27 +377,72 @@ const statusOptions = [
 
                     <!-- Actions -->
                     <td class="px-5 py-3.5 text-right whitespace-nowrap">
-                        <template v-if="item.status === 'pending'">
-                            <div class="inline-flex items-center gap-1.5">
-                                <Button
-                                    variant="primary"
-                                    size="sm"
-                                    class="!px-3 !py-1 text-xs"
-                                    @click="openApprove(item)"
-                                >
-                                    Setujui
-                                </Button>
-                                <Button
-                                    variant="danger"
-                                    size="sm"
-                                    class="!px-3 !py-1 text-xs"
+                        <div class="inline-flex items-center gap-2 justify-end">
+                            <template v-if="item.status === 'pending'">
+                                <button
+                                    type="button"
                                     @click="openReject(item)"
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-rose-600 bg-rose-50/90 hover:bg-rose-100/90 border border-rose-200/80 rounded-lg transition cursor-pointer"
+                                    title="Tolak Permohonan"
                                 >
-                                    Tolak
-                                </Button>
-                            </div>
-                        </template>
-                        <span v-else class="text-xs text-slate-400 italic">Selesai</span>
+                                    <svg
+                                        class="w-3.5 h-3.5"
+                                        viewBox="0 0 20 20"
+                                        fill="currentColor"
+                                    >
+                                        <path
+                                            d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+                                        />
+                                    </svg>
+                                    <span>Tolak</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="openApprove(item)"
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50/90 hover:bg-emerald-100/90 border border-emerald-200/80 rounded-lg transition cursor-pointer"
+                                    title="Setujui Permohonan"
+                                >
+                                    <svg
+                                        class="w-3.5 h-3.5"
+                                        viewBox="0 0 20 20"
+                                        fill="currentColor"
+                                    >
+                                        <path
+                                            fill-rule="evenodd"
+                                            d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+                                            clip-rule="evenodd"
+                                        />
+                                    </svg>
+                                    <span>Setujui</span>
+                                </button>
+                            </template>
+
+                            <Link
+                                :href="route('owner.management.schedules.swap-personal.show', item.id)"
+                                class="p-1.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition"
+                                title="Lihat Detail Permohonan"
+                            >
+                                <svg
+                                    class="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                    />
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                    />
+                                </svg>
+                            </Link>
+                        </div>
                     </td>
                 </tr>
             </template>
@@ -372,7 +450,7 @@ const statusOptions = [
                 <TableEmpty
                     title="Belum ada permohonan tukar jadwal"
                     message="Tidak ada permohonan tukar jadwal pribadi yang ditemukan atau sesuaikan filter pencarian Anda."
-                    :colspan="6"
+                    :colspan="5"
                 />
             </template>
         </DataTable>

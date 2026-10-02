@@ -638,7 +638,11 @@ class ScheduleController extends Controller
         $branches = Branch::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
         $divisions = Division::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
 
-        $query = SwapPersonal::with(['employee.branch:id,name', 'employee.division:id,name'])
+        $query = SwapPersonal::with([
+            'employee.branch:id,name',
+            'employee.division:id,name',
+            'employee.user:id,avatar,email',
+        ])
             ->where('company_id', $company->id);
 
         if ($request->filled('status')) {
@@ -664,7 +668,8 @@ class ScheduleController extends Controller
             });
         }
 
-        $swaps = $query->orderBy('created_at', 'desc')
+        $sort = $request->input('sort', 'desc') === 'asc' ? 'asc' : 'desc';
+        $swaps = $query->orderBy('created_at', $sort)
             ->paginate($request->input('per_page', 10))
             ->withQueryString();
 
@@ -677,7 +682,40 @@ class ScheduleController extends Controller
                 'branch_id' => $request->branch_id,
                 'division_id' => $request->division_id,
                 'search' => $request->search,
+                'sort' => $sort,
             ],
+        ]);
+    }
+
+    public function showSwapPersonal($id)
+    {
+        $company = auth()->user()->company;
+        $swap = SwapPersonal::with([
+            'employee.branch:id,name',
+            'employee.division:id,name',
+            'employee.position:id,name',
+            'approver:id,name,email',
+        ])
+        ->where('company_id', $company->id)
+        ->findOrFail($id);
+
+        $reqDate = Carbon::parse($swap->original_work_date)->format('Y-m-d');
+        $tarDate = Carbon::parse($swap->target_work_date)->format('Y-m-d');
+
+        $originalSchedule = WorkSchedule::with('shift')
+            ->where('employee_id', $swap->employee_id)
+            ->where('date', $reqDate)
+            ->first();
+
+        $targetSchedule = WorkSchedule::with('shift')
+            ->where('employee_id', $swap->employee_id)
+            ->where('date', $tarDate)
+            ->first();
+
+        return Inertia::render('Owner/Management/Schedules/SwapPersonal/Show', [
+            'swap' => $swap,
+            'originalSchedule' => $originalSchedule,
+            'targetSchedule' => $targetSchedule,
         ]);
     }
 
@@ -712,7 +750,7 @@ class ScheduleController extends Controller
             }
         });
 
-        return redirect()->route('owner.management.schedules.swap-personal.index')
+        return redirect()->back()
             ->with('success', 'Tukar jadwal mandiri telah disetujui.');
     }
 
@@ -721,7 +759,7 @@ class ScheduleController extends Controller
         $swap = SwapPersonal::where('company_id', auth()->user()->company->id)->findOrFail($id);
         $swap->update(['status' => 'rejected', 'approved_by' => auth()->id()]);
 
-        return redirect()->route('owner.management.schedules.swap-personal.index')
+        return redirect()->back()
             ->with('success', 'Tukar jadwal mandiri telah ditolak.');
     }
 
@@ -737,8 +775,10 @@ class ScheduleController extends Controller
         $query = SwapTeam::with([
             'requestor.branch:id,name',
             'requestor.division:id,name',
+            'requestor.user:id,avatar,email',
             'targetEmployee.branch:id,name',
             'targetEmployee.division:id,name',
+            'targetEmployee.user:id,avatar,email',
         ])->where('company_id', $company->id);
 
         if ($request->filled('status')) {
@@ -768,7 +808,8 @@ class ScheduleController extends Controller
             });
         }
 
-        $swaps = $query->latest()
+        $sort = $request->input('sort', 'desc') === 'asc' ? 'asc' : 'desc';
+        $swaps = $query->orderBy('created_at', $sort)
             ->paginate($request->input('per_page', 10))
             ->withQueryString();
         
@@ -781,7 +822,43 @@ class ScheduleController extends Controller
                 'branch_id' => $request->branch_id,
                 'division_id' => $request->division_id,
                 'search' => $request->search,
+                'sort' => $sort,
             ],
+        ]);
+    }
+
+    public function showSwapTeam($id)
+    {
+        $company = auth()->user()->company;
+        $swap = SwapTeam::with([
+            'requestor.branch:id,name',
+            'requestor.division:id,name',
+            'requestor.position:id,name',
+            'targetEmployee.branch:id,name',
+            'targetEmployee.division:id,name',
+            'targetEmployee.position:id,name',
+            'approver:id,name,email',
+        ])
+        ->where('company_id', $company->id)
+        ->findOrFail($id);
+
+        $reqDate = Carbon::parse($swap->requestor_work_date)->format('Y-m-d');
+        $tarDate = Carbon::parse($swap->target_work_date)->format('Y-m-d');
+
+        $requestorSchedule = WorkSchedule::with('shift')
+            ->where('employee_id', $swap->requestor_id)
+            ->where('date', $reqDate)
+            ->first();
+
+        $targetSchedule = WorkSchedule::with('shift')
+            ->where('employee_id', $swap->target_employee_id)
+            ->where('date', $tarDate)
+            ->first();
+
+        return Inertia::render('Owner/Management/Schedules/SwapTeam/Show', [
+            'swap' => $swap,
+            'requestorSchedule' => $requestorSchedule,
+            'targetSchedule' => $targetSchedule,
         ]);
     }
 
@@ -844,7 +921,7 @@ class ScheduleController extends Controller
             }
         });
 
-        return redirect()->route('owner.management.schedules.swap-team.index')
+        return redirect()->back()
             ->with('success', 'Tukar jadwal tim telah disetujui.');
     }
 
@@ -853,7 +930,7 @@ class ScheduleController extends Controller
         $swap = SwapTeam::where('company_id', auth()->user()->company->id)->findOrFail($id);
         $swap->update(['status' => 'rejected', 'approved_by' => auth()->id()]);
 
-        return redirect()->route('owner.management.schedules.swap-team.index')
+        return redirect()->back()
             ->with('success', 'Tukar jadwal tim telah ditolak.');
     }
 }

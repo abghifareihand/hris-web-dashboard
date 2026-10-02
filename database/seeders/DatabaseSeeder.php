@@ -140,45 +140,33 @@ class DatabaseSeeder extends Seeder
         $posManager = Position::create(['company_id' => $goysMedia->id, 'name' => 'Manager']);
         $posStaff = Position::create(['company_id' => $goysMedia->id, 'name' => 'Staff']);
 
-        // Shifts
-        \App\Models\Shift::create([
-            'company_id' => $goysMedia->id,
-            'name' => 'Pagi',
-            'clock_in' => '07:00',
-            'clock_out' => '14:00',
-        ]);
-        \App\Models\Shift::create([
-            'company_id' => $goysMedia->id,
-            'name' => 'Siang',
-            'clock_in' => '15:00',
-            'clock_out' => '22:00',
-        ]);
+        // 15 Shifts
+        $shiftsList = [
+            ['name' => 'Shift Reguler', 'clock_in' => '08:00:00', 'clock_out' => '17:00:00'],
+            ['name' => 'Shift Reguler IT', 'clock_in' => '08:00:00', 'clock_out' => '17:00:00'],
+            ['name' => 'Shift Pagi Operasional', 'clock_in' => '07:00:00', 'clock_out' => '15:30:00'],
+            ['name' => 'Shift Siang Operasional', 'clock_in' => '15:00:00', 'clock_out' => '23:30:00'],
+            ['name' => 'Shift Malam / NOC 24 Jam', 'clock_in' => '23:00:00', 'clock_out' => '07:30:00'],
+            ['name' => 'Shift Customer Support Pagi', 'clock_in' => '06:00:00', 'clock_out' => '14:30:00'],
+            ['name' => 'Shift Customer Support Sore', 'clock_in' => '14:00:00', 'clock_out' => '22:30:00'],
+            ['name' => 'Shift Customer Support Malam', 'clock_in' => '22:00:00', 'clock_out' => '06:30:00'],
+            ['name' => 'Shift Middle Fleksibel', 'clock_in' => '09:00:00', 'clock_out' => '18:00:00'],
+            ['name' => 'Shift Eksekutif / Head Office', 'clock_in' => '08:30:00', 'clock_out' => '17:30:00'],
+            ['name' => 'Shift Logistik & Gudang Pagi', 'clock_in' => '06:30:00', 'clock_out' => '15:00:00'],
+            ['name' => 'Shift Logistik & Gudang Siang', 'clock_in' => '14:30:00', 'clock_out' => '23:00:00'],
+            ['name' => 'Shift Weekend Standby', 'clock_in' => '08:00:00', 'clock_out' => '16:00:00'],
+            ['name' => 'Shift Part Time Sesi Pagi', 'clock_in' => '08:00:00', 'clock_out' => '12:00:00'],
+            ['name' => 'Shift Maintenance Server Subuh', 'clock_in' => '00:00:00', 'clock_out' => '06:00:00'],
+        ];
 
-        // Holidays (Tanpa Type & Tanpa Recurring)
-        \App\Models\Holiday::create([
-            'company_id' => $goysMedia->id,
-            'name' => 'Tahun Baru Masehi',
-            'start_date' => '2026-01-01',
-            'end_date' => '2026-01-01',
-        ]);
-        \App\Models\Holiday::create([
-            'company_id' => $goysMedia->id,
-            'name' => 'Hari Raya Idul Fitri 1447 H',
-            'start_date' => '2026-03-20',
-            'end_date' => '2026-03-22',
-        ]);
-        \App\Models\Holiday::create([
-            'company_id' => $goysMedia->id,
-            'name' => 'Hari Kemerdekaan RI Ke-81',
-            'start_date' => '2026-08-17',
-            'end_date' => '2026-08-17',
-        ]);
-        \App\Models\Holiday::create([
-            'company_id' => $goysMedia->id,
-            'name' => 'Libur Bersama Akhir Tahun',
-            'start_date' => '2026-12-31',
-            'end_date' => '2026-12-31',
-        ]);
+        foreach ($shiftsList as $sData) {
+            \App\Models\Shift::create([
+                'company_id' => $goysMedia->id,
+                'name' => $sData['name'],
+                'clock_in' => $sData['clock_in'],
+                'clock_out' => $sData['clock_out'],
+            ]);
+        }
 
         // Announcements
         \App\Models\Announcement::create([
@@ -533,5 +521,6 @@ class DatabaseSeeder extends Seeder
         $this->call(AnnouncementSeeder::class);
         $this->call(AbghiFareihanSeeder::class);
         $this->call(PendingEmployeeSeeder::class);
+        $this->call(ScheduleManagementSeeder::class);
     }
 }
