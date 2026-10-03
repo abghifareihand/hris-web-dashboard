@@ -50,13 +50,17 @@ const props = defineProps({
         type: String,
         default: 'md', // sm, md, lg
     },
+    defaultTime: {
+        type: String,
+        default: '',
+    },
     id: {
         type: String,
         default: () => `input-${Math.random().toString(36).substr(2, 9)}`,
     },
 });
 
-const emit = defineEmits(['update:modelValue', 'clear']);
+const emit = defineEmits(['update:modelValue', 'clear', 'click']);
 
 const clear = () => {
     emit('update:modelValue', isCurrency.value ? 0 : '');
@@ -140,6 +144,10 @@ const onInput = (event) => {
 };
 
 const onFocus = (event) => {
+    if (props.type === 'time' && (!props.modelValue || props.modelValue === '') && props.defaultTime) {
+        emit('update:modelValue', props.defaultTime);
+        event.target.value = props.defaultTime;
+    }
     if (isCurrency.value && (props.modelValue === 0 || props.modelValue === '0' || props.modelValue === '')) {
         event.target.select();
     }
@@ -163,6 +171,21 @@ const onKeyDown = (event) => {
             input.setSelectionRange(newPos, newPos);
         }
     }
+};
+
+const onClick = (event) => {
+    if (props.type === 'time' && (!props.modelValue || props.modelValue === '') && props.defaultTime) {
+        emit('update:modelValue', props.defaultTime);
+        event.target.value = props.defaultTime;
+    }
+    if (props.type === 'time' || props.type === 'date') {
+        try {
+            event.target.showPicker?.();
+        } catch (e) {
+            // Browser might throw if user activation is deemed insufficient or already open
+        }
+    }
+    emit('click', event);
 };
 </script>
 
@@ -194,12 +217,14 @@ const onKeyDown = (event) => {
                 @input="onInput"
                 @focus="onFocus"
                 @keydown="onKeyDown"
+                @click="onClick"
                 class="input"
                 :class="[
                     sizeClass,
                     { 'border-danger-500': error },
                     effectivePrefix ? '!pl-9' : '',
                     clearable && modelValue ? '!pr-9' : '',
+                    (type === 'time' || type === 'date') ? 'cursor-pointer' : '',
                 ]"
             />
             <button

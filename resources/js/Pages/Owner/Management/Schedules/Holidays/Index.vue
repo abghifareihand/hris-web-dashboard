@@ -305,12 +305,9 @@ const monthOptions = [
                     <td class="px-5 py-3.5 whitespace-nowrap">
                         <div class="text-sm font-medium text-slate-700">
                             {{ formatDate(item.start_date) }}
-                            <span
-                                v-if="item.end_date && item.end_date !== item.start_date"
-                                class="text-slate-400 font-normal"
-                            >
+                            <template v-if="item.end_date && item.end_date !== item.start_date">
                                 &mdash; {{ formatDate(item.end_date) }}
-                            </span>
+                            </template>
                         </div>
                     </td>
 

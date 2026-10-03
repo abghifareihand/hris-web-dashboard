@@ -393,7 +393,7 @@ onBeforeUnmount(() => {
         >
             <span
                 class="truncate text-[13px] leading-normal"
-                :class="displayValue ? 'text-slate-800 font-normal' : 'text-slate-400 font-normal'"
+                :class="displayValue ? 'text-slate-900 font-normal' : 'text-slate-400 font-normal'"
             >
                 {{ displayValue || placeholder }}
             </span>

@@ -31,12 +31,12 @@ const form = useForm({
 });
 
 const branchOptions = computed(() => [
-    { value: 'all', label: 'Semua Cabang Kantor' },
+    { value: 'all', label: 'Semua Cabang' },
     ...props.branches.map((b) => ({ value: b.id, label: b.name })),
 ]);
 
 const divisionOptions = computed(() => [
-    { value: 'all', label: 'Semua Divisi Kerja' },
+    { value: 'all', label: 'Semua Divisi' },
     ...props.divisions.map((d) => ({ value: d.id, label: d.name })),
 ]);
 
@@ -99,6 +99,35 @@ const submit = () => {
                         required
                     />
 
+                    <!-- Batasan Cabang & Divisi -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div>
+                            <Select
+                                label="Cabang yang Libur"
+                                v-model="form.branch"
+                                :options="branchOptions"
+                                placeholder="Pilih Cabang"
+                                :error="form.errors.branch"
+                            />
+                            <p class="text-xs text-slate-500 mt-1.5">
+                                Pilih Semua Cabang jika libur untuk semua cabang
+                            </p>
+                        </div>
+
+                        <div>
+                            <Select
+                                label="Divisi yang Libur"
+                                v-model="form.division"
+                                :options="divisionOptions"
+                                placeholder="Pilih Divisi"
+                                :error="form.errors.division"
+                            />
+                            <p class="text-xs text-slate-500 mt-1.5">
+                                Pilih Semua Divisi jika libur untuk semua divisi
+                            </p>
+                        </div>
+                    </div>
+
                     <!-- Rentang Tanggal -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <DatePicker
@@ -115,25 +144,6 @@ const submit = () => {
                             placeholder="Pilih Tanggal Selesai"
                             :error="form.errors.end_date"
                             required
-                        />
-                    </div>
-
-                    <!-- Batasan Cabang & Divisi -->
-                    <div class="pt-5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        <Select
-                            label="Cabang yang Libur"
-                            v-model="form.branch"
-                            :options="branchOptions"
-                            placeholder="Pilih Cabang"
-                            :error="form.errors.branch"
-                        />
-
-                        <Select
-                            label="Divisi yang Libur"
-                            v-model="form.division"
-                            :options="divisionOptions"
-                            placeholder="Pilih Divisi"
-                            :error="form.errors.division"
                         />
                     </div>
                 </div>

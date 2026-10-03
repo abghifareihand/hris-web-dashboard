@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { usePage, Link, router } from '@inertiajs/vue3';
 
 const page = usePage();
@@ -9,9 +9,112 @@ const unreadNotificationsCount = computed(() => page.props.auth?.unreadNotificat
 const appName = computed(() => page.props.appName || 'HRIS Company');
 const flash = computed(() => page.props.flash || {});
 
+// Toast Notification State & Auto-Dismiss Logic
+const showToast = ref(false);
+const toastMessage = ref('');
+const toastType = ref('success');
+let toastTimer = null;
+let startTime = 0;
+let remainingTime = 4000;
+const progress = ref(100);
+let progressInterval = null;
+
+const startProgress = (duration) => {
+    progress.value = 100;
+    if (progressInterval) clearInterval(progressInterval);
+    const intervalTime = 50;
+    const step = (intervalTime / duration) * 100;
+    progressInterval = setInterval(() => {
+        progress.value = Math.max(0, progress.value - step);
+        if (progress.value <= 0) {
+            clearInterval(progressInterval);
+        }
+    }, intervalTime);
+};
+
+const triggerToast = (msg, type = 'success') => {
+    if (!msg) return;
+    toastMessage.value = msg;
+    toastType.value = type;
+    showToast.value = true;
+    remainingTime = 4000;
+    startTime = Date.now();
+
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+        showToast.value = false;
+    }, remainingTime);
+
+    startProgress(remainingTime);
+};
+
+const dismissToast = () => {
+    showToast.value = false;
+    if (toastTimer) clearTimeout(toastTimer);
+    if (progressInterval) clearInterval(progressInterval);
+};
+
+const pauseToast = () => {
+    if (toastTimer) {
+        clearTimeout(toastTimer);
+        remainingTime = Math.max(500, remainingTime - (Date.now() - startTime));
+    }
+    if (progressInterval) clearInterval(progressInterval);
+};
+
+const resumeToast = () => {
+    if (!showToast.value || remainingTime <= 0) return;
+    startTime = Date.now();
+    toastTimer = setTimeout(() => {
+        showToast.value = false;
+    }, remainingTime);
+    startProgress(remainingTime);
+};
+
+watch(
+    () => page.props.flash,
+    (newFlash) => {
+        if (newFlash?.success) {
+            triggerToast(newFlash.success, 'success');
+        } else if (newFlash?.error) {
+            triggerToast(newFlash.error, 'error');
+        } else if (newFlash?.warning) {
+            triggerToast(newFlash.warning, 'warning');
+        } else if (newFlash?.info) {
+            triggerToast(newFlash.info, 'info');
+        }
+    },
+    { deep: true, immediate: true }
+);
+
 const sidebarOpen = ref(false);
 const desktopSidebarOpen = ref(true);
 const isUserDropdownOpen = ref(false);
+const userDropdownRef = ref(null);
+
+const handleGlobalClick = (event) => {
+    if (isUserDropdownOpen.value && userDropdownRef.value && !userDropdownRef.value.contains(event.target)) {
+        isUserDropdownOpen.value = false;
+    }
+};
+
+const handleGlobalKeydown = (event) => {
+    if (event.key === 'Escape' && isUserDropdownOpen.value) {
+        isUserDropdownOpen.value = false;
+    }
+};
+
+onMounted(() => {
+    document.addEventListener('click', handleGlobalClick);
+    document.addEventListener('keydown', handleGlobalKeydown);
+});
+
+onUnmounted(() => {
+    if (toastTimer) clearTimeout(toastTimer);
+    if (progressInterval) clearInterval(progressInterval);
+    document.removeEventListener('click', handleGlobalClick);
+    document.removeEventListener('keydown', handleGlobalKeydown);
+});
 
 // Accordion states for owner sidebar
 const accordions = ref({
@@ -64,23 +167,90 @@ const logout = () => {
         <!-- Toast / Flash Notification -->
         <transition
             enter-active-class="transform ease-out duration-300 transition"
-            enter-from-class="translate-y-2 opacity-0 sm:translate-y-0 sm:translate-x-2"
-            enter-to-class="translate-y-0 opacity-100 sm:translate-x-0"
-            leave-active-class="transition ease-in duration-100"
-            leave-from-class="opacity-100"
-            leave-to-class="opacity-0"
+            enter-from-class="translate-x-8 opacity-0"
+            enter-to-class="translate-x-0 opacity-100"
+            leave-active-class="transform ease-in duration-200 transition"
+            leave-from-class="translate-x-0 opacity-100"
+            leave-to-class="translate-x-8 opacity-0"
         >
             <div
-                v-if="flash.success || flash.error || flash.warning"
-                class="fixed top-5 right-5 z-[9999] max-w-sm w-full bg-white shadow-xl rounded-xl border p-4 flex items-start gap-3"
-                :class="{
-                    'border-emerald-200 text-emerald-800': flash.success,
-                    'border-rose-200 text-rose-800': flash.error,
-                    'border-amber-200 text-amber-800': flash.warning,
-                }"
+                v-if="showToast"
+                @mouseenter="pauseToast"
+                @mouseleave="resumeToast"
+                class="fixed top-20 right-5 z-[9999] max-w-sm w-full sm:w-[380px] bg-white shadow-2xl shadow-slate-900/10 rounded-2xl border border-slate-200/90 overflow-hidden transition-all pointer-events-auto"
             >
-                <div class="flex-1 text-sm font-medium">
-                    {{ flash.success || flash.error || flash.warning }}
+                <div class="p-4 flex items-start gap-3">
+                    <!-- Icon -->
+                    <div
+                        class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-xs"
+                        :class="{
+                            'bg-emerald-100 text-emerald-600': toastType === 'success',
+                            'bg-rose-100 text-rose-600': toastType === 'error',
+                            'bg-amber-100 text-amber-600': toastType === 'warning',
+                            'bg-sky-100 text-sky-600': toastType === 'info',
+                        }"
+                    >
+                        <!-- Success Checkmark -->
+                        <svg v-if="toastType === 'success'" class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                        </svg>
+                        <!-- Error Exclamation -->
+                        <svg v-else-if="toastType === 'error'" class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
+                        </svg>
+                        <!-- Warning Triangle -->
+                        <svg v-else-if="toastType === 'warning'" class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                        </svg>
+                        <!-- Info -->
+                        <svg v-else class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+
+                    <!-- Content -->
+                    <div class="flex-1 min-w-0 pt-0.5">
+                        <p
+                            class="text-xs font-bold uppercase tracking-wider mb-0.5"
+                            :class="{
+                                'text-emerald-700': toastType === 'success',
+                                'text-rose-700': toastType === 'error',
+                                'text-amber-700': toastType === 'warning',
+                                'text-sky-700': toastType === 'info',
+                            }"
+                        >
+                            {{ toastType === 'success' ? 'Berhasil' : (toastType === 'error' ? 'Gagal' : (toastType === 'warning' ? 'Perhatian' : 'Informasi')) }}
+                        </p>
+                        <p class="text-sm font-medium text-slate-700 leading-snug">
+                            {{ toastMessage }}
+                        </p>
+                    </div>
+
+                    <!-- Close Button -->
+                    <button
+                        type="button"
+                        @click="dismissToast"
+                        class="p-1 -mr-1 -mt-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+                        title="Tutup Notifikasi"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Progress Bar Indicator -->
+                <div class="h-1 w-full bg-slate-100/80">
+                    <div
+                        class="h-full transition-all duration-75"
+                        :style="{ width: `${progress}%` }"
+                        :class="{
+                            'bg-emerald-500': toastType === 'success',
+                            'bg-rose-500': toastType === 'error',
+                            'bg-amber-500': toastType === 'warning',
+                            'bg-sky-500': toastType === 'info',
+                        }"
+                    />
                 </div>
             </div>
         </transition>
@@ -620,7 +790,7 @@ const logout = () => {
                     </Link>
 
                     <!-- User Profile Dropdown -->
-                    <div class="relative">
+                    <div ref="userDropdownRef" class="relative">
                         <button
                             type="button"
                             @click="isUserDropdownOpen = !isUserDropdownOpen"
@@ -647,76 +817,78 @@ const logout = () => {
                             </svg>
                         </button>
 
-                        <!-- Backdrop Click Outside -->
-                        <div
-                            v-if="isUserDropdownOpen"
-                            @click="isUserDropdownOpen = false"
-                            class="fixed inset-0 z-40"
-                        />
-
                         <!-- Dropdown Menu Panel (Exact Blade classes & width w-72) -->
-                        <div
-                            v-if="isUserDropdownOpen"
-                            class="dropdown-menu w-72 right-0 z-50 text-left"
+                        <transition
+                            enter-active-class="transition duration-150 ease-out"
+                            enter-from-class="opacity-0 scale-95 -translate-y-1"
+                            enter-to-class="opacity-100 scale-100 translate-y-0"
+                            leave-active-class="transition duration-100 ease-in"
+                            leave-from-class="opacity-100 scale-100 translate-y-0"
+                            leave-to-class="opacity-0 scale-95 -translate-y-1"
                         >
-                            <!-- User Info Header -->
-                            <div class="px-4 py-3 border-b border-slate-100">
-                                <p class="text-sm font-semibold text-slate-900">{{ authUser?.name || 'Company User' }}</p>
-                                <p class="text-xs text-slate-500">{{ authUser?.email || '' }}</p>
-                                <div class="mt-2 flex items-center gap-2">
-                                    <span
-                                        v-if="companyName"
-                                        class="inline-flex items-center px-2 py-0.5 bg-red-50 text-red-700 text-xs font-medium rounded"
+                            <div
+                                v-if="isUserDropdownOpen"
+                                class="dropdown-menu w-72 right-0 z-50 text-left origin-top-right"
+                            >
+                                <!-- User Info Header -->
+                                <div class="px-4 py-3 border-b border-slate-100">
+                                    <p class="text-sm font-semibold text-slate-900">{{ authUser?.name || 'Company User' }}</p>
+                                    <p class="text-xs text-slate-500">{{ authUser?.email || '' }}</p>
+                                    <div class="mt-2 flex items-center gap-2">
+                                        <span
+                                            v-if="companyName"
+                                            class="inline-flex items-center px-2 py-0.5 bg-red-50 text-red-700 text-xs font-medium rounded"
+                                        >
+                                            {{ companyName }}
+                                        </span>
+                                        <span class="inline-flex items-center px-2 py-0.5 bg-slate-100 text-slate-600 text-xs font-medium rounded capitalize">
+                                            {{ authUser?.role || 'Owner' }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Menu Links -->
+                                <div class="py-1">
+                                    <Link
+                                        v-if="authUser?.role === 'owner'"
+                                        :href="route('owner.my-profile.index')"
+                                        @click="isUserDropdownOpen = false"
+                                        class="dropdown-item"
                                     >
-                                        {{ companyName }}
-                                    </span>
-                                    <span class="inline-flex items-center px-2 py-0.5 bg-slate-100 text-slate-600 text-xs font-medium rounded capitalize">
-                                        {{ authUser?.role || 'Owner' }}
-                                    </span>
+                                        <svg class="w-5 h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                        </svg>
+                                        <span>Profil Saya</span>
+                                    </Link>
+                                    <Link
+                                        v-else-if="authUser?.role === 'employee'"
+                                        :href="route('employee.profile.index')"
+                                        @click="isUserDropdownOpen = false"
+                                        class="dropdown-item"
+                                    >
+                                        <svg class="w-5 h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                        </svg>
+                                        <span>Profil Saya</span>
+                                    </Link>
+                                </div>
+
+                                <div class="dropdown-divider"></div>
+
+                                <div class="py-1">
+                                    <button
+                                        type="button"
+                                        @click="logout"
+                                        class="dropdown-item dropdown-item-danger w-full text-left cursor-pointer"
+                                    >
+                                        <svg class="w-5 h-5 text-slate-400 group-hover:text-rose-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                        </svg>
+                                        <span>Keluar</span>
+                                    </button>
                                 </div>
                             </div>
-
-                            <!-- Menu Links -->
-                            <div class="py-1">
-                                <Link
-                                    v-if="authUser?.role === 'owner'"
-                                    :href="route('owner.my-profile.index')"
-                                    @click="isUserDropdownOpen = false"
-                                    class="dropdown-item"
-                                >
-                                    <svg class="w-5 h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                    </svg>
-                                    <span>Profil Saya</span>
-                                </Link>
-                                <Link
-                                    v-else-if="authUser?.role === 'employee'"
-                                    :href="route('employee.profile.index')"
-                                    @click="isUserDropdownOpen = false"
-                                    class="dropdown-item"
-                                >
-                                    <svg class="w-5 h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                    </svg>
-                                    <span>Profil Saya</span>
-                                </Link>
-                            </div>
-
-                            <div class="dropdown-divider"></div>
-
-                            <div class="py-1">
-                                <button
-                                    type="button"
-                                    @click="logout"
-                                    class="dropdown-item dropdown-item-danger w-full text-left cursor-pointer"
-                                >
-                                    <svg class="w-5 h-5 text-slate-400 group-hover:text-rose-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                    </svg>
-                                    <span>Keluar</span>
-                                </button>
-                            </div>
-                        </div>
+                        </transition>
                     </div>
                 </div>
             </header>

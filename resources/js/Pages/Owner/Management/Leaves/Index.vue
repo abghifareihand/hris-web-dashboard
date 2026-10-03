@@ -5,6 +5,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import Button from '@/Components/UI/Button.vue';
 import Input from '@/Components/UI/Input.vue';
 import Select from '@/Components/UI/Select.vue';
+import DatePicker from '@/Components/UI/DatePicker.vue';
 import Badge from '@/Components/UI/Badge.vue';
 import DataTable from '@/Components/Table/DataTable.vue';
 import TablePagination from '@/Components/Table/TablePagination.vue';
@@ -71,6 +72,31 @@ const onSearchInput = (val) => {
     debouncedSearch();
 };
 
+const onFilterChange = () => {
+    applyFilters();
+};
+
+const resetFilters = () => {
+    filters.search = '';
+    filters.status = '';
+    filters.branch_id = '';
+    filters.division_id = '';
+    filters.start_date = '';
+    filters.end_date = '';
+    applyFilters();
+};
+
+const hasActiveFilters = () => {
+    return Boolean(
+        filters.search ||
+        filters.status ||
+        filters.branch_id ||
+        filters.division_id ||
+        filters.start_date ||
+        filters.end_date
+    );
+};
+
 const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     return new Date(dateStr).toLocaleDateString('id-ID', {
@@ -101,7 +127,7 @@ const statusLabel = (status) => {
     <Head title="Riwayat Seluruh Cuti Karyawan" />
 
     <div class="space-y-6">
-        <!-- Header -->
+        <!-- Page Header -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Riwayat Pengajuan Cuti</h1>
@@ -109,77 +135,107 @@ const statusLabel = (status) => {
                     Daftar histori seluruh pengajuan cuti karyawan yang telah diproses.
                 </p>
             </div>
-            <div class="flex items-center gap-3">
-                <Link :href="route('owner.management.leaves.pending.index')">
-                    <Button variant="secondary">
-                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        Persetujuan Tertunda
-                    </Button>
-                </Link>
-                <Link :href="route('owner.management.leaves.balance.index')">
-                    <Button variant="secondary">
-                        Sisa Kuota Cuti
-                    </Button>
-                </Link>
-            </div>
         </div>
 
-        <!-- Filter Bar -->
-        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                <!-- Search -->
-                <div class="lg:col-span-2">
+        <!-- Filter Controls -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+            <div class="px-6 py-2.5 border-b border-slate-100 rounded-t-2xl flex items-center justify-between min-h-[56px]">
+                <h2 class="text-base font-bold text-slate-900">
+                    Filter Riwayat Cuti
+                </h2>
+
+                <!-- Reset Filter Button -->
+                <transition
+                    enter-active-class="transition-opacity duration-150 ease-out"
+                    enter-from-class="opacity-0"
+                    enter-to-class="opacity-100"
+                    leave-active-class="transition-opacity duration-100 ease-in"
+                    leave-from-class="opacity-100"
+                    leave-to-class="opacity-0"
+                >
+                    <Button
+                        v-if="hasActiveFilters()"
+                        variant="secondary"
+                        size="sm"
+                        type="button"
+                        @click="resetFilters"
+                        class="shrink-0 text-xs font-semibold gap-1.5 !h-8 !min-h-[32px] !px-3 !rounded-lg !bg-white !text-slate-700 !border-slate-300 hover:!bg-slate-50 hover:!text-slate-900 shadow-xs"
+                    >
+                        <svg
+                            class="w-3.5 h-3.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            />
+                        </svg>
+                        <span>Reset</span>
+                    </Button>
+                </transition>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <!-- Row 1: Dropdown Filters -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Status Filter -->
+                    <div>
+                        <Select
+                            label="Status"
+                            v-model="filters.status"
+                            :options="[
+                                { value: '', label: 'Semua Status' },
+                                { value: 'approved', label: 'Disetujui', dotClass: 'bg-emerald-500' },
+                                { value: 'rejected', label: 'Ditolak', dotClass: 'bg-rose-500' },
+                            ]"
+                            @change="onFilterChange"
+                        />
+                    </div>
+
+                    <!-- Branch Filter -->
+                    <div>
+                        <Select
+                            label="Cabang"
+                            v-model="filters.branch_id"
+                            :options="branches.map(b => ({ value: b.id, label: b.name }))"
+                            all-label="Semua Cabang"
+                            @change="onFilterChange"
+                        />
+                    </div>
+
+                    <!-- Division Filter -->
+                    <div>
+                        <Select
+                            label="Divisi"
+                            v-model="filters.division_id"
+                            :options="divisions.map(d => ({ value: d.id, label: d.name }))"
+                            all-label="Semua Divisi"
+                            @change="onFilterChange"
+                        />
+                    </div>
+
+                    <!-- Date Filter -->
+                    <div>
+                        <DatePicker
+                            label="Tanggal"
+                            v-model="filters.start_date"
+                            placeholder="Pilih Tanggal"
+                            @change="onFilterChange"
+                        />
+                    </div>
+                </div>
+
+                <!-- Row 2: Search field -->
+                <div class="pt-3 border-t border-slate-100">
                     <Input
+                        label="Cari"
                         :modelValue="filters.search"
                         @update:modelValue="onSearchInput"
-                        placeholder="Cari nama atau NIP..."
-                    />
-                </div>
-
-                <!-- Status -->
-                <div>
-                    <Select
-                        v-model="filters.status"
-                        :options="[
-                            { value: '', label: 'Semua Status' },
-                            { value: 'approved', label: 'Disetujui', dotClass: 'bg-emerald-500' },
-                            { value: 'rejected', label: 'Ditolak', dotClass: 'bg-rose-500' },
-                        ]"
-                        size="sm"
-                        @change="applyFilters"
-                    />
-                </div>
-
-                <!-- Cabang -->
-                <div>
-                    <Select
-                        v-model="filters.branch_id"
-                        :options="branches.map(b => ({ value: b.id, label: b.name }))"
-                        all-label="Semua Cabang"
-                        size="sm"
-                        @change="applyFilters"
-                    />
-                </div>
-
-                <!-- Divisi -->
-                <div>
-                    <Select
-                        v-model="filters.division_id"
-                        :options="divisions.map(d => ({ value: d.id, label: d.name }))"
-                        all-label="Semua Divisi"
-                        size="sm"
-                        @change="applyFilters"
-                    />
-                </div>
-
-                <!-- Start Date -->
-                <div>
-                    <Input
-                        v-model="filters.start_date"
-                        type="date"
-                        @change="applyFilters"
+                        placeholder="Cari nama karyawan atau NIP..."
                     />
                 </div>
             </div>
@@ -202,9 +258,9 @@ const statusLabel = (status) => {
                     </td>
                     <td class="px-5 py-3.5 text-xs text-slate-700 whitespace-nowrap">
                         {{ formatDate(item.start_date) }}
-                        <span v-if="item.end_date && item.end_date !== item.start_date" class="text-slate-400">
+                        <template v-if="item.end_date && item.end_date !== item.start_date">
                             &mdash; {{ formatDate(item.end_date) }}
-                        </span>
+                        </template>
                     </td>
                     <td class="px-5 py-3.5 whitespace-nowrap">
                         <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700">

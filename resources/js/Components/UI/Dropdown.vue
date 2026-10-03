@@ -209,11 +209,19 @@ const sizeClasses = computed(() => {
         case 'md':
         default:
             return {
-                button: 'h-10 min-h-[40px] px-3.5 text-[13px] rounded-lg',
+                button: 'h-10 min-h-[40px] px-3 text-[13px] rounded-lg',
                 panel: 'text-[13px]',
-                item: 'px-3.5 py-2 text-[13px]',
+                item: 'px-3 py-2 text-[13px]',
             };
     }
+});
+
+const isPlaceholderState = computed(() => {
+    if (props.modelValue === '' || props.modelValue === null || props.modelValue === undefined) {
+        if (!selectedOption.value) return true;
+        if (props.placeholder && selectedOption.value.label === props.placeholder) return true;
+    }
+    return false;
 });
 </script>
 
@@ -241,22 +249,22 @@ const sizeClasses = computed(() => {
             @click="toggleDropdown"
             :disabled="disabled"
             :class="[
-                'w-full flex items-center justify-between gap-2.5 bg-white font-medium transition-all select-none border text-left outline-none',
+                'w-full flex items-center justify-between gap-2 bg-white font-normal transition-all select-none border text-left outline-none',
                 sizeClasses.button,
                 disabled ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'cursor-pointer',
                 isOpen
                     ? 'border-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.15)] text-slate-900 bg-white'
                     : error
-                        ? 'border-rose-400 shadow-[0_0_0_3px_rgba(244,63,94,0.15)] text-slate-800'
-                        : 'border-slate-300 hover:border-slate-400 text-slate-800',
+                        ? 'border-rose-400 shadow-[0_0_0_3px_rgba(244,63,94,0.15)] text-slate-900'
+                        : 'border-slate-300 hover:border-slate-400 text-slate-900',
                 buttonClass,
             ]"
             :aria-expanded="isOpen"
         >
             <div class="flex items-center gap-2 truncate">
                 <span
-                    class="truncate"
-                    :class="selectedOption && selectedOption.value !== '' ? 'font-medium text-slate-800' : 'text-slate-600 font-normal'"
+                    class="truncate leading-normal"
+                    :class="isPlaceholderState ? 'text-slate-400 font-normal' : 'text-slate-900 font-normal'"
                 >
                     {{ displayLabel }}
                 </span>

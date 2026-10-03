@@ -433,7 +433,7 @@ const formatDate = (dateStr) => {
                 </h3>
                 <p class="text-sm text-slate-500 mt-2">
                     Apakah Anda yakin ingin menyetujui karyawan
-                    {{ selectedPending?.name }}?
+                    <span class="font-semibold text-slate-900">{{ selectedPending?.name }}</span>?
                 </p>
             </div>
 
@@ -470,7 +470,7 @@ const formatDate = (dateStr) => {
                 </h3>
                 <p class="text-sm text-slate-500 mt-2">
                     Apakah Anda yakin ingin menolak permohonan registrasi dari
-                    {{ selectedPending?.name }}?
+                    <span class="font-semibold text-slate-900">{{ selectedPending?.name }}</span>?
                 </p>
             </div>
 

@@ -289,6 +289,17 @@ textarea.input {
     resize: vertical;
 }
 
+/* Date & Time input styles */
+input[type="time"],
+input[type="date"] {
+    cursor: pointer;
+}
+
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+}
+
 /* Input with error state */
 .input.border-danger-500 {
     border-color: #f43f5e !important;

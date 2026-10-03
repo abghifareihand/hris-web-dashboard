@@ -33,6 +33,22 @@ class LeaveController extends Controller
             ->where('company_id', $company->id)
             ->where('status', 'pending');
 
+        if ($request->filled('branch_id')) {
+            $query->whereHas('employee', function ($q) use ($request) {
+                $q->where('branch_id', $request->branch_id);
+            });
+        }
+
+        if ($request->filled('division_id')) {
+            $query->whereHas('employee', function ($q) use ($request) {
+                $q->where('division_id', $request->division_id);
+            });
+        }
+
+        if ($request->filled('leave_category_id')) {
+            $query->where('leave_category_id', $request->leave_category_id);
+        }
+
         if ($request->filled('search')) {
             $query->whereHas('employee', function ($q) use ($request) {
                 $q->where('name', 'like', '%' . $request->search . '%')
@@ -44,10 +60,28 @@ class LeaveController extends Controller
             ->paginate($request->input('per_page', 10))
             ->withQueryString();
 
+        $branches = Branch::where('company_id', $company->id)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $divisions = Division::where('company_id', $company->id)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $leaveCategories = LeaveCategory::where('company_id', $company->id)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
         return Inertia::render('Owner/Management/Leaves/Pending', [
             'pendingLeaves' => $pendingLeaves,
+            'branches' => $branches,
+            'divisions' => $divisions,
+            'leaveCategories' => $leaveCategories,
             'filters' => [
                 'search' => $request->search,
+                'branch_id' => $request->branch_id,
+                'division_id' => $request->division_id,
+                'leave_category_id' => $request->leave_category_id,
             ],
         ]);
     }
@@ -278,7 +312,7 @@ class LeaveController extends Controller
             abort(403, 'Akses ditolak.');
         }
 
-        $balance = LeaveBalance::with(['employee:id,name,nip', 'leaveCategory:id,name'])
+        $balance = LeaveBalance::with(['employee:id,name,nip', 'leaveCategory:id,name,default_quota'])
             ->where('company_id', $company->id)
             ->findOrFail($id);
 
@@ -294,16 +328,27 @@ class LeaveController extends Controller
             abort(403, 'Akses ditolak.');
         }
 
-        $balance = LeaveBalance::where('company_id', $company->id)->findOrFail($id);
+        $balance = LeaveBalance::with('leaveCategory:id,name,default_quota')
+            ->where('company_id', $company->id)
+            ->findOrFail($id);
+
+        $defaultQuota = $balance->leaveCategory?->default_quota ?? 365;
+        $used = $balance->used ?? 0;
 
         $request->validate([
-            'quota' => 'required|integer|min:0',
-            'used' => 'required|integer|min:0',
+            'quota' => [
+                'required',
+                'integer',
+                "min:{$used}",
+                "max:{$defaultQuota}",
+            ],
+        ], [
+            'quota.min' => "Jatah cuti yang diizinkan tidak boleh kurang dari cuti terpakai ({$used} hari).",
+            'quota.max' => "Jatah cuti tidak boleh lebih dari jatah cuti perusahaan ({$defaultQuota} hari).",
         ]);
 
         $balance->update([
             'quota' => $request->quota,
-            'used' => $request->used,
         ]);
 
         return redirect()->route('owner.management.leaves.balance.index')

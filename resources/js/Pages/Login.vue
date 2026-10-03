@@ -1,9 +1,12 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, nextTick } from 'vue';
 import { Head, useForm, Link } from '@inertiajs/vue3';
 
 const showPassword = ref(false);
 const demoTab = ref('company');
+const passwordInput = ref(null);
+const isShaking = ref(false);
+const dismissedError = ref(false);
 
 const form = useForm({
     email: '',
@@ -12,12 +15,31 @@ const form = useForm({
 });
 
 const submit = () => {
+    dismissedError.value = false;
     form.post(route('login'), {
         onFinish: () => form.reset('password'),
+        onError: () => {
+            isShaking.value = true;
+            setTimeout(() => {
+                isShaking.value = false;
+            }, 600);
+            nextTick(() => {
+                passwordInput.value?.focus();
+            });
+        },
     });
 };
 
+const onUserInput = () => {
+    if (form.hasErrors) {
+        form.clearErrors();
+        dismissedError.value = false;
+    }
+};
+
 const setCredentials = (email, password) => {
+    form.clearErrors();
+    dismissedError.value = false;
     form.email = email;
     form.password = password;
 };
@@ -144,12 +166,44 @@ const setCredentials = (email, password) => {
                 </div>
 
                 <!-- Error Alert if any -->
-                <div v-if="form.errors.email || form.errors.password" class="mb-5 p-3.5 bg-danger-50 border border-danger-200 rounded-xl text-danger-700 text-sm flex items-start gap-2.5">
-                    <svg class="w-5 h-5 flex-shrink-0 text-danger-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>{{ form.errors.email || form.errors.password }}</span>
-                </div>
+                <transition
+                    enter-active-class="transition duration-200 ease-out"
+                    enter-from-class="opacity-0 -translate-y-2 scale-95"
+                    enter-to-class="opacity-100 translate-y-0 scale-100"
+                    leave-active-class="transition duration-150 ease-in"
+                    leave-from-class="opacity-100 translate-y-0 scale-100"
+                    leave-to-class="opacity-0 -translate-y-2 scale-95"
+                >
+                    <div
+                        v-if="(form.errors.email || form.errors.password || $page.props.errors?.email || $page.props.errors?.password) && !dismissedError"
+                        :class="[
+                            'mb-5 p-3.5 bg-rose-50/90 border border-rose-200/90 rounded-2xl text-rose-800 text-sm shadow-xs transition-all flex items-start gap-3',
+                            isShaking ? 'animate-shake' : ''
+                        ]"
+                    >
+                        <div class="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                            <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="flex-1 min-w-0 pt-0.5">
+                            <p class="font-bold text-rose-900 text-xs uppercase tracking-wider mb-0.5">Autentikasi Gagal</p>
+                            <p class="text-xs text-rose-700 leading-relaxed font-medium">
+                                {{ form.errors.email || form.errors.password || $page.props.errors?.email || $page.props.errors?.password }}
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            @click="dismissedError = true"
+                            class="p-1 -mr-1 -mt-0.5 text-rose-400 hover:text-rose-600 hover:bg-rose-100/80 rounded-lg transition-colors cursor-pointer shrink-0"
+                            title="Tutup Pesan"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </transition>
 
                 <!-- Login Form -->
                 <form @submit.prevent="submit" class="space-y-5">
@@ -166,10 +220,10 @@ const setCredentials = (email, password) => {
                                 type="email"
                                 id="email"
                                 v-model="form.email"
+                                @input="onUserInput"
                                 required
                                 autofocus
-                                class="form-input w-full rounded-xl border border-secondary-300 focus:border-primary-500 focus:ring-primary-500"
-                                :class="{ 'border-danger-500': form.errors.email }"
+                                class="form-input w-full rounded-xl border border-secondary-300 focus:border-primary-500 focus:ring-primary-500 transition-colors"
                                 style="padding-left: 3rem;"
                                 placeholder="nama@perusahaan.com"
                             />
@@ -186,12 +240,13 @@ const setCredentials = (email, password) => {
                                 </svg>
                             </div>
                             <input
+                                ref="passwordInput"
                                 :type="showPassword ? 'text' : 'password'"
                                 id="password"
                                 v-model="form.password"
+                                @input="onUserInput"
                                 required
-                                class="form-input w-full rounded-xl border border-secondary-300 focus:border-primary-500 focus:ring-primary-500"
-                                :class="{ 'border-danger-500': form.errors.password }"
+                                class="form-input w-full rounded-xl border border-secondary-300 focus:border-primary-500 focus:ring-primary-500 transition-colors"
                                 style="padding-left: 3rem; padding-right: 3rem;"
                                 placeholder="Masukkan password"
                             />
@@ -331,3 +386,21 @@ const setCredentials = (email, password) => {
         </div>
     </div>
 </template>
+
+<style scoped>
+@keyframes shake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    15%, 45%, 75% {
+        transform: translateX(-6px);
+    }
+    30%, 60%, 90% {
+        transform: translateX(6px);
+    }
+}
+
+.animate-shake {
+    animation: shake 0.5s ease-in-out;
+}
+</style>
