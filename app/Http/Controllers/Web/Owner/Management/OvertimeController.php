@@ -26,6 +26,22 @@ class OvertimeController extends Controller
             ->where('company_id', $company->id)
             ->where('status', 'pending');
 
+        if ($request->filled('branch_id')) {
+            $query->whereHas('employee', function ($q) use ($request) {
+                $q->where('branch_id', $request->branch_id);
+            });
+        }
+
+        if ($request->filled('division_id')) {
+            $query->whereHas('employee', function ($q) use ($request) {
+                $q->where('division_id', $request->division_id);
+            });
+        }
+
+        if ($request->filled('date')) {
+            $query->whereDate('date', $request->date);
+        }
+
         if ($request->filled('search')) {
             $query->whereHas('employee', function ($q) use ($request) {
                 $q->where('name', 'like', '%' . $request->search . '%')
@@ -37,10 +53,18 @@ class OvertimeController extends Controller
             ->paginate($request->input('per_page', 10))
             ->withQueryString();
 
+        $branches = Branch::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
+        $divisions = Division::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
+
         return Inertia::render('Owner/Management/Overtimes/Pending', [
             'pendingOvertimes' => $pendingOvertimes,
+            'branches' => $branches,
+            'divisions' => $divisions,
             'filters' => [
                 'search' => $request->search,
+                'branch_id' => $request->branch_id,
+                'division_id' => $request->division_id,
+                'date' => $request->date,
             ],
         ]);
     }
