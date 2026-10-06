@@ -158,6 +158,14 @@ const formatDate = (dateStr) => {
         year: "numeric",
     });
 };
+
+const getAttachmentUrl = (path) => {
+    if (!path) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    if (path.startsWith('/storage/')) return path;
+    if (path.startsWith('storage/')) return '/' + path;
+    return '/storage/' + path;
+};
 </script>
 
 <template>
@@ -298,6 +306,7 @@ const formatDate = (dateStr) => {
                 'Jenis Cuti',
                 'Periode Cuti',
                 'Durasi',
+                'Lampiran',
                 'Alasan Cuti',
                 '',
             ]"
@@ -354,6 +363,23 @@ const formatDate = (dateStr) => {
                         </span>
                     </td>
 
+                    <!-- Lampiran -->
+                    <td class="px-5 py-3.5 whitespace-nowrap text-center">
+                        <a
+                            v-if="item.attachment"
+                            :href="getAttachmentUrl(item.attachment)"
+                            target="_blank"
+                            class="inline-flex items-center gap-1.5 text-xs text-emerald-600 font-medium hover:underline bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-100 transition"
+                            title="Lihat Berkas Lampiran"
+                        >
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                            </svg>
+                            <span>Lihat File</span>
+                        </a>
+                        <span v-else class="text-xs text-slate-400 italic">Tidak ada</span>
+                    </td>
+
                     <!-- Alasan Cuti -->
                     <td
                         class="px-5 py-3.5 text-xs text-slate-600 max-w-xs truncate"
@@ -408,7 +434,7 @@ const formatDate = (dateStr) => {
             </template>
             <template v-else>
                 <TableEmpty
-                    :colspan="6"
+                    :colspan="7"
                     message="Tidak ada permohonan cuti yang sedang menunggu persetujuan."
                 />
             </template>

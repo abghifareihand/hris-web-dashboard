@@ -121,6 +121,14 @@ const statusLabel = (status) => {
         default: return 'Menunggu';
     }
 };
+
+const getAttachmentUrl = (path) => {
+    if (!path) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    if (path.startsWith('/storage/')) return path;
+    if (path.startsWith('storage/')) return '/' + path;
+    return '/storage/' + path;
+};
 </script>
 
 <template>
@@ -242,7 +250,7 @@ const statusLabel = (status) => {
         </div>
 
         <!-- Table -->
-        <DataTable :headers="['Karyawan', 'Jenis Cuti', 'Periode Cuti', 'Durasi', 'Status', 'Alasan / Catatan']">
+        <DataTable :headers="['Karyawan', 'Jenis Cuti', 'Periode Cuti', 'Durasi', 'Status', 'Lampiran', 'Alasan / Catatan']">
             <template v-if="leaves.data && leaves.data.length > 0">
                 <tr v-for="item in leaves.data" :key="item.id" class="hover:bg-slate-50/70 transition">
                     <td class="px-5 py-3.5">
@@ -272,6 +280,21 @@ const statusLabel = (status) => {
                             {{ statusLabel(item.status) }}
                         </Badge>
                     </td>
+                    <td class="px-5 py-3.5 whitespace-nowrap text-center">
+                        <a
+                            v-if="item.attachment"
+                            :href="getAttachmentUrl(item.attachment)"
+                            target="_blank"
+                            class="inline-flex items-center gap-1.5 text-xs text-emerald-600 font-medium hover:underline bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-100 transition"
+                            title="Lihat Berkas Lampiran"
+                        >
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                            </svg>
+                            <span>Lihat File</span>
+                        </a>
+                        <span v-else class="text-xs text-slate-400 italic">Tidak ada</span>
+                    </td>
                     <td class="px-5 py-3.5 text-xs text-slate-600 max-w-xs">
                         <div>{{ item.reason || '-' }}</div>
                         <div v-if="item.reject_reason" class="text-rose-600 mt-0.5 italic">
@@ -281,7 +304,7 @@ const statusLabel = (status) => {
                 </tr>
             </template>
             <template v-else>
-                <TableEmpty :colspan="6" message="Tidak ada riwayat pengajuan cuti yang cocok dengan filter." />
+                <TableEmpty :colspan="7" message="Tidak ada riwayat pengajuan cuti yang cocok dengan filter." />
             </template>
         </DataTable>
 

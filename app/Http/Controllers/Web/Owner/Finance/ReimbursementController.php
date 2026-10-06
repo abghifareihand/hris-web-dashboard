@@ -25,6 +25,22 @@ class ReimbursementController extends Controller
             ->where('company_id', $company->id)
             ->where('status', 'pending');
 
+        if ($request->filled('branch_id')) {
+            $query->whereHas('employee', function ($q) use ($request) {
+                $q->where('branch_id', $request->branch_id);
+            });
+        }
+
+        if ($request->filled('division_id')) {
+            $query->whereHas('employee', function ($q) use ($request) {
+                $q->where('division_id', $request->division_id);
+            });
+        }
+
+        if ($request->filled('date')) {
+            $query->whereDate('date', $request->date);
+        }
+
         if ($request->filled('search')) {
             $search = $request->search;
             $query->whereHas('employee', function ($q) use ($search) {
@@ -34,10 +50,14 @@ class ReimbursementController extends Controller
         }
 
         $pendingReimbursements = $query->latest('date')->paginate(10)->withQueryString();
+        $branches = Branch::where('company_id', $company->id)->select('id', 'name')->get();
+        $divisions = Division::where('company_id', $company->id)->select('id', 'name')->get();
 
         return Inertia::render('Owner/Finance/Reimbursements/Pending', [
             'pendingReimbursements' => $pendingReimbursements,
-            'filters' => $request->only(['search']),
+            'branches' => $branches,
+            'divisions' => $divisions,
+            'filters' => $request->only(['search', 'branch_id', 'division_id', 'date']),
         ]);
     }
 

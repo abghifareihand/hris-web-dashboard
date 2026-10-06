@@ -21,7 +21,7 @@ class DashboardController extends Controller
     {
         $user = $request->user();
         $employee = $user->employee()
-            ->with(['branch:id,name', 'division:id,name', 'position:id,name', 'company:id,name'])
+            ->with(['branch:id,name', 'division:id,name', 'position:id,name', 'company:id,name_company'])
             ->first();
 
         if (!$employee) {
@@ -71,7 +71,10 @@ class DashboardController extends Controller
         $attendanceRate = $scheduledDays > 0 ? min(100, round(($presentDays / $scheduledDays) * 100)) : 100;
 
         // 3. Leave Balance
-        $totalLeaveBalance = (int) LeaveBalance::where('employee_id', $employee->id)->sum('balance');
+        $totalLeaveBalance = (int) LeaveBalance::where('employee_id', $employee->id)
+            ->where('year', Carbon::now()->year)
+            ->selectRaw('COALESCE(SUM(quota - used), 0) as remaining')
+            ->value('remaining');
 
         // 4. Overtime Hours
         $otMinutes = Overtime::where('employee_id', $employee->id)

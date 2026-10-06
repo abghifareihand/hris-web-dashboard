@@ -13,6 +13,13 @@ class Company extends Model
 
     protected $guarded = ['id'];
 
+    protected $appends = ['name'];
+
+    public function getNameAttribute(): ?string
+    {
+        return $this->attributes['name'] ?? $this->attributes['name_company'] ?? null;
+    }
+
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');

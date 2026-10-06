@@ -516,7 +516,7 @@ class PayrollController extends Controller
                 'employee.division:id,name',
                 'employee.position:id,name',
                 'employee.branch:id,name',
-                'employee.company:id,name',
+                'employee.company:id,name_company',
                 'loanInstallment.loan',
                 'reimbursements'
             ])

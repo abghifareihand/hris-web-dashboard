@@ -17,7 +17,7 @@ class LeaveController extends Controller
         $employee = $request->user()->employee;
         if (!$employee) abort(403);
 
-        $query = LeaveRequest::with('leaveCategory:id,name,days_count')
+        $query = LeaveRequest::with('leaveCategory:id,name,default_quota')
             ->where('employee_id', $employee->id);
 
         if ($request->filled('status')) {

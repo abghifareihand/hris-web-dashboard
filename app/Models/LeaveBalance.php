@@ -18,6 +18,15 @@ class LeaveBalance extends Model
         'used',
     ];
 
+    protected $appends = ['balance'];
+
+    public function getBalanceAttribute(): int
+    {
+        $quota = $this->quota ?? 0;
+        $used = $this->used ?? 0;
+        return max(0, (int)$quota - (int)$used);
+    }
+
     public function company()
     {
         return $this->belongsTo(Company::class);

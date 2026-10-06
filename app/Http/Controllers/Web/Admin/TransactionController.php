@@ -11,7 +11,7 @@ class TransactionController extends Controller
 {
     public function index(Request $request)
     {
-        $companies = Company::select('id', 'name', 'email')->get();
+        $companies = Company::select('id', 'name_company', 'email')->get();
 
         // Sample real SaaS invoices derived from active tenants
         $transactions = [];
