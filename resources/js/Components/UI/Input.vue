@@ -22,6 +22,10 @@ const props = defineProps({
         type: String,
         default: '',
     },
+    suffix: {
+        type: String,
+        default: '',
+    },
     label: {
         type: String,
         default: '',
@@ -223,10 +227,17 @@ const onClick = (event) => {
                     sizeClass,
                     { 'border-danger-500': error },
                     effectivePrefix ? '!pl-9' : '',
+                    suffix ? '!pr-16' : '',
                     clearable && modelValue ? '!pr-9' : '',
                     (type === 'time' || type === 'date') ? 'cursor-pointer' : '',
                 ]"
             />
+            <span
+                v-if="suffix"
+                class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 select-none pointer-events-none"
+            >
+                {{ suffix }}
+            </span>
             <button
                 v-if="clearable && modelValue && !disabled"
                 type="button"

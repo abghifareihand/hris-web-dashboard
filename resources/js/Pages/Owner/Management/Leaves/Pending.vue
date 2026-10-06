@@ -486,23 +486,56 @@ const getAttachmentUrl = (path) => {
         <!-- Modal Tolak -->
         <Modal
             :show="isRejectModalOpen"
-            maxWidth="sm"
+            maxWidth="md"
             @close="isRejectModalOpen = false"
         >
-            <div>
-                <h3 class="text-base sm:text-lg font-bold text-slate-900">
-                    Tolak Permohonan Cuti
-                </h3>
-                <p class="text-sm text-slate-500 mt-2">
-                    Berikan alasan penolakan permohonan cuti untuk karyawan
-                    <span class="font-semibold text-slate-900">{{selectedLeave?.employee?.name}}</span>
-                </p>
+            <div class="space-y-4" v-if="selectedLeave">
+                <div>
+                    <h3 class="text-base sm:text-lg font-bold text-slate-900">
+                        Tolak Permohonan Cuti
+                    </h3>
+                    <p class="text-sm text-slate-500 mt-1">
+                        Berikan alasan penolakan untuk permohonan cuti ini. Alasan akan tersimpan dan dapat dilihat oleh karyawan.
+                    </p>
+                </div>
 
-                <div class="mt-4">
+                <!-- Info Preview Card -->
+                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-500">Nama Karyawan:</span>
+                        <span class="font-semibold text-slate-900">{{ selectedLeave.employee?.name }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm" v-if="selectedLeave.employee?.nip || selectedLeave.employee?.division?.name">
+                        <span class="text-slate-500">NIP / Divisi:</span>
+                        <span class="font-mono text-xs text-slate-600">{{ selectedLeave.employee?.nip || '-' }} &bull; {{ selectedLeave.employee?.division?.name || '-' }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-500">Jenis Cuti:</span>
+                        <span class="font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80 text-xs">
+                            {{ selectedLeave.leave_category?.name || 'Cuti' }}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-500">Periode Cuti:</span>
+                        <span class="font-medium text-slate-700">
+                            {{ formatDate(selectedLeave.start_date) }}
+                            <template v-if="selectedLeave.end_date && selectedLeave.end_date !== selectedLeave.start_date">
+                                &mdash; {{ formatDate(selectedLeave.end_date) }}
+                            </template>
+                            ({{ selectedLeave.days_count }} hari)
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-start text-sm" v-if="selectedLeave.reason">
+                        <span class="text-slate-500 shrink-0">Alasan Permohonan:</span>
+                        <span class="text-slate-700 text-right ml-4 italic">"{{ selectedLeave.reason }}"</span>
+                    </div>
+                </div>
+
+                <div>
                     <Textarea
                         label="Alasan Penolakan"
                         v-model="rejectForm.reject_reason"
-                        placeholder="Masukkan alasan penolakan..."
+                        placeholder="Contoh: Kuota cuti cabang pada tanggal tersebut sudah penuh atau operasional kantor sedang padat..."
                         :rows="3"
                         :error="rejectForm.errors.reject_reason"
                         required
@@ -524,7 +557,7 @@ const getAttachmentUrl = (path) => {
                     variant="danger"
                     @click="executeReject"
                     :loading="rejectForm.processing"
-                    :disabled="rejectForm.processing"
+                    :disabled="rejectForm.processing || !rejectForm.reject_reason?.trim()"
                 >
                     Ya, Tolak
                 </Button>

@@ -29,6 +29,27 @@ class Overtime extends Model
         'approved_at' => 'datetime',
     ];
 
+    protected $appends = [
+        'duration_hours',
+        'notes',
+        'reason',
+    ];
+
+    public function getDurationHoursAttribute()
+    {
+        return $this->duration_minutes ? round($this->duration_minutes / 60, 1) : 0;
+    }
+
+    public function getNotesAttribute()
+    {
+        return $this->description;
+    }
+
+    public function getReasonAttribute()
+    {
+        return $this->description;
+    }
+
     public function company()
     {
         return $this->belongsTo(Company::class);

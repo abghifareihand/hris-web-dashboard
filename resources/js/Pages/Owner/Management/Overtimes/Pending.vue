@@ -384,25 +384,53 @@ const formatTime = (timeStr) => {
         <!-- Modal Tolak -->
         <Modal
             :show="isRejectModalOpen"
-            maxWidth="sm"
+            maxWidth="md"
             @close="isRejectModalOpen = false"
         >
-            <div>
-                <h3 class="text-base sm:text-lg font-bold text-slate-900">
-                    Tolak Permohonan Lembur
-                </h3>
-                <p class="text-sm text-slate-500 mt-2">
-                    Berikan alasan penolakan permohonan lembur untuk karyawan
-                    <span class="font-semibold text-slate-900">{{
-                        selectedOvertime?.employee?.name
-                    }}</span>:
-                </p>
+            <div class="space-y-4" v-if="selectedOvertime">
+                <div>
+                    <h3 class="text-base sm:text-lg font-bold text-slate-900">
+                        Tolak Permohonan Lembur
+                    </h3>
+                    <p class="text-sm text-slate-500 mt-1">
+                        Berikan alasan penolakan untuk permohonan lembur ini. Alasan akan tersimpan dan dapat dilihat oleh karyawan.
+                    </p>
+                </div>
 
-                <div class="mt-4">
+                <!-- Info Preview Card -->
+                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-500">Nama Karyawan:</span>
+                        <span class="font-semibold text-slate-900">{{ selectedOvertime.employee?.name }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm" v-if="selectedOvertime.employee?.nip || selectedOvertime.employee?.division?.name">
+                        <span class="text-slate-500">NIP / Divisi:</span>
+                        <span class="font-mono text-xs text-slate-600">{{ selectedOvertime.employee?.nip || '-' }} &bull; {{ selectedOvertime.employee?.division?.name || '-' }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-500">Tanggal Lembur:</span>
+                        <span class="font-medium text-slate-700">{{ formatDate(selectedOvertime.date) }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-500">Jam Kerja Lembur:</span>
+                        <span class="font-mono text-xs text-slate-700">
+                            {{ formatTime(selectedOvertime.start_time) }} &mdash; {{ formatTime(selectedOvertime.end_time) }}
+                            <span class="ml-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200/80">
+                                {{ selectedOvertime.duration_hours || 0 }} Jam
+                            </span>
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-start text-sm" v-if="selectedOvertime.description || selectedOvertime.notes || selectedOvertime.title">
+                        <span class="text-slate-500 shrink-0">Deskripsi Tugas:</span>
+                        <span class="text-slate-700 text-right ml-4 italic">"{{ selectedOvertime.description || selectedOvertime.notes || selectedOvertime.title }}"</span>
+                    </div>
+                </div>
+
+                <div>
                     <Textarea
                         label="Alasan Penolakan"
                         v-model="rejectForm.reject_reason"
-                        placeholder="Masukkan alasan penolakan..."
+                        placeholder="Contoh: Pekerjaan dapat dialihkan ke jam kerja reguler berikutnya..."
                         :rows="3"
                         :error="rejectForm.errors.reject_reason"
                         required
@@ -424,7 +452,7 @@ const formatTime = (timeStr) => {
                     variant="danger"
                     @click="executeReject"
                     :loading="rejectForm.processing"
-                    :disabled="rejectForm.processing"
+                    :disabled="rejectForm.processing || !rejectForm.reject_reason?.trim()"
                 >
                     Ya, Tolak
                 </Button>

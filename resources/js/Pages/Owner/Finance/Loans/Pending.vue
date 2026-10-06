@@ -1,176 +1,528 @@
 <script setup>
-import { ref } from 'vue'
-import { Head, Link, router } from '@inertiajs/vue3'
-import AppLayout from '@/Layouts/AppLayout.vue'
-import Button from '@/Components/UI/Button.vue'
-import Input from '@/Components/UI/Input.vue'
-import Badge from '@/Components/UI/Badge.vue'
-import TablePagination from '@/Components/Table/TablePagination.vue'
+import { ref, reactive } from 'vue';
+import { Head, router, useForm } from '@inertiajs/vue3';
+import AppLayout from '@/Layouts/AppLayout.vue';
+import Button from '@/Components/UI/Button.vue';
+import Input from '@/Components/UI/Input.vue';
+import Select from '@/Components/UI/Select.vue';
+import DatePicker from '@/Components/UI/DatePicker.vue';
+import DataTable from '@/Components/Table/DataTable.vue';
+import TablePagination from '@/Components/Table/TablePagination.vue';
+import TableEmpty from '@/Components/Table/TableEmpty.vue';
+import Modal from '@/Components/UI/Modal.vue';
+import { useDebounce } from '@/Composables/useDebounce';
+
+defineOptions({
+    layout: AppLayout,
+});
 
 const props = defineProps({
-    pendingLoans: Object,
-    filters: Object,
-})
+    pendingLoans: {
+        type: Object,
+        required: true,
+    },
+    branches: {
+        type: Array,
+        default: () => [],
+    },
+    divisions: {
+        type: Array,
+        default: () => [],
+    },
+    filters: {
+        type: Object,
+        default: () => ({}),
+    },
+});
 
-const search = ref(props.filters?.search || '')
+const filters = reactive({
+    search: props.filters.search || '',
+    branch_id: props.filters.branch_id || '',
+    division_id: props.filters.division_id || '',
+    date: props.filters.date || '',
+});
 
-const handleSearch = () => {
-    router.get(route('owner.finance.loans.pending.index'), {
-        search: search.value || undefined,
-    }, { preserveState: true, replace: true })
-}
+const selectedItem = ref(null);
+const showApproveModal = ref(false);
+const showRejectModal = ref(false);
 
-const handleApprove = (id) => {
-    if (confirm('Setujui pengajuan pinjaman/kasbon ini dan buat jadwal cicilannya?')) {
-        router.post(route('owner.finance.loans.pending.approve', id))
-    }
-}
+const approveForm = useForm({});
+const rejectForm = useForm({});
 
-const handleReject = (id) => {
-    if (confirm('Tolak pengajuan pinjaman/kasbon ini?')) {
-        router.post(route('owner.finance.loans.pending.reject', id))
-    }
-}
+const applyFilters = () => {
+    router.get(
+        route('owner.finance.loans.pending.index'),
+        {
+            search: filters.search || undefined,
+            branch_id: filters.branch_id || undefined,
+            division_id: filters.division_id || undefined,
+            date: filters.date || undefined,
+        },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        }
+    );
+};
+
+const { debouncedFn: debouncedSearch } = useDebounce(() => {
+    applyFilters();
+}, 350);
+
+const onSearchInput = (val) => {
+    filters.search = val;
+    debouncedSearch();
+};
+
+const onFilterChange = () => {
+    applyFilters();
+};
+
+const resetFilters = () => {
+    filters.search = '';
+    filters.branch_id = '';
+    filters.division_id = '';
+    filters.date = '';
+    applyFilters();
+};
+
+const hasActiveFilters = () => {
+    return Boolean(
+        filters.search ||
+        filters.branch_id ||
+        filters.division_id ||
+        filters.date
+    );
+};
+
+const openApprove = (item) => {
+    selectedItem.value = item;
+    showApproveModal.value = true;
+};
+
+const openReject = (item) => {
+    selectedItem.value = item;
+    showRejectModal.value = true;
+};
+
+const submitApprove = () => {
+    if (!selectedItem.value) return;
+    approveForm.post(route('owner.finance.loans.pending.approve', selectedItem.value.id), {
+        onSuccess: () => {
+            showApproveModal.value = false;
+            selectedItem.value = null;
+        },
+    });
+};
+
+const submitReject = () => {
+    if (!selectedItem.value) return;
+    rejectForm.post(route('owner.finance.loans.pending.reject', selectedItem.value.id), {
+        onSuccess: () => {
+            showRejectModal.value = false;
+            selectedItem.value = null;
+        },
+    });
+};
+
+const formatDate = (dateStr) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+    });
+};
 
 const formatCurrency = (val) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val || 0)
-}
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        maximumFractionDigits: 0,
+    }).format(val || 0);
+};
+
+const getSalaryRatio = (amount, tenor, basicSalary) => {
+    if (!basicSalary || basicSalary <= 0 || !tenor || tenor <= 0) return null;
+    const monthlyInstallment = amount / tenor;
+    return (monthlyInstallment / basicSalary) * 100;
+};
 </script>
 
 <template>
-    <AppLayout>
-        <Head title="Persetujuan Pinjaman (Kasbon) - Frans HRIS" />
+    <Head title="Persetujuan Pinjaman - Frans HRIS" />
 
-        <div class="space-y-6">
-            <!-- Header -->
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 class="text-2xl font-bold text-secondary-900 tracking-tight">Persetujuan Pinjaman / Kasbon</h1>
-                    <p class="text-sm text-secondary-500 mt-1">
-                        Daftar pengajuan pinjaman dana karyawan yang menunggu verifikasi manajemen.
-                    </p>
-                </div>
-                <div class="flex items-center gap-3">
-                    <Link :href="route('owner.finance.loans.index')">
-                        <Button variant="secondary" size="md">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                            </svg>
-                            Riwayat Pinjaman
-                        </Button>
-                    </Link>
-                </div>
+    <div class="space-y-6">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Persetujuan Pinjaman</h1>
+                <p class="text-xs sm:text-sm text-slate-500 mt-1">
+                    Daftar pengajuan pinjaman karyawan dan jadwalkan pemotongan cicilan.
+                </p>
             </div>
+        </div>
 
-            <!-- Search -->
-            <div class="bg-white p-4 rounded-xl border border-secondary-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div class="w-full sm:w-80">
-                    <Input
-                        v-model="search"
-                        placeholder="Cari nama karyawan / NIP..."
-                        @keyup.enter="handleSearch"
+        <!-- Filter Controls -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+            <div class="px-6 py-2.5 border-b border-slate-100 rounded-t-2xl flex items-center justify-between min-h-[56px]">
+                <h2 class="text-base font-bold text-slate-900">
+                    Filter Pinjaman
+                </h2>
+
+                <!-- Reset Filter Button -->
+                <transition
+                    enter-active-class="transition-opacity duration-150 ease-out"
+                    enter-from-class="opacity-0"
+                    enter-to-class="opacity-100"
+                    leave-active-class="transition-opacity duration-100 ease-in"
+                    leave-from-class="opacity-100"
+                    leave-to-class="opacity-0"
+                >
+                    <Button
+                        v-if="hasActiveFilters()"
+                        variant="secondary"
+                        size="sm"
+                        type="button"
+                        @click="resetFilters"
+                        class="shrink-0 text-xs font-semibold gap-1.5 !h-8 !min-h-[32px] !px-3 !rounded-lg !bg-white !text-slate-700 !border-slate-300 hover:!bg-slate-50 hover:!text-slate-900 shadow-xs cursor-pointer"
                     >
-                        <template #prefix>
-                            <svg class="w-4 h-4 text-secondary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                        </template>
-                    </Input>
-                </div>
-                <div class="text-sm text-secondary-600">
-                    Menampilkan <span class="font-bold text-secondary-900">{{ pendingLoans.total }}</span> pengajuan pending
-                </div>
+                        <svg
+                            class="w-3.5 h-3.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            />
+                        </svg>
+                        <span>Reset</span>
+                    </Button>
+                </transition>
             </div>
 
-            <!-- Table Card -->
-            <div class="bg-white rounded-xl border border-secondary-200 shadow-sm overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm text-secondary-600">
-                        <thead class="bg-secondary-50 border-b border-secondary-200 text-xs font-semibold text-secondary-700 uppercase tracking-wider">
-                            <tr>
-                                <th class="px-5 py-3">Tanggal</th>
-                                <th class="px-5 py-3">Karyawan</th>
-                                <th class="px-5 py-3 text-right">Nominal Pinjaman</th>
-                                <th class="px-5 py-3 text-center">Tenor</th>
-                                <th class="px-5 py-3 text-right">Cicilan / Bln</th>
-                                <th class="px-5 py-3 text-center">Rasio Gaji Pokok</th>
-                                <th class="px-5 py-3">Keperluan</th>
-                                <th class="px-5 py-3 text-center">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-secondary-200">
-                            <tr v-for="loan in pendingLoans.data" :key="loan.id" class="hover:bg-secondary-50/50 transition">
-                                <td class="px-5 py-4 whitespace-nowrap font-medium text-secondary-900">
-                                    {{ loan.date }}
-                                </td>
-                                <td class="px-5 py-4 whitespace-nowrap">
-                                    <div class="font-semibold text-secondary-900">{{ loan.employee?.name || '-' }}</div>
-                                    <div class="text-xs text-secondary-500 font-mono">{{ loan.employee?.nip || '-' }} • {{ loan.employee?.division?.name || '-' }}</div>
-                                </td>
-                                <td class="px-5 py-4 whitespace-nowrap text-right font-bold text-secondary-900">
-                                    {{ formatCurrency(loan.amount) }}
-                                </td>
-                                <td class="px-5 py-4 whitespace-nowrap text-center">
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-secondary-100 text-secondary-800">
-                                        {{ loan.tenor }} Bulan
-                                    </span>
-                                </td>
-                                <td class="px-5 py-4 whitespace-nowrap text-right font-medium text-primary-700">
-                                    {{ formatCurrency(loan.amount / loan.tenor) }}
-                                </td>
-                                <td class="px-5 py-4 whitespace-nowrap text-center">
-                                    <span
-                                        v-if="loan.employee?.basic_salary"
-                                        class="text-xs font-bold px-2 py-1 rounded-lg"
-                                        :class="((loan.amount / loan.tenor) / loan.employee.basic_salary) > 0.35 ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'"
-                                    >
-                                        {{ (((loan.amount / loan.tenor) / loan.employee.basic_salary) * 100).toFixed(1) }}%
-                                    </span>
-                                    <span v-else class="text-xs text-secondary-400">-</span>
-                                </td>
-                                <td class="px-5 py-4 max-w-xs">
-                                    <p class="text-secondary-800 line-clamp-1">{{ loan.description || '-' }}</p>
-                                </td>
-                                <td class="px-5 py-4 whitespace-nowrap text-center">
-                                    <div class="flex items-center justify-center gap-2">
-                                        <Button
-                                            variant="primary"
-                                            size="sm"
-                                            @click="handleApprove(loan.id)"
-                                        >
-                                            Setujui
-                                        </Button>
-                                        <Button
-                                            variant="danger"
-                                            size="sm"
-                                            @click="handleReject(loan.id)"
-                                        >
-                                            Tolak
-                                        </Button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr v-if="pendingLoans.data.length === 0">
-                                <td colspan="8" class="px-5 py-12 text-center text-secondary-500">
-                                    <div class="flex flex-col items-center">
-                                        <div class="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3">
-                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                            </svg>
-                                        </div>
-                                        <p class="font-medium text-secondary-700">Tidak ada pengajuan pinjaman pending</p>
-                                        <p class="text-xs text-secondary-400 mt-1">Semua kasbon karyawan telah diproses.</p>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+            <div class="p-6 space-y-4">
+                <!-- Row 1: Dropdown Filters (Cabang, Divisi, Tanggal Pengajuan) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Cabang -->
+                    <div>
+                        <Select
+                            label="Cabang"
+                            v-model="filters.branch_id"
+                            :options="branches.map((b) => ({ value: b.id, label: b.name }))"
+                            all-label="Semua Cabang"
+                            @change="onFilterChange"
+                        />
+                    </div>
+
+                    <!-- Divisi -->
+                    <div>
+                        <Select
+                            label="Divisi"
+                            v-model="filters.division_id"
+                            :options="divisions.map((d) => ({ value: d.id, label: d.name }))"
+                            all-label="Semua Divisi"
+                            @change="onFilterChange"
+                        />
+                    </div>
+
+                    <!-- Tanggal Pengajuan -->
+                    <div>
+                        <DatePicker
+                            label="Tanggal Pengajuan"
+                            v-model="filters.date"
+                            placeholder="Pilih Tanggal"
+                            @change="onFilterChange"
+                        />
+                    </div>
                 </div>
 
-                <div v-if="pendingLoans.links && pendingLoans.links.length > 3" class="p-4 border-t border-secondary-200">
-                    <TablePagination :links="pendingLoans.links" />
+                <!-- Row 2: Search field -->
+                <div class="pt-3 border-t border-slate-100">
+                    <Input
+                        label="Cari"
+                        :modelValue="filters.search"
+                        @update:modelValue="onSearchInput"
+                        placeholder="Cari nama karyawan atau NIP..."
+                    />
                 </div>
             </div>
         </div>
-    </AppLayout>
+
+        <!-- Table -->
+        <DataTable :headers="['Karyawan', 'Tanggal Pengajuan', 'Nominal Pinjaman', 'Tenor', 'Cicilan / Bln', 'Rasio Gaji Pokok', '']">
+            <template v-if="pendingLoans.data && pendingLoans.data.length > 0">
+                <tr v-for="item in pendingLoans.data" :key="item.id" class="hover:bg-slate-50/70 transition">
+                    <!-- Karyawan -->
+                    <td class="px-5 py-3.5">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
+                                {{ item.employee?.name?.charAt(0).toUpperCase() || 'E' }}
+                            </div>
+                            <div class="min-w-0">
+                                <div class="font-semibold text-slate-800 truncate">
+                                    {{ item.employee?.name || '-' }}
+                                </div>
+                                <div class="text-xs text-slate-400 truncate flex items-center gap-1.5 mt-0.5 font-mono">
+                                    <span>{{ item.employee?.nip || '-' }}</span>
+                                    <span>&bull;</span>
+                                    <span>{{ item.employee?.division?.name || '-' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- Tanggal Pengajuan -->
+                    <td class="px-5 py-3.5 text-xs font-semibold text-slate-700 whitespace-nowrap">
+                        {{ formatDate(item.date) }}
+                    </td>
+
+                    <!-- Nominal Pinjaman -->
+                    <td class="px-5 py-3.5 whitespace-nowrap font-bold text-emerald-600 text-sm">
+                        {{ formatCurrency(item.amount) }}
+                    </td>
+
+                    <!-- Tenor -->
+                    <td class="px-5 py-3.5 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200/80">
+                            {{ item.tenor }} Bulan
+                        </span>
+                    </td>
+
+                    <!-- Cicilan / Bln -->
+                    <td class="px-5 py-3.5 whitespace-nowrap font-semibold text-slate-800 text-xs">
+                        {{ formatCurrency(item.amount / item.tenor) }}
+                    </td>
+
+                    <!-- Rasio Gaji Pokok -->
+                    <td class="px-5 py-3.5 whitespace-nowrap">
+                        <template v-if="getSalaryRatio(item.amount, item.tenor, item.employee?.basic_salary) !== null">
+                            <span
+                                v-if="getSalaryRatio(item.amount, item.tenor, item.employee?.basic_salary) > 35"
+                                class="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200/80"
+                                title="Beban cicilan melebihi rekomendasi batas 35% gaji pokok"
+                            >
+                                <span>{{ getSalaryRatio(item.amount, item.tenor, item.employee?.basic_salary).toFixed(1) }}%</span>
+                                <span class="text-[10px] text-rose-500 font-normal">(Tinggi)</span>
+                            </span>
+                            <span
+                                v-else
+                                class="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200/80"
+                                title="Beban cicilan aman dalam batas wajar"
+                            >
+                                <span>{{ getSalaryRatio(item.amount, item.tenor, item.employee?.basic_salary).toFixed(1) }}%</span>
+                            </span>
+                        </template>
+                        <span v-else class="text-xs text-slate-400 italic">-</span>
+                    </td>
+
+                    <!-- Aksi -->
+                    <td class="px-5 py-3.5 whitespace-nowrap text-right">
+                        <div class="inline-flex items-center justify-end gap-2">
+                            <button
+                                type="button"
+                                @click="openReject(item)"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-rose-600 bg-rose-50/90 hover:bg-rose-100/90 border border-rose-200/80 rounded-lg transition cursor-pointer"
+                                title="Tolak Pengajuan"
+                            >
+                                <svg
+                                    class="w-3.5 h-3.5"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+                                    />
+                                </svg>
+                                <span>Tolak</span>
+                            </button>
+                            <button
+                                type="button"
+                                @click="openApprove(item)"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50/90 hover:bg-emerald-100/90 border border-emerald-200/80 rounded-lg transition cursor-pointer"
+                                title="Setujui Pengajuan"
+                            >
+                                <svg
+                                    class="w-3.5 h-3.5"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+                                        clip-rule="evenodd"
+                                    />
+                                </svg>
+                                <span>Setujui</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            </template>
+            <template v-else>
+                <TableEmpty
+                    :colspan="7"
+                    message="Tidak ada pengajuan pinjaman/kasbon yang sedang menunggu persetujuan."
+                />
+            </template>
+        </DataTable>
+
+        <!-- Pagination -->
+        <TablePagination :pagination="pendingLoans" />
+
+        <!-- Modal Setujui -->
+        <Modal
+            :show="showApproveModal"
+            maxWidth="md"
+            @close="showApproveModal = false"
+        >
+            <div class="space-y-4" v-if="selectedItem">
+                <div>
+                    <h3 class="text-base sm:text-lg font-bold text-slate-900">
+                        Setujui Pinjaman Karyawan
+                    </h3>
+                    <p class="text-sm text-slate-500 mt-1">
+                        Verifikasi persetujuan pengajuan pinjaman dan buat jadwal cicilan otomatis bulanan.
+                    </p>
+                </div>
+
+                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-500">Karyawan:</span>
+                        <span class="font-semibold text-slate-900">{{ selectedItem.employee?.name }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm" v-if="selectedItem.employee?.nip">
+                        <span class="text-slate-500">NIP / Divisi:</span>
+                        <span class="font-mono text-xs text-slate-600">{{ selectedItem.employee?.nip }} • {{ selectedItem.employee?.division?.name || '-' }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-500">Nominal Pinjaman:</span>
+                        <span class="font-bold text-emerald-600 text-base">{{ formatCurrency(selectedItem.amount) }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-500">Durasi Tenor:</span>
+                        <span class="font-semibold text-slate-700">{{ selectedItem.tenor }} Bulan</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-500">Cicilan per Bulan:</span>
+                        <span class="font-bold text-slate-900">{{ formatCurrency(selectedItem.amount / selectedItem.tenor) }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm" v-if="selectedItem.employee?.basic_salary">
+                        <span class="text-slate-500">Gaji Pokok Karyawan:</span>
+                        <span class="font-medium text-slate-700">{{ formatCurrency(selectedItem.employee?.basic_salary) }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm" v-if="getSalaryRatio(selectedItem.amount, selectedItem.tenor, selectedItem.employee?.basic_salary) !== null">
+                        <span class="text-slate-500">Beban terhadap Gaji:</span>
+                        <span
+                            class="font-bold text-xs px-2 py-0.5 rounded"
+                            :class="getSalaryRatio(selectedItem.amount, selectedItem.tenor, selectedItem.employee?.basic_salary) > 35 ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-800'"
+                        >
+                            {{ getSalaryRatio(selectedItem.amount, selectedItem.tenor, selectedItem.employee?.basic_salary).toFixed(1) }}%
+                            ({{ getSalaryRatio(selectedItem.amount, selectedItem.tenor, selectedItem.employee?.basic_salary) > 35 ? 'Di atas 35%' : 'Aman' }})
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-start text-sm" v-if="selectedItem.description">
+                        <span class="text-slate-500 shrink-0">Keperluan:</span>
+                        <span class="text-slate-700 text-right ml-4 text-xs italic">"{{ selectedItem.description }}"</span>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl flex items-start gap-2.5">
+                    <svg class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p class="text-xs text-amber-800 leading-relaxed">
+                        <span class="font-semibold">Catatan:</span> Setelah disetujui, sistem akan otomatis menjadwalkan cicilan pinjaman per bulan dan memotongnya melalui slip gaji bulanan (payroll).
+                    </p>
+                </div>
+            </div>
+
+            <template #footer>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    :disabled="approveForm.processing"
+                    @click="showApproveModal = false"
+                >
+                    Batal
+                </Button>
+                <Button
+                    type="button"
+                    variant="primary"
+                    @click="submitApprove"
+                    :loading="approveForm.processing"
+                    :disabled="approveForm.processing"
+                >
+                    Ya, Setujui Pinjaman
+                </Button>
+            </template>
+        </Modal>
+
+        <!-- Modal Tolak -->
+        <Modal
+            :show="showRejectModal"
+            maxWidth="md"
+            @close="showRejectModal = false"
+        >
+            <div class="space-y-4" v-if="selectedItem">
+                <div>
+                    <h3 class="text-base sm:text-lg font-bold text-slate-900">
+                        Tolak Pengajuan Pinjaman
+                    </h3>
+                    <p class="text-sm text-slate-500 mt-1">
+                        Konfirmasi penolakan pengajuan pinjaman/kasbon ini.
+                    </p>
+                </div>
+
+                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+                    <div class="text-sm">
+                        <span class="text-slate-500">Nama Karyawan: </span>
+                        <span class="font-semibold text-slate-900">{{ selectedItem.employee?.name }}</span>
+                    </div>
+                    <div class="text-sm">
+                        <span class="text-slate-500">Nominal Pinjaman: </span>
+                        <span class="font-bold text-rose-600">{{ formatCurrency(selectedItem.amount) }}</span>
+                    </div>
+                    <div class="text-sm" v-if="selectedItem.description">
+                        <span class="text-slate-500">Keperluan: </span>
+                        <span class="text-slate-700 italic">"{{ selectedItem.description }}"</span>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-rose-50/70 border border-rose-200/80 rounded-xl flex items-start gap-2.5">
+                    <svg class="w-4 h-4 text-rose-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <p class="text-xs text-rose-800 leading-relaxed">
+                        Apakah Anda yakin ingin menolak pengajuan pinjaman ini? Pengajuan akan berstatus Ditolak dan tidak dapat diproses lagi.
+                    </p>
+                </div>
+            </div>
+
+            <template #footer>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    :disabled="rejectForm.processing"
+                    @click="showRejectModal = false"
+                >
+                    Batal
+                </Button>
+                <Button
+                    type="button"
+                    variant="danger"
+                    @click="submitReject"
+                    :loading="rejectForm.processing"
+                    :disabled="rejectForm.processing"
+                >
+                    Ya, Tolak Pinjaman
+                </Button>
+            </template>
+        </Modal>
+    </div>
 </template>

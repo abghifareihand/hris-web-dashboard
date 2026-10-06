@@ -461,11 +461,32 @@ const formatCurrency = (val) => {
                         Tolak Pengajuan Klaim Biaya
                     </h3>
                     <p class="text-sm text-slate-500 mt-1">
-                        Berikan alasan penolakan klaim untuk
-                        <span class="font-semibold text-slate-900">{{ selectedItem.employee?.name }}</span>
-                        sebesar
-                        <span class="font-semibold text-emerald-600">{{ formatCurrency(selectedItem.amount) }}</span>.
+                        Berikan alasan penolakan untuk pengajuan klaim ini. Alasan akan tersimpan dan dapat dilihat oleh karyawan.
                     </p>
+                </div>
+
+                <!-- Info Preview Card -->
+                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-500">Nama Karyawan:</span>
+                        <span class="font-semibold text-slate-900">{{ selectedItem.employee?.name }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm" v-if="selectedItem.employee?.nip || selectedItem.employee?.division?.name">
+                        <span class="text-slate-500">NIP / Divisi:</span>
+                        <span class="font-mono text-xs text-slate-600">{{ selectedItem.employee?.nip || '-' }} &bull; {{ selectedItem.employee?.division?.name || '-' }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-500">Nominal Klaim:</span>
+                        <span class="font-bold text-rose-600">{{ formatCurrency(selectedItem.amount) }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-500">Tanggal Pengajuan:</span>
+                        <span class="font-medium text-slate-700">{{ formatDate(selectedItem.date) }}</span>
+                    </div>
+                    <div class="flex justify-between items-start text-sm" v-if="selectedItem.reason">
+                        <span class="text-slate-500 shrink-0">Keperluan Klaim:</span>
+                        <span class="text-slate-700 text-right ml-4 italic">"{{ selectedItem.reason }}"</span>
+                    </div>
                 </div>
 
                 <div>
@@ -473,7 +494,7 @@ const formatCurrency = (val) => {
                         label="Alasan Penolakan"
                         v-model="rejectForm.reject_reason"
                         :error="rejectForm.errors.reject_reason"
-                        placeholder="Contoh: Nota tidak jelas / pengeluaran di luar ketentuan dinas..."
+                        placeholder="Contoh: Bukti nota tidak terbaca atau pengeluaran di luar ketentuan dinas kantor..."
                         :rows="3"
                         required
                     />
@@ -496,7 +517,7 @@ const formatCurrency = (val) => {
                     :loading="rejectForm.processing"
                     :disabled="rejectForm.processing || !rejectForm.reject_reason?.trim()"
                 >
-                    Ya, Tolak Klaim
+                    Ya, Tolak
                 </Button>
             </template>
         </Modal>

@@ -522,5 +522,8 @@ class DatabaseSeeder extends Seeder
         $this->call(AbghiFareihanSeeder::class);
         $this->call(PendingEmployeeSeeder::class);
         $this->call(ScheduleManagementSeeder::class);
+        $this->call(LoanSeeder::class);
+        $this->call(PendingLeaveSeeder::class);
+        $this->call(PendingOvertimeSeeder::class);
     }
 }

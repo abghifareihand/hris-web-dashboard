@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use App\Models\Loan;
 use App\Models\LoanInstallment;
 use App\Models\Employee;
+use App\Models\Branch;
+use App\Models\Division;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Inertia\Inertia;
@@ -24,6 +26,22 @@ class LoanController extends Controller
             ->where('company_id', $company->id)
             ->where('status', 'pending');
 
+        if ($request->filled('branch_id')) {
+            $query->whereHas('employee', function ($q) use ($request) {
+                $q->where('branch_id', $request->branch_id);
+            });
+        }
+
+        if ($request->filled('division_id')) {
+            $query->whereHas('employee', function ($q) use ($request) {
+                $q->where('division_id', $request->division_id);
+            });
+        }
+
+        if ($request->filled('date')) {
+            $query->whereDate('date', $request->date);
+        }
+
         if ($request->filled('search')) {
             $search = $request->search;
             $query->whereHas('employee', function ($q) use ($search) {
@@ -33,10 +51,14 @@ class LoanController extends Controller
         }
 
         $pendingLoans = $query->latest('date')->paginate(10)->withQueryString();
+        $branches = Branch::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
+        $divisions = Division::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
 
         return Inertia::render('Owner/Finance/Loans/Pending', [
             'pendingLoans' => $pendingLoans,
-            'filters' => $request->only(['search']),
+            'branches' => $branches,
+            'divisions' => $divisions,
+            'filters' => $request->only(['search', 'branch_id', 'division_id', 'date']),
         ]);
     }
 
@@ -102,6 +124,18 @@ class LoanController extends Controller
             $query->whereIn('status', ['approved', 'paid']);
         }
 
+        if ($request->filled('branch_id')) {
+            $query->whereHas('employee', function ($q) use ($request) {
+                $q->where('branch_id', $request->branch_id);
+            });
+        }
+
+        if ($request->filled('division_id')) {
+            $query->whereHas('employee', function ($q) use ($request) {
+                $q->where('division_id', $request->division_id);
+            });
+        }
+
         if ($request->filled('search')) {
             $search = $request->search;
             $query->whereHas('employee', function ($q) use ($search) {
@@ -119,6 +153,8 @@ class LoanController extends Controller
         }
 
         $loans = $query->latest('date')->paginate(10)->withQueryString();
+        $branches = Branch::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
+        $divisions = Division::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
 
         $stats = [
             'total_active_loan' => Loan::where('company_id', $company->id)->where('status', 'approved')->sum('amount'),
@@ -128,8 +164,10 @@ class LoanController extends Controller
 
         return Inertia::render('Owner/Finance/Loans/Index', [
             'loans' => $loans,
+            'branches' => $branches,
+            'divisions' => $divisions,
             'stats' => $stats,
-            'filters' => $request->only(['status', 'search', 'start_date', 'end_date']),
+            'filters' => $request->only(['status', 'search', 'start_date', 'end_date', 'branch_id', 'division_id']),
         ]);
     }
 
