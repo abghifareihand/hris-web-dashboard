@@ -222,7 +222,8 @@ Route::middleware('auth')->group(function () {
                 Route::get('/{id}/slips', [PayrollController::class, 'printSlips'])->name('slips');
                 Route::get('/{id}/slips/{itemId}', [PayrollController::class, 'printSingleSlip'])->name('slip-single');
                 Route::get('/{id}/items/{itemId}', [PayrollController::class, 'showItem'])->name('items.show');
-                Route::get('/{id}/export-bank-csv', [PayrollController::class, 'exportBankCsv'])->name('export-bank-csv');
+                Route::get('/{id}/export-bank-excel', [PayrollController::class, 'exportBankExcel'])->name('export-bank-excel');
+                Route::get('/{id}/export-bank-csv', [PayrollController::class, 'exportBankExcel'])->name('export-bank-csv');
                 Route::patch('/{id}/status', [PayrollController::class, 'updateStatus'])->name('update-status');
                 Route::patch('/{id}/items', [PayrollController::class, 'updateItems'])->name('update-items');
                 Route::delete('/{id}', [PayrollController::class, 'destroy'])->name('destroy');

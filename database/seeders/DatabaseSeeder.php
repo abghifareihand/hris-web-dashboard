@@ -316,43 +316,43 @@ class DatabaseSeeder extends Seeder
                 'fixed_allowance' => 1000000,
             ],
 
-            // Payroll Mid-Month Joiners (Joined during September 2026 -> Will display warning & badge)
+            // Payroll Mid-Month Joiners (2 minggu lalu & baru bergabung)
             [
-                'name' => 'Budi Santoso (Masuk 05 Sep)',
-                'email' => 'budi.prorata@goysmedia.com',
-                'nip' => 'EMP-PRO-05',
-                'joined_at' => '2026-09-05',
+                'name' => 'Dimas Anggara (Masuk 23 Sep)',
+                'email' => 'dimas.prorata@goysmedia.com',
+                'nip' => 'EMP-PRO-23',
+                'joined_at' => '2026-09-23', // 2 minggu lalu dari 7 Oktober 2026
                 'basic_salary' => 6000000,
                 'fixed_allowance' => 500000,
             ],
             [
-                'name' => 'Dewi Lestari (Masuk 10 Sep)',
-                'email' => 'dewi.prorata@goysmedia.com',
-                'nip' => 'EMP-PRO-10',
-                'joined_at' => '2026-09-10',
-                'basic_salary' => 6000000,
+                'name' => 'Rina Kartika (Masuk 01 Okt)',
+                'email' => 'rina.prorata@goysmedia.com',
+                'nip' => 'EMP-PRO-01O',
+                'joined_at' => '2026-10-01',
+                'basic_salary' => 7000000,
                 'fixed_allowance' => 1000000,
             ],
             [
-                'name' => 'Rian Pratama (Masuk 15 Sep)',
-                'email' => 'rian.prorata@goysmedia.com',
-                'nip' => 'EMP-PRO-15',
-                'joined_at' => '2026-09-15',
-                'basic_salary' => 5000000,
+                'name' => 'Bayu Setiawan (Masuk 03 Okt)',
+                'email' => 'bayu.prorata@goysmedia.com',
+                'nip' => 'EMP-PRO-03O',
+                'joined_at' => '2026-10-03',
+                'basic_salary' => 5500000,
                 'fixed_allowance' => 0,
             ],
             [
-                'name' => 'Siti Nurhaliza (Masuk 20 Sep)',
-                'email' => 'siti.prorata@goysmedia.com',
-                'nip' => 'EMP-PRO-20',
-                'joined_at' => '2026-09-20',
-                'basic_salary' => 7500000,
+                'name' => 'Budi Santoso (Masuk 10 Sep)',
+                'email' => 'budi.prorata@goysmedia.com',
+                'nip' => 'EMP-PRO-10S',
+                'joined_at' => '2026-09-10',
+                'basic_salary' => 6500000,
                 'fixed_allowance' => 500000,
             ],
             [
                 'name' => 'Kevin Sanjaya (Masuk 25 Sep)',
                 'email' => 'kevin.prorata@goysmedia.com',
-                'nip' => 'EMP-PRO-25',
+                'nip' => 'EMP-PRO-25S',
                 'joined_at' => '2026-09-25',
                 'basic_salary' => 5500000,
                 'fixed_allowance' => 0,
@@ -441,79 +441,35 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        $bpjsTk = $goysMedia->bpjsKetenagakerjaan()->firstOrCreate(['company_id' => $goysMedia->id]);
-        $bpjsKes = $goysMedia->bpjsKesehatan()->firstOrCreate(['company_id' => $goysMedia->id]);
+        // Seed second employee loan
+        $secondEmployee = $allEmployees->where('id', '!=', $firstEmployee?->id)->first();
+        if ($secondEmployee) {
+            $loan2 = \App\Models\Loan::create([
+                'company_id' => $goysMedia->id,
+                'employee_id' => $secondEmployee->id,
+                'date' => '2026-09-01',
+                'amount' => 1000000,
+                'tenor' => 2,
+                'description' => 'Pinjaman Kasbon Darurat Keluarga',
+                'status' => 'approved',
+            ]);
 
-        $payroll = \App\Models\Payroll::create([
-            'company_id' => $goysMedia->id,
-            'code' => 'PY-202609-PRORATA',
-            'start_date' => '2026-09-01',
-            'end_date' => '2026-09-30',
-            'branch_id' => null,
-            'division_id' => null,
-            'status' => 'process',
-            'total_employees' => $allEmployees->count(),
-            'total_amount' => 0,
-        ]);
-
-        $totalPayrollAmount = 0;
-        foreach ($allEmployees as $emp) {
-            $basisBpjsKes = $emp->basic_salary + $emp->fixed_allowance;
-            $bpjsKesEmp = ($basisBpjsKes * 1.00) / 100;
-            $bpjsKesComp = ($basisBpjsKes * 4.00) / 100;
-
-            $basisBpjsTk = $emp->basic_salary + $emp->fixed_allowance;
-            $basisJp = min($basisBpjsTk, 10042300);
-
-            $jhtEmp = ($basisBpjsTk * 2.00) / 100;
-            $jhtComp = ($basisBpjsTk * 3.70) / 100;
-            $jpEmp = ($basisJp * 1.00) / 100;
-            $jpComp = ($basisJp * 2.00) / 100;
-            $jkkComp = ($basisBpjsTk * 0.24) / 100;
-            $jkmComp = ($basisBpjsTk * 0.30) / 100;
-
-            $dailyAllowance = 0;
-            $totalEarnings = $emp->basic_salary + $emp->fixed_allowance + $dailyAllowance;
-            $totalPenalty = 0;
-            $otherDeductions = 0;
-            $pph21Amount = 0;
-
-            $totalDeductions = $totalPenalty + $otherDeductions + $pph21Amount + $bpjsKesEmp + $jhtEmp + $jpEmp;
-            $totalBenefits = $bpjsKesComp + $jhtComp + $jpComp + $jkkComp + $jkmComp;
-            $netSalary = $totalEarnings - $totalDeductions;
-            $totalPayrollAmount += $netSalary;
-
-            $payroll->items()->create([
-                'employee_id' => $emp->id,
-                'basic_salary' => $emp->basic_salary,
-                'fixed_allowance' => $emp->fixed_allowance,
-                'daily_allowance' => $dailyAllowance,
-                'other_allowance' => 0,
-                'overtime_amount' => 0,
-                'bonus' => 0,
-                'late_penalty_amount' => 0,
-                'alpha_penalty_amount' => 0,
-                'total_penalty' => 0,
-                'other_deductions' => 0,
-                'pph21_amount' => 0,
-                'ptkp_status' => $emp->ptkp_status ?? 'TK/0',
-                'bpjs_kesehatan_employee' => $bpjsKesEmp,
-                'bpjs_kesehatan_company' => $bpjsKesComp,
-                'jht_employee' => $jhtEmp,
-                'jht_company' => $jhtComp,
-                'jp_employee' => $jpEmp,
-                'jp_company' => $jpComp,
-                'jkk_company' => $jkkComp,
-                'jkm_company' => $jkmComp,
-                'total_earnings' => $totalEarnings,
-                'total_benefits' => $totalBenefits,
-                'total_deductions' => $totalDeductions,
-                'net_salary' => $netSalary,
-                'remarks' => null,
+            \App\Models\LoanInstallment::create([
+                'loan_id' => $loan2->id,
+                'due_date' => '2026-09-25',
+                'amount' => 500000,
+                'status' => 'unpaid',
+            ]);
+            \App\Models\LoanInstallment::create([
+                'loan_id' => $loan2->id,
+                'due_date' => '2026-10-25',
+                'amount' => 500000,
+                'status' => 'unpaid',
             ]);
         }
 
-        $payroll->update(['total_amount' => $totalPayrollAmount]);
+        $bpjsTk = $goysMedia->bpjsKetenagakerjaan()->firstOrCreate(['company_id' => $goysMedia->id]);
+        $bpjsKes = $goysMedia->bpjsKesehatan()->firstOrCreate(['company_id' => $goysMedia->id]);
 
         $this->call(ReimbursementSeeder::class);
         $this->call(AttendanceRecapSeeder::class);

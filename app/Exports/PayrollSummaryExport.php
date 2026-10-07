@@ -8,6 +8,7 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use Illuminate\Support\Enumerable;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
@@ -23,7 +24,7 @@ class PayrollSummaryExport implements FromCollection, WithHeadings, WithMapping,
         $this->payrolls = $payrolls;
     }
 
-    public function collection()
+    public function collection(): Enumerable
     {
         return $this->payrolls;
     }
@@ -44,9 +45,16 @@ class PayrollSummaryExport implements FromCollection, WithHeadings, WithMapping,
         ];
     }
 
-    public function map($payroll): array
+    public function map(mixed $payroll): array
     {
         $this->rowNumber++;
+
+        $statusLabel = match (strtolower((string) $payroll->status)) {
+            'paid' => 'Lunas',
+            'process' => 'Dalam Proses',
+            'cancelled' => 'Dibatalkan',
+            default => ucfirst((string) $payroll->status),
+        };
 
         return [
             $this->rowNumber,
@@ -57,8 +65,8 @@ class PayrollSummaryExport implements FromCollection, WithHeadings, WithMapping,
             $payroll->division->name ?? 'Semua Divisi',
             $payroll->total_employees,
             (int) $payroll->total_amount,
-            strtoupper($payroll->status),
-            $payroll->paid_at ? $payroll->paid_at->format('d/m/Y H:i') : '-',
+            $statusLabel,
+            $payroll->paid_at ? \Carbon\Carbon::parse($payroll->paid_at)->format('d/m/Y') : '-',
         ];
     }
 
@@ -69,23 +77,24 @@ class PayrollSummaryExport implements FromCollection, WithHeadings, WithMapping,
         ];
     }
 
-    public function styles(Worksheet $sheet)
+    public function styles(Worksheet $sheet): ?array
     {
         $sheet->getParent()->getDefaultStyle()->getFont()->setName('Arial');
+        $sheet->setShowGridlines(true);
         $lastRow = max(2, $sheet->getHighestRow());
 
         // Header Styling
-        $sheet->getRowDimension(1)->setRowHeight(26);
+        $sheet->getRowDimension(1)->setRowHeight(30);
         $sheet->getStyle('A1:J1')->applyFromArray([
             'font' => [
                 'name' => 'Arial',
-                'size' => 10,
+                'size' => 11,
                 'bold' => true,
                 'color' => ['rgb' => 'FFFFFF'],
             ],
             'fill' => [
                 'fillType' => Fill::FILL_SOLID,
-                'startColor' => ['rgb' => '1E40AF'],
+                'startColor' => ['rgb' => '1E293B'], // Slate 800
             ],
             'alignment' => [
                 'vertical' => Alignment::VERTICAL_CENTER,
@@ -93,18 +102,49 @@ class PayrollSummaryExport implements FromCollection, WithHeadings, WithMapping,
             ],
         ]);
 
-        // Content alignments & borders
+        // Row heights for data
+        for ($r = 2; $r <= $lastRow; $r++) {
+            $sheet->getRowDimension($r)->setRowHeight(22);
+        }
+
+        // Vertical alignment for all cells
+        $sheet->getStyle("A1:J{$lastRow}")->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+
+        // Content alignments matching user screenshot
         $sheet->getStyle("A2:A{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle("B2:D{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle("B2:B{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        $sheet->getStyle("C2:D{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle("E2:F{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
         $sheet->getStyle("G2:G{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle("H2:H{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-        $sheet->getStyle("I2:J{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle("I2:I{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        $sheet->getStyle("J2:J{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        // Status font colors & weights
+        $rowIndex = 2;
+        foreach ($this->payrolls as $p) {
+            $status = strtolower((string) $p->status);
+            $color = match ($status) {
+                'paid' => '059669',     // Emerald (Lunas)
+                'process' => 'D97706',  // Amber (Dalam Proses)
+                'cancelled' => 'DC2626',// Merah (Dibatalkan)
+                default => '475569',
+            };
+
+            $sheet->getStyle("I{$rowIndex}")->applyFromArray([
+                'font' => [
+                    'bold' => true,
+                    'color' => ['rgb' => $color],
+                ],
+            ]);
+            $rowIndex++;
+        }
 
         $sheet->getStyle("A1:J{$lastRow}")->applyFromArray([
             'borders' => [
                 'allBorders' => [
                     'borderStyle' => Border::BORDER_THIN,
-                    'color' => ['rgb' => 'E2E8F0'],
+                    'color' => ['rgb' => 'CBD5E1'],
                 ],
             ],
         ]);

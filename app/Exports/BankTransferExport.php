@@ -9,14 +9,15 @@ use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
+use Illuminate\Support\Enumerable;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Cell\DefaultValueBinder;
 use PhpOffice\PhpSpreadsheet\Cell\Cell;
+use Carbon\Carbon;
 
 class BankTransferExport extends DefaultValueBinder implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithStyles, WithColumnFormatting, WithCustomValueBinder
 {
@@ -27,10 +28,12 @@ class BankTransferExport extends DefaultValueBinder implements FromCollection, W
     public function __construct($payroll)
     {
         $this->payroll = $payroll;
-        $this->periodName = \Carbon\Carbon::parse($payroll->start_date)->translatedFormat('F Y');
+        $this->periodName = $payroll->start_date 
+            ? Carbon::parse($payroll->start_date)->locale('id')->translatedFormat('F Y') 
+            : Carbon::now()->locale('id')->translatedFormat('F Y');
     }
 
-    public function collection()
+    public function collection(): Enumerable
     {
         return $this->payroll->items()->with('employee')->get();
     }
@@ -68,9 +71,9 @@ class BankTransferExport extends DefaultValueBinder implements FromCollection, W
         ];
     }
 
-    public function bindValue(Cell $cell, $value)
+    public function bindValue(Cell $cell, mixed $value): bool
     {
-        // Keep Account Numbers strictly as strings so leading zeros are never removed
+        // Pastikan nomor rekening tetap terbaca sebagai teks murni agar 0 di depan tidak terpotong
         if ($cell->getColumn() === 'C' && $cell->getRow() > 1) {
             $cell->setValueExplicit((string) $value, DataType::TYPE_STRING);
             return true;
@@ -82,41 +85,48 @@ class BankTransferExport extends DefaultValueBinder implements FromCollection, W
     public function columnFormats(): array
     {
         return [
+            'C' => '@',
             'E' => '#,##0',
         ];
     }
 
-    public function styles(Worksheet $sheet)
+    public function styles(Worksheet $sheet): ?array
     {
         $sheet->getParent()->getDefaultStyle()->getFont()->setName('Arial');
-        $lastRow = $sheet->getHighestRow();
+        $sheet->setShowGridlines(true);
 
-        // 1. Header Row Styling (Cobalt Blue Background, White Bold Text)
-        $sheet->getRowDimension(1)->setRowHeight(26);
-        $sheet->getStyle('A1:F1')->applyFromArray([
+        $highestRow = max(1, $sheet->getHighestRow());
+        $highestCol = $sheet->getHighestColumn();
+
+        // 1. Style Header (Slate 800 '1E293B', Font Putih Tebal, Row Height 30 - Seragam Export Rekap)
+        $sheet->getStyle("A1:{$highestCol}1")->applyFromArray([
             'font' => [
                 'name' => 'Arial',
-                'size' => 10,
+                'size' => 11,
                 'bold' => true,
-                'color' => ['argb' => 'FFFFFFFF'],
+                'color' => ['rgb' => 'FFFFFF'],
             ],
             'fill' => [
                 'fillType' => Fill::FILL_SOLID,
-                'startColor' => ['argb' => 'FF1D4ED8'], // Cobalt Royal Blue like the user screenshot
+                'startColor' => ['rgb' => '1E293B'], // Slate 800
             ],
             'alignment' => [
                 'vertical' => Alignment::VERTICAL_CENTER,
             ],
         ]);
+        $sheet->getRowDimension(1)->setRowHeight(30);
 
-        // Alignments
+        // Header Alignments
         $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle('E1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        $sheet->getStyle('B1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        $sheet->getStyle('C1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        $sheet->getStyle('D1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        $sheet->getStyle('E1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+        $sheet->getStyle('F1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
 
         // 2. Data Rows Styling
-        if ($lastRow > 1) {
-            // General Font
-            $sheet->getStyle('A2:F' . $lastRow)->applyFromArray([
+        if ($highestRow > 1) {
+            $sheet->getStyle("A2:{$highestCol}{$highestRow}")->applyFromArray([
                 'font' => [
                     'name' => 'Arial',
                     'size' => 10,
@@ -126,25 +136,24 @@ class BankTransferExport extends DefaultValueBinder implements FromCollection, W
                 ],
             ]);
 
-            // Set Data Row Heights
-            for ($row = 2; $row <= $lastRow; $row++) {
-                $sheet->getRowDimension($row)->setRowHeight(20);
+            for ($row = 2; $row <= $highestRow; $row++) {
+                $sheet->getRowDimension($row)->setRowHeight(22);
             }
 
-            // Alignments
-            $sheet->getStyle('A2:A' . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle('B2:B' . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
-            $sheet->getStyle('C2:C' . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
-            $sheet->getStyle('D2:D' . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
-            $sheet->getStyle('E2:E' . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
-            $sheet->getStyle('F2:F' . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+            // Alignments Data
+            $sheet->getStyle("A2:A{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("B2:B{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+            $sheet->getStyle("C2:C{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+            $sheet->getStyle("D2:D{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+            $sheet->getStyle("E2:E{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            $sheet->getStyle("F2:F{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
 
-            // Subtle Thin Gridlines for Clean Excel Look
-            $sheet->getStyle('A1:F' . $lastRow)->applyFromArray([
+            // Thin Border untuk seluruh data (Slate 300 'CBD5E1' - Seragam Export Rekap)
+            $sheet->getStyle("A1:{$highestCol}{$highestRow}")->applyFromArray([
                 'borders' => [
                     'allBorders' => [
                         'borderStyle' => Border::BORDER_THIN,
-                        'color' => ['argb' => 'FFE2E8F0'],
+                        'color' => ['rgb' => 'CBD5E1'],
                     ],
                 ],
             ]);

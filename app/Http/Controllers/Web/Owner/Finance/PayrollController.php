@@ -21,6 +21,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Exports\PayrollSummaryExport;
+use App\Exports\BankTransferExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class PayrollController extends Controller
 {
@@ -29,7 +32,7 @@ class PayrollController extends Controller
         $company = auth()->user()->company;
         
         $query = Employee::where('company_id', $company->id)
-            ->with(['branch:id,name', 'division:id,name', 'position:id,name']);
+            ->with(['user:id,avatar', 'branch:id,name', 'division:id,name', 'position:id,name']);
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -39,16 +42,39 @@ class PayrollController extends Controller
             });
         }
 
+        if ($request->filled('branch_id')) {
+            $query->where('branch_id', $request->input('branch_id'));
+        }
+
+        if ($request->filled('division_id')) {
+            $query->where('division_id', $request->input('division_id'));
+        }
+
+        if ($request->filled('salary_status')) {
+            if ($request->input('salary_status') === 'configured') {
+                $query->whereNotNull('basic_salary')->where('basic_salary', '>', 0);
+            } elseif ($request->input('salary_status') === 'unconfigured') {
+                $query->where(function ($q) {
+                    $q->whereNull('basic_salary')->orWhere('basic_salary', '<=', 0);
+                });
+            }
+        }
+
         $employees = $query->orderBy('name', 'asc')->paginate(10)->withQueryString();
         
         $bpjsTk = $company->bpjsKetenagakerjaan()->firstOrCreate(['company_id' => $company->id]);
         $bpjsKes = $company->bpjsKesehatan()->firstOrCreate(['company_id' => $company->id]);
 
+        $branches = Branch::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
+        $divisions = Division::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
+
         return Inertia::render('Owner/Finance/Payrolls/Master', [
             'employees' => $employees,
             'bpjsTk' => $bpjsTk,
             'bpjsKes' => $bpjsKes,
-            'filters' => $request->only(['search']),
+            'branches' => $branches,
+            'divisions' => $divisions,
+            'filters' => $request->only(['search', 'branch_id', 'division_id', 'salary_status']),
         ]);
     }
 
@@ -59,6 +85,11 @@ class PayrollController extends Controller
         $query = Payroll::with(['branch:id,name', 'division:id,name'])
             ->where('company_id', $company->id)
             ->latest();
+
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where('code', 'like', "%{$search}%");
+        }
 
         if ($request->filled('start_date') && $request->filled('end_date')) {
             $query->whereBetween('start_date', [$request->input('start_date'), $request->input('end_date')]);
@@ -86,13 +117,69 @@ class PayrollController extends Controller
             'total_payrolls_count' => Payroll::where('company_id', $company->id)->count(),
         ];
 
+        $activeEmployees = Employee::where('company_id', $company->id)
+            ->where('is_active', true)
+            ->select('id', 'name', 'nip', 'basic_salary', 'branch_id', 'division_id', 'payroll_cycle')
+            ->get();
+
+        $missingSalary = $activeEmployees->filter(fn($e) => empty($e->basic_salary) || $e->basic_salary <= 0);
+
+        $readiness = [
+            'total_active' => $activeEmployees->count(),
+            'missing_salary_employees' => $missingSalary->map(fn($e) => [
+                'id' => $e->id,
+                'name' => $e->name,
+                'nip' => $e->nip,
+                'branch_id' => $e->branch_id,
+                'division_id' => $e->division_id,
+                'payroll_cycle' => $e->payroll_cycle,
+            ])->values(),
+        ];
+
         return Inertia::render('Owner/Finance/Payrolls/Index', [
             'payrolls' => $payrolls,
             'branches' => $branches,
             'divisions' => $divisions,
             'stats' => $stats,
-            'filters' => $request->only(['start_date', 'end_date', 'branch_id', 'division_id', 'status']),
+            'readiness' => $readiness,
+            'filters' => $request->only(['search', 'start_date', 'end_date', 'branch_id', 'division_id', 'status']),
         ]);
+    }
+
+    public function exportExcel(Request $request)
+    {
+        $company = auth()->user()->company;
+        
+        $query = Payroll::with(['branch:id,name', 'division:id,name'])
+            ->where('company_id', $company->id)
+            ->latest();
+
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where('code', 'like', "%{$search}%");
+        }
+
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $query->whereBetween('start_date', [$request->input('start_date'), $request->input('end_date')]);
+        }
+
+        if ($request->filled('branch_id')) {
+            $query->where('branch_id', $request->input('branch_id'));
+        }
+
+        if ($request->filled('division_id')) {
+            $query->where('division_id', $request->input('division_id'));
+        }
+        
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        $payrolls = $query->get();
+
+        $filename = 'Rekap-Penggajian-' . now()->format('Ymd-His') . '.xlsx';
+
+        return Excel::download(new PayrollSummaryExport($payrolls), $filename);
     }
 
     public function checkEmployees()
@@ -442,7 +529,7 @@ class PayrollController extends Controller
                     'total_deductions' => $totalDeductions,
                     'net_salary' => $netSalary,
                     'loan_installment_id' => $loanInstallmentId,
-                    'remarks' => $remarks ?: ($totalPenalty > 0 ? 'Potongan denda absensi' : null)
+                    'remarks' => $remarks
                 ]);
 
                 if ($approvedReimbursements->isNotEmpty()) {
@@ -474,7 +561,7 @@ class PayrollController extends Controller
         $payroll = Payroll::with([
             'branch:id,name',
             'division:id,name',
-            'items.employee:id,name,nip,branch_id,division_id,position_id',
+            'items.employee:id,name,nip,branch_id,division_id,position_id,joined_at',
             'items.employee.division:id,name',
             'items.employee.position:id,name',
             'items.employee.branch:id,name',
@@ -512,7 +599,7 @@ class PayrollController extends Controller
 
         $item = $payroll->items()
             ->with([
-                'employee:id,name,nip,basic_salary,branch_id,division_id,position_id,joined_at',
+                'employee:id,name,nip,basic_salary,branch_id,division_id,position_id,joined_at,bank_name,bank_account_number,bank_account_name,bpjs_kesehatan_no,jht_no,jp_no,ptkp_status',
                 'employee.division:id,name',
                 'employee.position:id,name',
                 'employee.branch:id,name',
@@ -586,11 +673,35 @@ class PayrollController extends Controller
             'percent' => $attendancePercent,
         ];
 
+        // Prorata calculation details
+        $prorataDetails = null;
+        if ($item->employee?->joined_at) {
+            $join = Carbon::parse($item->employee->joined_at);
+            if ($join->gt($startDate) && $join->lte($endDate)) {
+                $activeDays = $join->diffInDays($endDate) + 1;
+                $proratedSalary = ($item->basic_salary / $totalDaysInPeriod) * $activeDays;
+                $prorateAmount = max(0, round($item->basic_salary - $proratedSalary));
+                $prorataDetails = [
+                    'join_date' => $join->format('Y-m-d'),
+                    'join_date_formatted' => $join->locale('id')->isoFormat('D MMMM Y'),
+                    'active_days' => $activeDays,
+                    'total_days' => $totalDaysInPeriod,
+                    'prorate_amount' => $prorateAmount,
+                ];
+            }
+        }
+
+        $bpjsTk = $company->bpjsKetenagakerjaan()->firstOrCreate(['company_id' => $company->id]);
+        $bpjsKes = $company->bpjsKesehatan()->firstOrCreate(['company_id' => $company->id]);
+
         return Inertia::render('Owner/Finance/Payrolls/ItemShow', [
             'payroll' => $payroll,
             'item' => $item,
             'company' => $company,
             'attendanceSummary' => $attendanceSummary,
+            'prorataDetails' => $prorataDetails,
+            'bpjsTk' => $bpjsTk,
+            'bpjsKes' => $bpjsKes,
         ]);
     }
 
@@ -645,87 +756,20 @@ class PayrollController extends Controller
         return $pdf->stream('Slip-Gaji-'. $employeeName .'-'. $payroll->code .'.pdf');
     }
 
-    public function exportExcel(Request $request)
-    {
-        $company = auth()->user()->company;
-        
-        $query = Payroll::with(['branch:id,name', 'division:id,name'])
-            ->where('company_id', $company->id)
-            ->latest();
-
-        if ($request->filled('start_date') && $request->filled('end_date')) {
-            $query->whereBetween('start_date', [$request->input('start_date'), $request->input('end_date')]);
-        }
-
-        if ($request->filled('branch_id')) {
-            $query->where('branch_id', $request->input('branch_id'));
-        }
-
-        if ($request->filled('division_id')) {
-            $query->where('division_id', $request->input('division_id'));
-        }
-        
-        if ($request->filled('status')) {
-            $query->where('status', $request->input('status'));
-        }
-
-        $payrolls = $query->get();
-
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="Rekapitulasi-Penggajian-' . date('Ymd-His') . '.csv"',
-        ];
-
-        $callback = function () use ($payrolls) {
-            $file = fopen('php://output', 'w');
-            fputcsv($file, ['KODE PENGGAJIAN', 'PERIODE AWAL', 'PERIODE AKHIR', 'CABANG', 'DIVISI', 'JUMLAH KARYAWAN', 'TOTAL NOMINAL', 'STATUS']);
-
-            foreach ($payrolls as $p) {
-                fputcsv($file, [
-                    $p->code,
-                    $p->start_date,
-                    $p->end_date,
-                    $p->branch ? $p->branch->name : 'Semua Cabang',
-                    $p->division ? $p->division->name : 'Semua Divisi',
-                    $p->total_employees,
-                    $p->total_amount,
-                    strtoupper($p->status),
-                ]);
-            }
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
-    }
-
-    public function exportBankCsv($id)
+    public function exportBankExcel($id)
     {
         $company = auth()->user()->company;
         $payroll = Payroll::with(['items.employee'])->where('company_id', $company->id)->findOrFail($id);
 
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="Transfer-Gaji-' . Str::slug($payroll->code) . '.csv"',
-        ];
+        $period = Carbon::parse($payroll->start_date)->locale('id')->translatedFormat('F-Y');
+        $filename = 'Bank-Transfer-' . Str::slug($payroll->code) . '-' . $period . '.xlsx';
 
-        $callback = function () use ($payroll) {
-            $file = fopen('php://output', 'w');
-            fputcsv($file, ['NAMA KARYAWAN', 'NIP', 'NAMA BANK', 'NOMOR REKENING', 'PEMILIK REKENING', 'NOMINAL GAJI BERSIH (NET)']);
+        return Excel::download(new BankTransferExport($payroll), $filename);
+    }
 
-            foreach ($payroll->items as $item) {
-                fputcsv($file, [
-                    $item->employee?->name ?? '-',
-                    $item->employee?->nip ?? '-',
-                    $item->employee?->bank_name ?? '-',
-                    $item->employee?->bank_account_number ?? '-',
-                    $item->employee?->bank_account_holder ?? '-',
-                    $item->net_salary,
-                ]);
-            }
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+    public function exportBankCsv($id)
+    {
+        return $this->exportBankExcel($id);
     }
 
     public function updateStatus(Request $request, $id)
