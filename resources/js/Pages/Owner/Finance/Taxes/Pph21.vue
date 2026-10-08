@@ -1,185 +1,316 @@
 <script setup>
-import { ref, computed } from 'vue'
-import { Head, Link } from '@inertiajs/vue3'
+import { Head } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
-import Button from '@/Components/UI/Button.vue'
-import Input from '@/Components/UI/Input.vue'
 
 const props = defineProps({
-    ptkpList: Array,
-})
-
-// Interactive Simulator
-const simSalary = ref(10000000)
-const simPtkp = ref('TK/0')
-
-const selectedPtkpObj = computed(() => {
-    return props.ptkpList.find(p => p.code === simPtkp.value) || props.ptkpList[0]
-})
-
-const simResult = computed(() => {
-    const gross = Math.min(Number(simSalary.value) || 0, 12000000)
-    const biayaJabatan = Math.min(gross * 0.05, 500000)
-    const ptkpYearly = selectedPtkpObj.value?.yearly || 54000000
-    
-    // BPJS estimation (approximate for sim: 1% kes, 2% jht, 1% jp)
-    const totalBpjsKaryawan = gross * 0.04
-    const totalBpjsPerusahaan = gross * 0.0454
-
-    const netoMonthly = gross - biayaJabatan - totalBpjsKaryawan - totalBpjsPerusahaan
-    const netoYearly = netoMonthly * 12
-    const pkpYearly = Math.max(0, netoYearly - ptkpYearly)
-    const pph21Yearly = pkpYearly * 0.05
-    const pph21Monthly = Math.round(pph21Yearly / 12)
-
-    return {
-        gross,
-        biayaJabatan,
-        netoMonthly,
-        netoYearly,
-        ptkpYearly,
-        pkpYearly,
-        pph21Monthly,
-        terCategory: selectedPtkpObj.value?.ter_category,
+    ptkpList: {
+        type: Array,
+        default: () => []
+    },
+    progressiveRates: {
+        type: Array,
+        default: () => []
     }
 })
 
+// Fallback jika progressiveRates belum ada dari props
+const defaultProgressiveRates = [
+    {
+        tier: 'Tier 1',
+        range_label: 'Rp 0 - Rp 60.000.000',
+        rate_label: '5%',
+        description: 'Penghasilan kena pajak sampai dengan Rp 60 juta',
+        color: 'blue'
+    },
+    {
+        tier: 'Tier 2',
+        range_label: 'Rp 60.000.000 - Rp 250.000.000',
+        rate_label: '15%',
+        description: 'Penghasilan kena pajak di atas Rp 60 juta s/d Rp 250 juta',
+        color: 'indigo'
+    },
+    {
+        tier: 'Tier 3',
+        range_label: 'Rp 250.000.000 - Rp 500.000.000',
+        rate_label: '25%',
+        description: 'Penghasilan kena pajak di atas Rp 250 juta s/d Rp 500 juta',
+        color: 'amber'
+    },
+    {
+        tier: 'Tier 4',
+        range_label: 'Rp 500.000.000 - Rp 5.000.000.000',
+        rate_label: '30%',
+        description: 'Penghasilan kena pajak di atas Rp 500 juta s/d Rp 5 miliar',
+        color: 'orange'
+    },
+    {
+        tier: 'Tier 5',
+        range_label: 'Di atas Rp 5.000.000.000',
+        rate_label: '35%',
+        description: 'Penghasilan kena pajak di atas Rp 5 miliar',
+        color: 'rose'
+    }
+]
+
+const tierList = props.progressiveRates && props.progressiveRates.length > 0 
+    ? props.progressiveRates 
+    : defaultProgressiveRates
+
 const formatCurrency = (val) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val || 0)
+}
+
+const getPtkpBadgeClass = (code) => {
+    if (code.startsWith('TK/')) {
+        return 'bg-blue-50 text-blue-600 border-blue-200/80'
+    }
+    if (code.startsWith('K/I/')) {
+        return 'bg-purple-50 text-purple-600 border-purple-200/80'
+    }
+    return 'bg-emerald-50 text-emerald-600 border-emerald-200/80'
+}
+
+const getTierBadgeClass = (tier) => {
+    switch (tier) {
+        case 'Tier 1':
+            return 'bg-blue-50 text-blue-600 border-blue-200/80'
+        case 'Tier 2':
+            return 'bg-indigo-50 text-indigo-600 border-indigo-200/80'
+        case 'Tier 3':
+            return 'bg-amber-50 text-amber-600 border-amber-200/80'
+        case 'Tier 4':
+            return 'bg-orange-50 text-orange-600 border-orange-200/80'
+        case 'Tier 5':
+            return 'bg-rose-50 text-rose-600 border-rose-200/80'
+        default:
+            return 'bg-slate-50 text-slate-600 border-slate-200/80'
+    }
+}
+
+const getTierRateTextClass = (tier) => {
+    switch (tier) {
+        case 'Tier 1':
+            return 'text-blue-600'
+        case 'Tier 2':
+            return 'text-indigo-600'
+        case 'Tier 3':
+            return 'text-amber-600'
+        case 'Tier 4':
+            return 'text-orange-600'
+        case 'Tier 5':
+            return 'text-rose-600'
+        default:
+            return 'text-slate-700'
+    }
 }
 </script>
 
 <template>
     <AppLayout>
-        <Head title="Kalkulasi Pajak PPh 21 & PTKP - Frans HRIS" />
+        <Head title="Pajak Penghasilan (PPh 21) & PTKP - Frans HRIS" />
 
         <div class="space-y-6">
-            <!-- Header -->
+            <!-- Header Halaman -->
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 class="text-2xl font-bold text-secondary-900 tracking-tight">Kalkulasi Pajak PPh 21 & PTKP</h1>
-                    <p class="text-sm text-secondary-500 mt-1">
-                        Pedoman Penghasilan Tidak Kena Pajak (PTKP) dan Tarif Efektif Rata-Rata (TER) resmi.
+                    <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Pajak Penghasilan (PPh 21) & PTKP</h1>
+                    <p class="text-sm text-slate-500 mt-1">
+                        Tabel informatif kategori Penghasilan Tidak Kena Pajak (PTKP) dan dasar acuan pemotongan PPh Pasal 21.
                     </p>
                 </div>
                 <div class="flex items-center gap-3">
-                    <Link :href="route('owner.finance.taxes.bpjs-tk')">
-                        <Button variant="secondary" size="md">BPJS Ketenagakerjaan</Button>
-                    </Link>
-                    <Link :href="route('owner.finance.taxes.bpjs-kes')">
-                        <Button variant="secondary" size="md">BPJS Kesehatan</Button>
-                    </Link>
-                </div>
-            </div>
-
-            <!-- Tax Simulator Widget -->
-            <div class="bg-gradient-to-br from-primary-900 to-secondary-900 rounded-2xl p-6 text-white shadow-lg">
-                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                    <div class="max-w-md space-y-4">
-                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-white/10 text-primary-200 border border-white/15">
-                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                            Simulasi Cepat PPh 21 Karyawan
-                        </div>
-                        <h2 class="text-xl font-bold">Kalkulator Estimasi Potongan Pajak Bulanan</h2>
-                        <p class="text-xs text-white/70 leading-relaxed">
-                            Hitung otomatis estimasi potongan PPh 21 berdasarkan Gaji Pokok dan status tanggungan keluarga (PTKP) menurut regulasi terbaru.
-                        </p>
-                    </div>
-
-                    <div class="bg-white/10 backdrop-blur-md p-5 rounded-xl border border-white/15 w-full lg:w-auto lg:min-w-[420px] space-y-4">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs font-medium text-white/80 mb-1">Gaji Pokok (Rp)</label>
-                                <input
-                                    type="number"
-                                    v-model="simSalary"
-                                    class="w-full bg-white/15 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-400"
-                                    placeholder="Contoh: 10000000"
-                                />
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-white/80 mb-1">Status PTKP</label>
-                                <select
-                                    v-model="simPtkp"
-                                    class="w-full bg-secondary-800 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-400"
-                                >
-                                    <option v-for="p in ptkpList" :key="p.code" :value="p.code">
-                                        {{ p.code }} ({{ p.category }})
-                                    </option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="p-3.5 rounded-lg bg-black/20 border border-white/10 flex items-center justify-between">
-                            <div>
-                                <div class="text-xs text-white/60">Estimasi PPh 21 Bulanan:</div>
-                                <div class="text-2xl font-black text-emerald-400 mt-0.5">
-                                    {{ formatCurrency(simResult.pph21Monthly) }}
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-xs font-semibold px-2 py-1 rounded bg-white/10 text-primary-200">
-                                    Kategori: {{ simResult.terCategory }}
-                                </span>
-                                <div class="text-[11px] text-white/50 mt-1">PKP: {{ formatCurrency(simResult.pkpYearly) }}/thn</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- PTKP Master Reference Table Card -->
-            <div class="bg-white rounded-xl border border-secondary-200 shadow-sm overflow-hidden">
-                <div class="p-5 border-b border-secondary-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div>
-                        <h2 class="text-base font-bold text-secondary-900">Tabel Referensi Resmi PTKP & Kategori TER</h2>
-                        <p class="text-xs text-secondary-500 mt-0.5">Standar Penghasilan Tidak Kena Pajak sesuai PMK & PP Republik Indonesia.</p>
-                    </div>
-                    <span class="text-xs font-semibold px-3 py-1 rounded-full bg-primary-50 text-primary-700 border border-primary-200">
-                        Total 12 Kategori Pajak
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-2xs">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        Standar PMK No. 101/PMK.010/2016
                     </span>
+                </div>
+            </div>
+
+            <!-- 4 Kartu Ringkasan (Stat Cards) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Kartu 1: PTKP Dasar -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+                    <div class="min-w-0">
+                        <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">PTKP DASAR (WAJIB PAJAK)</div>
+                        <div class="text-xl font-bold text-slate-900 mt-1">Rp 54.000.000</div>
+                        <div class="text-xs text-slate-400 mt-0.5">Rp 4.500.000 / bulan (TK/0)</div>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Kartu 2: Tambahan Status Kawin -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+                    <div class="min-w-0">
+                        <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">TAMBAHAN STATUS KAWIN</div>
+                        <div class="text-xl font-bold text-slate-900 mt-1">+ Rp 4.500.000</div>
+                        <div class="text-xs text-slate-400 mt-0.5">+ Rp 375.000 / bulan (K/0)</div>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Kartu 3: Tambahan Per Tanggungan -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+                    <div class="min-w-0">
+                        <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">TAMBAHAN PER TANGGUNGAN</div>
+                        <div class="text-xl font-bold text-slate-900 mt-1">+ Rp 4.500.000</div>
+                        <div class="text-xs text-slate-400 mt-0.5">Maks. 3 orang (+ Rp 375.000 / anak)</div>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Kartu 4: Tarif Pajak PPh 21 (Tier 1) -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+                    <div class="min-w-0">
+                        <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">TARIF PAJAK PPH 21 (TIER 1)</div>
+                        <div class="text-xl font-bold text-slate-900 mt-1">5%</div>
+                        <div class="text-xs text-slate-400 mt-0.5">PKP s/d Rp 60.000.000 / tahun</div>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabel 1: Tabel Master Kategori PTKP -->
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+                <div class="p-5 border-b border-slate-200/80">
+                    <h2 class="text-base font-bold text-slate-900 tracking-tight">Tabel Master Kategori PTKP</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Daftar batas Penghasilan Tidak Kena Pajak yang digunakan sebagai pengurang penghasilan bruto karyawan.
+                    </p>
                 </div>
 
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm text-secondary-600">
-                        <thead class="bg-secondary-50 border-b border-secondary-200 text-xs font-semibold text-secondary-700 uppercase tracking-wider">
+                    <table class="w-full text-left text-sm text-slate-600">
+                        <thead class="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                             <tr>
-                                <th class="px-5 py-3">Kode PTKP</th>
-                                <th class="px-5 py-3">Kategori</th>
-                                <th class="px-5 py-3">Keterangan / Status Pernikahan</th>
-                                <th class="px-5 py-3 text-right">PTKP Setahun</th>
-                                <th class="px-5 py-3 text-right">PTKP Sebulan</th>
-                                <th class="px-5 py-3 text-center">Golongan TER</th>
+                                <th class="px-5 py-3.5 whitespace-nowrap">KODE STATUS</th>
+                                <th class="px-5 py-3.5 whitespace-nowrap">KATEGORI</th>
+                                <th class="px-5 py-3.5 whitespace-nowrap">KETERANGAN</th>
+                                <th class="px-5 py-3.5 whitespace-nowrap text-right">PTKP / TAHUN</th>
+                                <th class="px-5 py-3.5 whitespace-nowrap text-right">PTKP / BULAN</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-secondary-200">
-                            <tr v-for="ptkp in ptkpList" :key="ptkp.code" class="hover:bg-secondary-50/50 transition">
-                                <td class="px-5 py-3.5 whitespace-nowrap font-mono font-bold text-primary-700">
-                                    {{ ptkp.code }}
+                        <tbody class="divide-y divide-slate-100">
+                            <tr v-for="ptkp in ptkpList" :key="ptkp.code" class="hover:bg-slate-50/60 transition">
+                                <td class="px-5 py-3.5 whitespace-nowrap">
+                                    <span 
+                                        class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-mono font-bold border"
+                                        :class="getPtkpBadgeClass(ptkp.code)"
+                                    >
+                                        {{ ptkp.code }}
+                                    </span>
                                 </td>
-                                <td class="px-5 py-3.5 whitespace-nowrap text-xs font-semibold text-secondary-800">
+                                <td class="px-5 py-3.5 whitespace-nowrap text-xs font-medium text-slate-800">
                                     {{ ptkp.category }}
                                 </td>
-                                <td class="px-5 py-3.5 text-secondary-700">
+                                <td class="px-5 py-3.5 text-xs text-slate-600">
                                     {{ ptkp.description }}
                                 </td>
-                                <td class="px-5 py-3.5 whitespace-nowrap text-right font-bold text-secondary-900">
+                                <td class="px-5 py-3.5 whitespace-nowrap text-right font-bold text-slate-900 text-sm">
                                     {{ formatCurrency(ptkp.yearly) }}
                                 </td>
-                                <td class="px-5 py-3.5 whitespace-nowrap text-right text-secondary-700 font-medium">
+                                <td class="px-5 py-3.5 whitespace-nowrap text-right font-semibold text-emerald-600 text-sm">
                                     {{ formatCurrency(ptkp.monthly) }}
-                                </td>
-                                <td class="px-5 py-3.5 whitespace-nowrap text-center">
-                                    <span
-                                        class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold"
-                                        :class="ptkp.ter_category === 'TER A' ? 'bg-blue-50 text-blue-700 border border-blue-200' : (ptkp.ter_category === 'TER B' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-purple-50 text-purple-700 border border-purple-200')"
-                                    >
-                                        {{ ptkp.ter_category }}
-                                    </span>
                                 </td>
                             </tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- Tabel 2: Tabel Lapisan Tarif Progresif PPh 21 (Pasal 17) -->
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+                <div class="p-5 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900 tracking-tight">Tabel Lapisan Tarif Progresif PPh 21 (Pasal 17)</h2>
+                        <p class="text-xs text-slate-500 mt-0.5">
+                            Ketentuan lapisan tarif pajak progresif wajib pajak orang pribadi berdasarkan UU No. 7 Tahun 2021 (UU HPP).
+                        </p>
+                    </div>
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200/80 shrink-0">
+                        Pasal 17 Ayat (1) Huruf a UU PPh
+                    </span>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-slate-600">
+                        <thead class="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                            <tr>
+                                <th class="px-5 py-3.5 whitespace-nowrap">LAPISAN (TIER)</th>
+                                <th class="px-5 py-3.5 whitespace-nowrap">RENTANG PENGHASILAN KENA PAJAK (PKP) SETAHUN</th>
+                                <th class="px-5 py-3.5 whitespace-nowrap text-center">TARIF PAJAK</th>
+                                <th class="px-5 py-3.5 whitespace-nowrap">KETERANGAN</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr v-for="rate in tierList" :key="rate.tier" class="hover:bg-slate-50/60 transition">
+                                <td class="px-5 py-3.5 whitespace-nowrap">
+                                    <span 
+                                        class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold border"
+                                        :class="getTierBadgeClass(rate.tier)"
+                                    >
+                                        {{ rate.tier }}
+                                    </span>
+                                </td>
+                                <td class="px-5 py-3.5 whitespace-nowrap font-medium text-slate-800 text-sm">
+                                    {{ rate.range_label }}
+                                </td>
+                                <td class="px-5 py-3.5 whitespace-nowrap text-center font-bold text-sm" :class="getTierRateTextClass(rate.tier)">
+                                    {{ rate.rate_label }}
+                                </td>
+                                <td class="px-5 py-3.5 text-xs text-slate-600">
+                                    {{ rate.description }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Card Edukasi: Bagaimana PPh 21 Karyawan Dihitung? -->
+            <div class="bg-blue-50/50 border border-blue-200/70 rounded-2xl p-5 sm:p-6 flex flex-col md:flex-row items-start gap-4">
+                <div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="flex-1 w-full">
+                    <h3 class="text-sm font-bold text-slate-900">Bagaimana PPh 21 Karyawan Dihitung?</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                        <div class="bg-white/90 p-4 rounded-xl border border-blue-100/80 shadow-2xs">
+                            <div class="text-xs font-bold text-slate-800">1. Penghasilan Bersih (Neto)</div>
+                            <p class="text-xs text-slate-600 mt-1 leading-relaxed">
+                                Penghasilan Bruto dikurangi Biaya Jabatan (5%, maks. Rp 500.000/bln) dan iuran BPJS yang menjadi tanggungan karyawan.
+                            </p>
+                        </div>
+                        <div class="bg-white/90 p-4 rounded-xl border border-blue-100/80 shadow-2xs">
+                            <div class="text-xs font-bold text-slate-800">2. Penghasilan Kena Pajak (PKP)</div>
+                            <p class="text-xs text-slate-600 mt-1 leading-relaxed">
+                                Penghasilan Bersih Setahun dikurangi dengan nilai PTKP sesuai tabel di atas. Jika hasilnya minus/nol, maka bebas pajak (PPh 21 = Rp 0).
+                            </p>
+                        </div>
+                        <div class="bg-white/90 p-4 rounded-xl border border-blue-100/80 shadow-2xs">
+                            <div class="text-xs font-bold text-slate-800">3. Pemotongan PPh 21 Bulanan</div>
+                            <p class="text-xs text-slate-600 mt-1 leading-relaxed">
+                                PKP Setahun dikalikan tarif pajak (5% untuk layer pertama), kemudian dibagi 12 bulan untuk dipotong pada slip gaji karyawan.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

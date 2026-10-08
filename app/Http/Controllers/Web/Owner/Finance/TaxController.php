@@ -28,8 +28,73 @@ class TaxController extends Controller
             ['code' => 'K/I/3', 'description' => 'Kawin, Penghasilan Istri Digabung, 3 Tanggungan', 'yearly' => 126000000, 'monthly' => 10500000, 'category' => 'Kawin + Istri Bekerja (K/I)', 'ter_category' => 'TER C'],
         ];
 
+        // Lapisan Tarif Progresif PPh 21 Berdasarkan UU HPP No. 7 Tahun 2021 Pasal 17 Ayat (1) Huruf a
+        $progressiveRates = [
+            [
+                'tier' => 'Tier 1',
+                'layer' => 'Lapisan I',
+                'range_label' => 'Rp 0 - Rp 60.000.000',
+                'min_pkp' => 0,
+                'max_pkp' => 60000000,
+                'rate' => 5,
+                'rate_label' => '5%',
+                'max_tax' => 3000000,
+                'description' => 'Penghasilan kena pajak sampai dengan Rp 60 juta',
+                'color' => 'blue',
+            ],
+            [
+                'tier' => 'Tier 2',
+                'layer' => 'Lapisan II',
+                'range_label' => 'Rp 60.000.000 - Rp 250.000.000',
+                'min_pkp' => 60000000,
+                'max_pkp' => 250000000,
+                'rate' => 15,
+                'rate_label' => '15%',
+                'max_tax' => 28500000,
+                'description' => 'Penghasilan kena pajak di atas Rp 60 juta s/d Rp 250 juta',
+                'color' => 'indigo',
+            ],
+            [
+                'tier' => 'Tier 3',
+                'layer' => 'Lapisan III',
+                'range_label' => 'Rp 250.000.000 - Rp 500.000.000',
+                'min_pkp' => 250000000,
+                'max_pkp' => 500000000,
+                'rate' => 25,
+                'rate_label' => '25%',
+                'max_tax' => 62500000,
+                'description' => 'Penghasilan kena pajak di atas Rp 250 juta s/d Rp 500 juta',
+                'color' => 'amber',
+            ],
+            [
+                'tier' => 'Tier 4',
+                'layer' => 'Lapisan IV',
+                'range_label' => 'Rp 500.000.000 - Rp 5.000.000.000',
+                'min_pkp' => 500000000,
+                'max_pkp' => 5000000000,
+                'rate' => 30,
+                'rate_label' => '30%',
+                'max_tax' => 1350000000,
+                'description' => 'Penghasilan kena pajak di atas Rp 500 juta s/d Rp 5 miliar',
+                'color' => 'orange',
+            ],
+            [
+                'tier' => 'Tier 5',
+                'layer' => 'Lapisan V',
+                'range_label' => 'Di atas Rp 5.000.000.000',
+                'min_pkp' => 5000000000,
+                'max_pkp' => null,
+                'rate' => 35,
+                'rate_label' => '35%',
+                'max_tax' => null,
+                'description' => 'Penghasilan kena pajak di atas Rp 5 miliar',
+                'color' => 'rose',
+            ],
+        ];
+
         return Inertia::render('Owner/Finance/Taxes/Pph21', [
             'ptkpList' => $ptkpList,
+            'progressiveRates' => $progressiveRates,
         ]);
     }
 
