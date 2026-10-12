@@ -134,10 +134,14 @@ class DatabaseSeeder extends Seeder
         // Divisions
         $divIt = Division::create(['company_id' => $goysMedia->id, 'name' => 'IT']);
         $divSales = Division::create(['company_id' => $goysMedia->id, 'name' => 'Sales']);
-        $divisions = [$divIt, $divSales];
+        $divHr = Division::create(['company_id' => $goysMedia->id, 'name' => 'HR & Operasional']);
+        $divFinance = Division::create(['company_id' => $goysMedia->id, 'name' => 'Finance & Accounting']);
+        $divisions = [$divIt, $divSales, $divHr, $divFinance];
 
         // Positions
         $posManager = Position::create(['company_id' => $goysMedia->id, 'name' => 'Manager']);
+        $posSupervisor = Position::create(['company_id' => $goysMedia->id, 'name' => 'Supervisor']);
+        $posSenior = Position::create(['company_id' => $goysMedia->id, 'name' => 'Senior Staff']);
         $posStaff = Position::create(['company_id' => $goysMedia->id, 'name' => 'Staff']);
 
         // 15 Shifts
@@ -186,12 +190,25 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        // Employees for each branch (2 per branch: 1 manager, 1 staff)
-        foreach ($branches as $branch) {
-            for ($i = 0; $i < 2; $i++) {
-                $isManager = ($i === 0);
-                $position = $isManager ? $posManager : $posStaff;
-                $division = $faker->randomElement($divisions);
+        // Employee templates per branch (8 employees per branch = 24 employees total)
+        // Designed to have both full tenure (>12 months) and prorata (<12 months)
+        $empProfiles = [
+            0 => ['pos' => $posManager, 'salary' => 14000000, 'allowance' => 2000000, 'join' => '2023-03-01'], // 36 bln (1x Gaji Penuh)
+            1 => ['pos' => $posSupervisor, 'salary' => 9500000, 'allowance' => 1000000, 'join' => '2024-02-15'], // 25 bln (1x Gaji Penuh)
+            2 => ['pos' => $posSenior, 'salary' => 7500000, 'allowance' => 500000, 'join' => '2024-09-10'], // 18 bln (1x Gaji Penuh)
+            3 => ['pos' => $posStaff, 'salary' => 6200000, 'allowance' => 300000, 'join' => '2025-01-20'], // 14 bln (1x Gaji Penuh)
+            4 => ['pos' => $posStaff, 'salary' => 5800000, 'allowance' => 200000, 'join' => '2025-06-15'], // 9 bln (Prorata 9/12)
+            5 => ['pos' => $posStaff, 'salary' => 5500000, 'allowance' => 0, 'join' => '2025-09-15'], // 6 bln (Prorata 6/12)
+            6 => ['pos' => $posStaff, 'salary' => 5200000, 'allowance' => 0, 'join' => '2025-11-15'], // 4 bln (Prorata 4/12)
+            7 => ['pos' => $posStaff, 'salary' => 5000000, 'allowance' => 0, 'join' => '2026-01-15'], // 2 bln (Prorata 2/12)
+        ];
+
+        $empCounter = 1;
+        foreach ($branches as $branchIndex => $branch) {
+            for ($i = 0; $i < 8; $i++) {
+                $prof = $empProfiles[$i];
+                $position = $prof['pos'];
+                $division = $divisions[($branchIndex + $i) % count($divisions)];
                 
                 $genderEnum = $faker->randomElement(['male', 'female']);
                 $firstName = $faker->firstName($genderEnum);
@@ -200,13 +217,13 @@ class DatabaseSeeder extends Seeder
                 
                 $empUser = User::create([
                     'name' => $fullName,
-                    'email' => strtolower($firstName . '.' . $lastName . $faker->unique()->randomNumber(2)) . '@goysmedia.com',
+                    'email' => strtolower($firstName . '.' . $lastName . '.' . $empCounter) . '@goysmedia.com',
                     'password' => Hash::make('password123'),
                     'role' => 'employee',
                 ]);
 
-                $basicSalary = $isManager ? $faker->randomElement([12000000, 15000000]) : $faker->randomElement([5000000, 6500000, 7000000]);
                 $bankName = $faker->randomElement(['BCA', 'Mandiri', 'BRI', 'BNI']);
+                $nip = 'EMP-' . str_pad($empCounter, 4, '0', STR_PAD_LEFT);
 
                 $employee = Employee::create([
                     'user_id' => $empUser->id,
@@ -215,14 +232,14 @@ class DatabaseSeeder extends Seeder
                     'email' => $empUser->email,
                     'phone' => '08' . $faker->numerify('##########'),
                     'gender' => $genderEnum,
-                    'nik' => $faker->numerify('################'),
-                    'nip' => $faker->numerify('EMP-####'),
+                    'nik' => '327' . str_pad($empCounter, 13, '0', STR_PAD_LEFT),
+                    'nip' => $nip,
                     'birth_date' => $faker->dateTimeBetween('-35 years', '-22 years')->format('Y-m-d'),
                     'address' => $faker->address,
                     'branch_id' => $branch->id,
                     'division_id' => $division->id,
                     'position_id' => $position->id,
-                    'joined_at' => $faker->dateTimeBetween('-3 years', '-10 days')->format('Y-m-d'),
+                    'joined_at' => $prof['join'],
                     
                     // Bank Details
                     'bank_name' => $bankName,
@@ -230,10 +247,10 @@ class DatabaseSeeder extends Seeder
                     'bank_account_name' => $fullName,
 
                     // Payroll Data
-                    'basic_salary' => $basicSalary,
-                    'fixed_allowance' => $isManager ? $faker->randomElement([0, 1500000, 2000000]) : $faker->randomElement([0, 300000, 500000]),
+                    'basic_salary' => $prof['salary'],
+                    'fixed_allowance' => $prof['allowance'],
                     'daily_allowance' => 50000,
-                    'other_allowance' => $faker->randomElement([0, 150000]),
+                    'other_allowance' => 0,
                     'overtime_rate_per_hour' => 50000,
                     'late_penalty_type' => 'flat',
                     'late_penalty_nominal' => 50000,
@@ -242,12 +259,14 @@ class DatabaseSeeder extends Seeder
                     'npwp' => $faker->numerify('##.###.###.#-###.###'),
                     'ptkp_status' => $faker->randomElement(['TK/0', 'TK/1', 'K/0', 'K/1']),
                     'taxable' => true,
-                    'bpjs_kesehatan_no' => $faker->numerify('000#########'),
-                    'jht_no' => $faker->numerify('120#########'),
-                    'jp_no' => $faker->numerify('130#########'),
-                    'jkk_no' => $faker->numerify('140#########'),
-                    'jkm_no' => $faker->numerify('150#########'),
+                    'bpjs_kesehatan_no' => '000' . str_pad($empCounter, 9, '0', STR_PAD_LEFT),
+                    'jht_no' => '120' . str_pad($empCounter, 9, '0', STR_PAD_LEFT),
+                    'jp_no' => '130' . str_pad($empCounter, 9, '0', STR_PAD_LEFT),
+                    'jkk_no' => '140' . str_pad($empCounter, 9, '0', STR_PAD_LEFT),
+                    'jkm_no' => '150' . str_pad($empCounter, 9, '0', STR_PAD_LEFT),
                 ]);
+
+                $empCounter++;
 
                 // Create Mock Attendance for September 2026
                 \App\Models\Attendance::create([

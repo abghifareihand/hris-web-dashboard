@@ -672,25 +672,50 @@ class AbghiFareihanSeeder extends Seeder
                     'payment_date' => '2026-03-15',
                     'branch_id' => null,
                     'status' => 'paid',
-                    'total_employees' => 1,
-                    'total_amount' => 16625000,
+                    'total_employees' => 0,
+                    'total_amount' => 0,
                 ]
             );
 
-            ThrItem::updateOrCreate(
-                [
-                    'thr_id' => $thr->id,
-                    'employee_id' => $employee->id,
-                ],
-                [
-                    'tenure_months' => 38,
-                    'basis_amount' => 17500000,
-                    'prorate_multiplier' => 1.00,
-                    'thr_amount' => 17500000,
-                    'tax_amount' => 875000,
-                    'net_amount' => 16625000,
-                ]
-            );
+            // Populasikan rincian THR seluruh karyawan yang sudah memenuhi masa kerja minimal
+            $allEmployees = Employee::where('company_id', $company->id)->get();
+            $paymentDate = Carbon::parse('2026-03-15');
+
+            foreach ($allEmployees as $emp) {
+                $joinedAt = Carbon::parse($emp->joined_at);
+                $diffInDays = $joinedAt->diffInDays($paymentDate, false);
+
+                // Lewati jika belum bergabung atau masa kerja kurang dari 1 bulan (30 hari)
+                if ($diffInDays < 30) {
+                    continue;
+                }
+
+                $monthsTenure = max(1, (int) floor($diffInDays / 30.436875));
+                $basis = (float) $emp->basic_salary;
+
+                if ($monthsTenure < 12) {
+                    $prorateMultiplier = round($monthsTenure / 12, 4);
+                    $netAmount = round(($basis * $monthsTenure) / 12);
+                } else {
+                    $prorateMultiplier = 1.0;
+                    $netAmount = $basis;
+                }
+
+                ThrItem::updateOrCreate(
+                    [
+                        'thr_id' => $thr->id,
+                        'employee_id' => $emp->id,
+                    ],
+                    [
+                        'tenure_months' => $monthsTenure,
+                        'basis_amount' => $basis,
+                        'prorate_multiplier' => $prorateMultiplier,
+                        'thr_amount' => $netAmount,
+                        'tax_amount' => 0,
+                        'net_amount' => $netAmount,
+                    ]
+                );
+            }
 
             $thr->update([
                 'total_employees' => $thr->items()->count(),

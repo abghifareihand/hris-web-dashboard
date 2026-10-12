@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Head, Link, useForm, router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import Button from '@/Components/UI/Button.vue'
@@ -8,14 +8,21 @@ import Modal from '@/Components/UI/Modal.vue'
 import Input from '@/Components/UI/Input.vue'
 import DataTable from '@/Components/Table/DataTable.vue'
 import TableEmpty from '@/Components/Table/TableEmpty.vue'
+import ClientTablePagination from '@/Components/Table/ClientTablePagination.vue'
 
 const props = defineProps({
     payroll: Object,
     unpaidLoanInstallments: Object,
 })
 
-// Search Filter in Table
+// Search Filter in Table & Pagination
 const searchQuery = ref('')
+const currentPage = ref(1)
+const perPage = ref(10)
+
+watch(searchQuery, () => {
+    currentPage.value = 1
+})
 
 const filteredItems = computed(() => {
     if (!props.payroll?.items) return []
@@ -29,6 +36,11 @@ const filteredItems = computed(() => {
         const division = item.employee?.division?.name?.toLowerCase() || ''
         return name.includes(q) || nip.includes(q) || position.includes(q) || division.includes(q)
     })
+})
+
+const paginatedItems = computed(() => {
+    const start = (currentPage.value - 1) * perPage.value
+    return filteredItems.value.slice(start, start + perPage.value)
 })
 
 // Status Changer Modal
@@ -482,8 +494,8 @@ const getInitials = (name) => {
                         '',
                     ]"
                 >
-                    <template v-if="filteredItems && filteredItems.length > 0">
-                        <tr v-for="item in filteredItems" :key="item.id" class="hover:bg-slate-50/70 transition">
+                    <template v-if="paginatedItems && paginatedItems.length > 0">
+                        <tr v-for="item in paginatedItems" :key="item.id" class="hover:bg-slate-50/70 transition">
                             <!-- Karyawan -->
                             <td class="px-5 py-4 whitespace-nowrap">
                                 <div class="font-semibold text-slate-900 text-sm">{{ item.employee?.name || '-' }}</div>
@@ -620,6 +632,13 @@ const getInitials = (name) => {
                     />
                 </DataTable>
             </div>
+
+            <!-- Table Pagination -->
+            <ClientTablePagination
+                v-model:current-page="currentPage"
+                :total-items="filteredItems.length"
+                :per-page="perPage"
+            />
         </div>
 
         <!-- Modal Konfirmasi Perubahan Status -->
