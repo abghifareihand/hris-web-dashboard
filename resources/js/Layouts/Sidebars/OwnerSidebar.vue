@@ -405,10 +405,10 @@ const toggleAccordion = (key) => {
                     </svg>
                 </button>
                 <div v-show="accordions.laporanKehadiran" class="mt-1 sidebar-submenu-light">
-                    <Link :href="route('owner.reports.attendances.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.reports.attendances.index') }">Laporan Kehadiran</Link>
-                    <Link :href="route('owner.reports.attendances.recap.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.reports.attendances.recap.*') }">Rekapitulasi</Link>
-                    <Link :href="route('owner.reports.attendances.overtime-recap.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.reports.attendances.overtime-recap.*') }">Lembur</Link>
+                    <Link :href="route('owner.reports.attendances.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.reports.attendances.index') }">Data Kehadiran</Link>
+                    <Link :href="route('owner.reports.attendances.recap.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.reports.attendances.recap.*') }">Rekap Kehadiran</Link>
                     <Link :href="route('owner.reports.attendances.rate.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.reports.attendances.rate.*') }">Tingkat Kehadiran</Link>
+                    <Link :href="route('owner.reports.attendances.overtime-recap.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.reports.attendances.overtime-recap.*') }">Rekap Lembur</Link>
                 </div>
             </div>
 
