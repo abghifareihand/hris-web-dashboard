@@ -92,7 +92,7 @@ class TaxController extends Controller
             ],
         ];
 
-        return Inertia::render('Owner/Finance/Taxes/Pph21', [
+        return Inertia::render('Owner/Finance/Taxes/Pph21/Index', [
             'ptkpList' => $ptkpList,
             'progressiveRates' => $progressiveRates,
         ]);
@@ -106,7 +106,7 @@ class TaxController extends Controller
         $company = auth()->user()->company;
         $settings = $company->bpjsKetenagakerjaan()->firstOrCreate(['company_id' => $company->id]);
         
-        return Inertia::render('Owner/Finance/Taxes/BpjsTk', [
+        return Inertia::render('Owner/Finance/Taxes/BpjsTk/Index', [
             'settings' => $settings,
         ]);
     }
@@ -144,7 +144,7 @@ class TaxController extends Controller
         $company = auth()->user()->company;
         $settings = $company->bpjsKesehatan()->firstOrCreate(['company_id' => $company->id]);
 
-        return Inertia::render('Owner/Finance/Taxes/BpjsKes', [
+        return Inertia::render('Owner/Finance/Taxes/BpjsKes/Index', [
             'settings' => $settings,
         ]);
     }

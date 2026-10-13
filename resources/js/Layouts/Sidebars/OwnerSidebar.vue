@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted, nextTick } from 'vue';
 import { Link } from '@inertiajs/vue3';
 
 defineProps({
@@ -17,6 +17,35 @@ defineProps({
 });
 
 defineEmits(['close']);
+
+const navRef = ref(null);
+
+const handleNavScroll = () => {
+    if (navRef.value) {
+        sessionStorage.setItem('owner_sidebar_scroll', navRef.value.scrollTop.toString());
+    }
+};
+
+onMounted(() => {
+    nextTick(() => {
+        if (!navRef.value) return;
+
+        const savedScroll = sessionStorage.getItem('owner_sidebar_scroll');
+        if (savedScroll !== null) {
+            navRef.value.scrollTop = Number(savedScroll);
+        }
+
+        // Ensure active menu item is comfortably visible
+        const activeLink = navRef.value.querySelector('.active');
+        if (activeLink) {
+            const navRect = navRef.value.getBoundingClientRect();
+            const linkRect = activeLink.getBoundingClientRect();
+            if (linkRect.top < navRect.top || linkRect.bottom > navRect.bottom) {
+                activeLink.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+        }
+    });
+});
 
 // Accordion states for owner sidebar
 const accordions = ref({
@@ -86,7 +115,11 @@ const toggleAccordion = (key) => {
         </div>
 
         <!-- Navigation Links -->
-        <nav class="sidebar-nav flex-1 overflow-y-auto py-4 px-3 space-y-1">
+        <nav
+            ref="navRef"
+            @scroll="handleNavScroll"
+            class="sidebar-nav flex-1 overflow-y-auto py-4 px-3 space-y-1"
+        >
             <!-- Dashboard -->
             <Link
                 :href="route('owner.dashboard')"

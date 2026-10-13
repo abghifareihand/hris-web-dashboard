@@ -56,7 +56,7 @@ class OvertimeController extends Controller
         $branches = Branch::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
         $divisions = Division::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
 
-        return Inertia::render('Owner/Management/Overtimes/Pending', [
+        return Inertia::render('Owner/Management/Overtimes/Pending/Index', [
             'pendingOvertimes' => $pendingOvertimes,
             'branches' => $branches,
             'divisions' => $divisions,

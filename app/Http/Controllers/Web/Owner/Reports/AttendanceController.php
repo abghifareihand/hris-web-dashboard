@@ -121,7 +121,7 @@ class AttendanceController extends Controller
             'poor' => $setting->status_poor ?? 'Kurang',
         ];
 
-        return Inertia::render('Owner/Reports/Attendances/Recap', [
+        return Inertia::render('Owner/Reports/Attendances/Recap/Index', [
             'employees' => $employees,
             'recapData' => $recapData,
             'branches' => $branches,
@@ -194,7 +194,7 @@ class AttendanceController extends Controller
         $branches = Branch::where('company_id', $company->id)->select('id', 'name')->get();
         $divisions = Division::where('company_id', $company->id)->select('id', 'name')->get();
 
-        return Inertia::render('Owner/Reports/Attendances/Rate', [
+        return Inertia::render('Owner/Reports/Attendances/Rate/Index', [
             'employees' => $employees,
             'rateData' => $recapList,
             'branches' => $branches,
@@ -303,7 +303,7 @@ class AttendanceController extends Controller
         $branches = Branch::where('company_id', $company->id)->select('id', 'name')->get();
         $divisions = Division::where('company_id', $company->id)->select('id', 'name')->get();
 
-        return Inertia::render('Owner/Reports/Attendances/OvertimeRecap', [
+        return Inertia::render('Owner/Reports/Attendances/Overtime/Index', [
             'employees' => $employees,
             'overtimeData' => $recap,
             'branches' => $branches,
@@ -391,7 +391,7 @@ class AttendanceController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return Inertia::render('Owner/Reports/Attendances/OvertimeDetail', [
+        return Inertia::render('Owner/Reports/Attendances/Overtime/Show', [
             'employee' => $employee,
             'overtimes' => $overtimes,
             'startDate' => $startDate,

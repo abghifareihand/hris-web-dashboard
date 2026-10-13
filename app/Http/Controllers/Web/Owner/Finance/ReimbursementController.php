@@ -53,7 +53,7 @@ class ReimbursementController extends Controller
         $branches = Branch::where('company_id', $company->id)->select('id', 'name')->get();
         $divisions = Division::where('company_id', $company->id)->select('id', 'name')->get();
 
-        return Inertia::render('Owner/Finance/Reimbursements/Pending', [
+        return Inertia::render('Owner/Finance/Reimbursements/Pending/Index', [
             'pendingReimbursements' => $pendingReimbursements,
             'branches' => $branches,
             'divisions' => $divisions,

@@ -72,7 +72,7 @@ class LeaveController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
-        return Inertia::render('Owner/Management/Leaves/Pending', [
+        return Inertia::render('Owner/Management/Leaves/Pending/Index', [
             'pendingLeaves' => $pendingLeaves,
             'branches' => $branches,
             'divisions' => $divisions,

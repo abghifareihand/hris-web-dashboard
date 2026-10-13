@@ -67,7 +67,7 @@ class PendingEmployeeController extends Controller
             ->paginate($request->input('per_page', 10))
             ->withQueryString();
 
-        return Inertia::render('Owner/Management/Employees/Pending', [
+        return Inertia::render('Owner/Management/Employees/Pending/Index', [
             'pendingEmployees' => $pendingEmployees,
             'branches' => $branches,
             'divisions' => $divisions,

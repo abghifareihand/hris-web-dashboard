@@ -26,7 +26,7 @@ class ThrSettingController extends Controller
             ]
         );
 
-        return Inertia::render('Owner/Finance/Thr/Settings', [
+        return Inertia::render('Owner/Finance/Thr/Settings/Index', [
             'settings' => $settings,
         ]);
     }

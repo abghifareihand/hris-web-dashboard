@@ -17,7 +17,7 @@ class ProfileController extends Controller
             abort(403, 'Anda tidak memiliki akses perusahaan.');
         }
 
-        return Inertia::render('Owner/Management/Company/Profile', [
+        return Inertia::render('Owner/Management/Company/Profile/Index', [
             'company' => $company,
         ]);
     }

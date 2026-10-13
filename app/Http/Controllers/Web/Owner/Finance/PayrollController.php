@@ -68,7 +68,7 @@ class PayrollController extends Controller
         $branches = Branch::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
         $divisions = Division::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
 
-        return Inertia::render('Owner/Finance/Payrolls/Master', [
+        return Inertia::render('Owner/Finance/Payrolls/Master/Index', [
             'employees' => $employees,
             'bpjsTk' => $bpjsTk,
             'bpjsKes' => $bpjsKes,
@@ -694,7 +694,7 @@ class PayrollController extends Controller
         $bpjsTk = $company->bpjsKetenagakerjaan()->firstOrCreate(['company_id' => $company->id]);
         $bpjsKes = $company->bpjsKesehatan()->firstOrCreate(['company_id' => $company->id]);
 
-        return Inertia::render('Owner/Finance/Payrolls/ItemShow', [
+        return Inertia::render('Owner/Finance/Payrolls/Items/Show', [
             'payroll' => $payroll,
             'item' => $item,
             'company' => $company,

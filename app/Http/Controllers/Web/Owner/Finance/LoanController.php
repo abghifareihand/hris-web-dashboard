@@ -54,7 +54,7 @@ class LoanController extends Controller
         $branches = Branch::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
         $divisions = Division::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
 
-        return Inertia::render('Owner/Finance/Loans/Pending', [
+        return Inertia::render('Owner/Finance/Loans/Pending/Index', [
             'pendingLoans' => $pendingLoans,
             'branches' => $branches,
             'divisions' => $divisions,
