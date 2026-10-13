@@ -22,8 +22,30 @@ class PerformanceController extends Controller
         $company = $request->user()?->company ?? auth()->user()?->company;
         if (!$company) abort(403);
 
-        $startDate = $request->input('start_date', now()->startOfMonth()->format('Y-m-d'));
-        $endDate = $request->input('end_date', now()->endOfMonth()->format('Y-m-d'));
+        $defaultStartDate = now()->startOfMonth()->format('Y-m-d');
+        $defaultEndDate = now()->endOfMonth()->format('Y-m-d');
+
+        $hasAllDates = $request->boolean('all_dates') || $request->input('period') === 'all';
+        $hasExplicitDate = $request->filled('start_date') || $request->filled('end_date');
+        $hasAnyDateQuery = $request->query->has('start_date') || $request->query->has('end_date');
+
+        if ($hasAllDates) {
+            $isInitialLoad = false;
+            $startDate = null;
+            $endDate = null;
+        } elseif ($hasExplicitDate) {
+            $isInitialLoad = false;
+            $startDate = $request->input('start_date');
+            $endDate = $request->input('end_date');
+        } elseif ($hasAnyDateQuery) {
+            $isInitialLoad = false;
+            $startDate = null;
+            $endDate = null;
+        } else {
+            $isInitialLoad = true;
+            $startDate = $defaultStartDate;
+            $endDate = $defaultEndDate;
+        }
 
         $branches = Branch::where('company_id', $company->id)->select('id', 'name')->get();
         $divisions = Division::where('company_id', $company->id)->select('id', 'name')->get();
@@ -55,6 +77,7 @@ class PerformanceController extends Controller
             'filters' => [
                 'start_date' => $startDate,
                 'end_date' => $endDate,
+                'all_dates' => ($hasAllDates || (!$isInitialLoad && empty($startDate) && empty($endDate))) ? 1 : 0,
                 'branch_id' => $request->input('branch_id', ''),
                 'division_id' => $request->input('division_id', ''),
                 'employee_id' => $request->input('employee_id', ''),
@@ -127,8 +150,26 @@ class PerformanceController extends Controller
         $company = $request->user()?->company ?? auth()->user()?->company;
         if (!$company) abort(403);
 
-        $startDate = $request->input('start_date', now()->startOfMonth()->format('Y-m-d'));
-        $endDate = $request->input('end_date', now()->endOfMonth()->format('Y-m-d'));
+        $defaultStartDate = now()->startOfMonth()->format('Y-m-d');
+        $defaultEndDate = now()->endOfMonth()->format('Y-m-d');
+
+        $hasAllDates = $request->boolean('all_dates') || $request->input('period') === 'all';
+        $hasExplicitDate = $request->filled('start_date') || $request->filled('end_date');
+        $hasAnyDateQuery = $request->query->has('start_date') || $request->query->has('end_date');
+
+        if ($hasAllDates) {
+            $startDate = null;
+            $endDate = null;
+        } elseif ($hasExplicitDate) {
+            $startDate = $request->input('start_date');
+            $endDate = $request->input('end_date');
+        } elseif ($hasAnyDateQuery) {
+            $startDate = null;
+            $endDate = null;
+        } else {
+            $startDate = $defaultStartDate;
+            $endDate = $defaultEndDate;
+        }
 
         $branches = Branch::where('company_id', $company->id)->select('id', 'name')->get();
         $divisions = Division::where('company_id', $company->id)->select('id', 'name')->get();
@@ -149,8 +190,8 @@ class PerformanceController extends Controller
             'divisions' => $divisions,
             'positions' => $positions,
             'filters' => [
-                'start_date' => $startDate,
-                'end_date' => $endDate,
+                'start_date' => $startDate ?? '',
+                'end_date' => $endDate ?? '',
                 'branch_id' => $request->input('branch_id', ''),
                 'division_id' => $request->input('division_id', ''),
                 'position_id' => $request->input('position_id', ''),
@@ -290,11 +331,11 @@ class PerformanceController extends Controller
                 $q->where('company_id', $company->id);
             });
 
-        if ($request->filled('start_date') && $request->filled('end_date')) {
+        if (!empty($startDate) && !empty($endDate)) {
             $query->whereBetween('date', [$startDate, $endDate]);
-        } elseif ($request->filled('start_date')) {
+        } elseif (!empty($startDate)) {
             $query->where('date', '>=', $startDate);
-        } elseif ($request->filled('end_date')) {
+        } elseif (!empty($endDate)) {
             $query->where('date', '<=', $endDate);
         }
 
@@ -527,26 +568,38 @@ class PerformanceController extends Controller
         $allFilteredEmployees = (clone $empQuery)->get();
         $employeeIds = $allFilteredEmployees->pluck('id')->toArray();
 
-        $attendances = Attendance::with('shift:id,clock_in,clock_out')
-            ->whereIn('employee_id', $employeeIds)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->get()
-            ->groupBy('employee_id');
+        $attQuery = Attendance::with('shift:id,clock_in,clock_out')->whereIn('employee_id', $employeeIds);
+        $schedQuery = WorkSchedule::whereIn('employee_id', $employeeIds)->where('is_day_off', false);
+        $otQuery = Overtime::whereIn('employee_id', $employeeIds)->where('status', 'approved');
 
-        $workSchedules = WorkSchedule::whereIn('employee_id', $employeeIds)
-            ->where('is_day_off', false)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->get()
-            ->groupBy('employee_id');
+        if (!empty($startDate) && !empty($endDate)) {
+            $attQuery->whereBetween('date', [$startDate, $endDate]);
+            $schedQuery->whereBetween('date', [$startDate, $endDate]);
+            $otQuery->whereBetween('date', [$startDate, $endDate]);
+            $start = Carbon::parse($startDate);
+            $end = Carbon::parse($endDate);
+        } elseif (!empty($startDate)) {
+            $attQuery->where('date', '>=', $startDate);
+            $schedQuery->where('date', '>=', $startDate);
+            $otQuery->where('date', '>=', $startDate);
+            $start = Carbon::parse($startDate);
+            $end = now();
+        } elseif (!empty($endDate)) {
+            $attQuery->where('date', '<=', $endDate);
+            $schedQuery->where('date', '<=', $endDate);
+            $otQuery->where('date', '<=', $endDate);
+            $firstDate = Attendance::whereIn('employee_id', $employeeIds)->min('date');
+            $start = $firstDate ? Carbon::parse($firstDate) : now()->startOfMonth();
+            $end = Carbon::parse($endDate);
+        } else {
+            $firstDate = Attendance::whereIn('employee_id', $employeeIds)->min('date');
+            $start = $firstDate ? Carbon::parse($firstDate) : now()->startOfMonth();
+            $end = now();
+        }
 
-        $overtimes = Overtime::whereIn('employee_id', $employeeIds)
-            ->where('status', 'approved')
-            ->whereBetween('date', [$startDate, $endDate])
-            ->get()
-            ->groupBy('employee_id');
-
-        $start = Carbon::parse($startDate);
-        $end = Carbon::parse($endDate);
+        $attendances = $attQuery->get()->groupBy('employee_id');
+        $workSchedules = $schedQuery->get()->groupBy('employee_id');
+        $overtimes = $otQuery->get()->groupBy('employee_id');
 
         $periodWeekdays = 0;
         $tempDay = $start->copy();

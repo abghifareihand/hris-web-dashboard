@@ -28,7 +28,7 @@ class AttendanceSettingController extends Controller
             ]
         );
 
-        return Inertia::render('Owner/Management/Attendance/Settings/Index', [
+        return Inertia::render('Owner/System/Settings/Attendance/Index', [
             'setting' => $setting,
         ]);
     }

@@ -14,7 +14,7 @@ class LoanSettingController extends Controller
         $company = auth()->user()->company;
         $setting = $company ? $company->loanSetting : null;
 
-        return Inertia::render('Owner/Finance/Loans/Settings/Index', [
+        return Inertia::render('Owner/System/Settings/Loan/Index', [
             'setting' => $setting,
         ]);
     }

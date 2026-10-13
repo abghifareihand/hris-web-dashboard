@@ -77,7 +77,7 @@ class AnnouncementController extends Controller
         $branches = Branch::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
         $divisions = Division::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
 
-        return Inertia::render('Owner/Announcements/Index', [
+        return Inertia::render('Owner/System/Announcements/Index', [
             'announcements' => $announcements,
             'branches' => $branches,
             'divisions' => $divisions,
@@ -109,7 +109,7 @@ class AnnouncementController extends Controller
         $branches = Branch::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
         $divisions = Division::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
 
-        return Inertia::render('Owner/Announcements/Create', [
+        return Inertia::render('Owner/System/Announcements/Create', [
             'branches' => $branches,
             'divisions' => $divisions,
         ]);
@@ -175,7 +175,7 @@ class AnnouncementController extends Controller
             ->where('company_id', $company->id)
             ->findOrFail($id);
 
-        return Inertia::render('Owner/Announcements/Show', [
+        return Inertia::render('Owner/System/Announcements/Show', [
             'announcement' => $announcement,
         ]);
     }
@@ -192,7 +192,7 @@ class AnnouncementController extends Controller
         $branches = Branch::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
         $divisions = Division::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
 
-        return Inertia::render('Owner/Announcements/Edit', [
+        return Inertia::render('Owner/System/Announcements/Edit', [
             'announcement' => $announcement,
             'branches' => $branches,
             'divisions' => $divisions,

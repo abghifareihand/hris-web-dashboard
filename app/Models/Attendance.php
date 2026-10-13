@@ -27,6 +27,11 @@ class Attendance extends Model
         'notes',
     ];
 
+    protected $appends = [
+        'status_label',
+        'status_color',
+    ];
+
     protected $casts = [
         'date' => 'date',
         'clock_in_time' => 'datetime',

@@ -24,8 +24,13 @@ class AttendanceController extends Controller
         $company = $request->user()->company;
         if (!$company) abort(403);
 
-        $query = Attendance::with(['employee:id,name,nip,branch_id,division_id', 'employee.division:id,name', 'employee.branch:id,name', 'shift:id,name,clock_in,clock_out'])
-            ->where('company_id', $company->id);
+        $query = Attendance::with([
+            'employee:id,name,nip,branch_id,division_id,user_id',
+            'employee.user:id,avatar',
+            'employee.division:id,name',
+            'employee.branch:id,name',
+            'shift:id,name,clock_in,clock_out',
+        ])->where('company_id', $company->id);
 
         if ($request->filled('branch_id')) {
             $query->whereHas('employee', function ($q) use ($request) {
@@ -43,12 +48,37 @@ class AttendanceController extends Controller
             $query->where('attendance_status', $request->status);
         }
 
-        if ($request->filled('start_date')) {
-            $query->whereDate('date', '>=', $request->start_date);
+        $defaultToday = now()->format('Y-m-d');
+        $hasAllDates = $request->boolean('all_dates') || $request->input('period') === 'all';
+        $hasExplicitDate = $request->filled('start_date') || $request->filled('end_date');
+        $hasAnyDateQuery = $request->query->has('start_date') || $request->query->has('end_date');
+
+        if ($hasAllDates) {
+            $isInitialLoad = false;
+            $startDate = null;
+            $endDate = null;
+        } elseif ($hasExplicitDate) {
+            $isInitialLoad = false;
+            $startDate = $request->input('start_date');
+            $endDate = $request->input('end_date');
+        } elseif ($hasAnyDateQuery) {
+            // User had query parameters like ?start_date=&end_date= (empty)
+            $isInitialLoad = false;
+            $startDate = null;
+            $endDate = null;
+        } else {
+            // Initial load without any date parameters
+            $isInitialLoad = true;
+            $startDate = $defaultToday;
+            $endDate = $defaultToday;
         }
 
-        if ($request->filled('end_date')) {
-            $query->whereDate('date', '<=', $request->end_date);
+        if (!empty($startDate)) {
+            $query->whereDate('date', '>=', $startDate);
+        }
+
+        if (!empty($endDate)) {
+            $query->whereDate('date', '<=', $endDate);
         }
 
         if ($request->filled('search')) {
@@ -58,16 +88,38 @@ class AttendanceController extends Controller
             });
         }
 
-        $attendances = $query->latest('date')->paginate(10)->withQueryString();
+        $attendances = $query->latest('date')->paginate($request->input('per_page', 10))->withQueryString();
 
         $branches = Branch::where('company_id', $company->id)->select('id', 'name')->get();
         $divisions = Division::where('company_id', $company->id)->select('id', 'name')->get();
 
+        $filters = array_merge(
+            $request->only(['branch_id', 'division_id', 'status', 'search']),
+            [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'all_dates' => ($hasAllDates || (!$isInitialLoad && empty($startDate) && empty($endDate))) ? 1 : 0,
+            ]
+        );
+
+        $totalRecords = (clone $query)->count();
+        $totalPresent = (clone $query)->whereIn('attendance_status', ['present', 'on_time', 'late', 'clocked_in'])->count();
+        $totalLate = (clone $query)->where(function($q) {
+            $q->where('attendance_status', 'late')->orWhere('late_minutes', '>', 0);
+        })->count();
+
+        $summary = [
+            'totalRecords' => $totalRecords,
+            'totalPresent' => $totalPresent,
+            'totalLate' => $totalLate,
+        ];
+
         return Inertia::render('Owner/Reports/Attendances/Index', [
             'attendances' => $attendances,
+            'summary' => $summary,
             'branches' => $branches,
             'divisions' => $divisions,
-            'filters' => $request->only(['branch_id', 'division_id', 'status', 'start_date', 'end_date', 'search']),
+            'filters' => $filters,
         ]);
     }
 
@@ -101,11 +153,35 @@ class AttendanceController extends Controller
         $company = $request->user()->company;
         if (!$company) abort(403);
 
-        $startDate = $request->input('start_date', now()->startOfMonth()->format('Y-m-d'));
-        $endDate = $request->input('end_date', now()->format('Y-m-d'));
+        $defaultStartDate = now()->startOfMonth()->format('Y-m-d');
+        $defaultEndDate = now()->format('Y-m-d');
+
+        $hasAllDates = $request->boolean('all_dates') || $request->input('period') === 'all';
+        $hasExplicitDate = $request->filled('start_date') || $request->filled('end_date');
+        $hasAnyDateQuery = $request->query->has('start_date') || $request->query->has('end_date');
+
+        if ($hasAllDates) {
+            $isInitialLoad = false;
+            $startDate = null;
+            $endDate = null;
+        } elseif ($hasExplicitDate) {
+            $isInitialLoad = false;
+            $startDate = $request->input('start_date');
+            $endDate = $request->input('end_date');
+        } elseif ($hasAnyDateQuery) {
+            // User explicitly sent empty date range (?start_date=&end_date=)
+            $isInitialLoad = false;
+            $startDate = null;
+            $endDate = null;
+        } else {
+            // Initial load without any date parameters
+            $isInitialLoad = true;
+            $startDate = $defaultStartDate;
+            $endDate = $defaultEndDate;
+        }
 
         $query = $this->getRecapQuery($company, $request);
-        $employees = $query->paginate(15)->withQueryString();
+        $employees = $query->paginate($request->input('per_page', 10))->withQueryString();
 
         $recapData = $this->calculateEmployeeRecap($employees->items(), $startDate, $endDate);
 
@@ -130,7 +206,14 @@ class AttendanceController extends Controller
             'startDate' => $startDate,
             'endDate' => $endDate,
             'statusLabels' => $statusLabels,
-            'filters' => $request->only(['branch_id', 'division_id', 'position_id', 'search', 'start_date', 'end_date']),
+            'filters' => array_merge(
+                $request->only(['branch_id', 'division_id', 'position_id', 'search']),
+                [
+                    'start_date' => $startDate,
+                    'end_date' => $endDate,
+                    'all_dates' => ($hasAllDates || (!$isInitialLoad && empty($startDate) && empty($endDate))) ? 1 : 0,
+                ]
+            ),
         ]);
     }
 
@@ -183,25 +266,117 @@ class AttendanceController extends Controller
         $company = $request->user()->company;
         if (!$company) abort(403);
 
-        $startDate = $request->input('start_date', now()->startOfMonth()->format('Y-m-d'));
-        $endDate = $request->input('end_date', now()->format('Y-m-d'));
+        $defaultStartDate = now()->startOfMonth()->format('Y-m-d');
+        $defaultEndDate = now()->format('Y-m-d');
+
+        $hasAllDates = $request->boolean('all_dates') || $request->input('period') === 'all';
+        $hasExplicitDate = $request->filled('start_date') || $request->filled('end_date');
+        $hasAnyDateQuery = $request->query->has('start_date') || $request->query->has('end_date');
+
+        if ($hasAllDates) {
+            $isInitialLoad = false;
+            $startDate = null;
+            $endDate = null;
+        } elseif ($hasExplicitDate) {
+            $isInitialLoad = false;
+            $startDate = $request->input('start_date');
+            $endDate = $request->input('end_date');
+        } elseif ($hasAnyDateQuery) {
+            $isInitialLoad = false;
+            $startDate = null;
+            $endDate = null;
+        } else {
+            $isInitialLoad = true;
+            $startDate = $defaultStartDate;
+            $endDate = $defaultEndDate;
+        }
 
         $query = $this->getRecapQuery($company, $request);
-        $employees = $query->paginate(15)->withQueryString();
+        $employees = $query->paginate($request->input('per_page', 10))->withQueryString();
 
         $recapList = $this->calculateEmployeeRecap($employees->items(), $startDate, $endDate);
 
         $branches = Branch::where('company_id', $company->id)->select('id', 'name')->get();
         $divisions = Division::where('company_id', $company->id)->select('id', 'name')->get();
+        $setting = AttendanceSetting::where('company_id', $company->id)->first();
+
+        $statusLabels = [
+            'very_good' => $setting->status_very_good ?? 'Sangat Baik',
+            'good' => $setting->status_good ?? 'Baik',
+            'fair' => $setting->status_fair ?? 'Cukup',
+            'poor' => $setting->status_poor ?? 'Kurang',
+        ];
+
+        // Calculate all active employees recap for global metrics & per-branch statistics
+        $allActiveEmployees = Employee::with(['branch:id,name', 'division:id,name', 'position:id,name', 'user:id,avatar'])
+            ->where('company_id', $company->id)
+            ->where('is_active', true)
+            ->get();
+
+        $allRecapList = $this->calculateEmployeeRecap($allActiveEmployees, $startDate, $endDate);
+
+        $branchRates = $branches->map(function ($branch) use ($allActiveEmployees, $allRecapList, $statusLabels) {
+            $branchEmployees = $allActiveEmployees->where('branch_id', $branch->id);
+            $count = $branchEmployees->count();
+
+            if ($count === 0) {
+                return [
+                    'id' => $branch->id,
+                    'name' => $branch->name,
+                    'employee_count' => 0,
+                    'attendance_rate' => 0,
+                    'status' => $statusLabels['poor'],
+                ];
+            }
+
+            $rates = $branchEmployees->map(function ($emp) use ($allRecapList) {
+                return $allRecapList[$emp->id]['attendance_rate'] ?? 0;
+            });
+
+            $avgRate = round($rates->avg(), 1);
+
+            $status = $statusLabels['poor'];
+            if ($avgRate >= 95) $status = $statusLabels['very_good'];
+            elseif ($avgRate >= 85) $status = $statusLabels['good'];
+            elseif ($avgRate >= 75) $status = $statusLabels['fair'];
+
+            return [
+                'id' => $branch->id,
+                'name' => $branch->name,
+                'employee_count' => $count,
+                'attendance_rate' => $avgRate,
+                'status' => $status,
+            ];
+        });
+
+        $globalAvgRate = count($allRecapList) > 0 ? round(collect($allRecapList)->avg('attendance_rate'), 1) : 0;
+        $globalWorkingDays = count($allRecapList) > 0 ? collect($allRecapList)->max('total_schedule') : 0;
+        $globalTotalEmployees = $allActiveEmployees->count();
+
+        $summary = [
+            'avgRate' => $globalAvgRate,
+            'totalWorkingDays' => $globalWorkingDays,
+            'totalCount' => $globalTotalEmployees,
+        ];
 
         return Inertia::render('Owner/Reports/Attendances/Rate/Index', [
             'employees' => $employees,
             'rateData' => $recapList,
+            'branchRates' => $branchRates,
+            'summary' => $summary,
             'branches' => $branches,
             'divisions' => $divisions,
             'startDate' => $startDate,
             'endDate' => $endDate,
-            'filters' => $request->only(['branch_id', 'division_id', 'search', 'start_date', 'end_date']),
+            'statusLabels' => $statusLabels,
+            'filters' => array_merge(
+                $request->only(['branch_id', 'division_id', 'search']),
+                [
+                    'start_date' => $startDate,
+                    'end_date' => $endDate,
+                    'all_dates' => ($hasAllDates || (!$isInitialLoad && empty($startDate) && empty($endDate))) ? 1 : 0,
+                ]
+            ),
         ]);
     }
 
@@ -250,10 +425,34 @@ class AttendanceController extends Controller
         $company = $request->user()->company;
         if (!$company) abort(403);
 
-        $startDate = $request->input('start_date', now()->startOfMonth()->format('Y-m-d'));
-        $endDate = $request->input('end_date', now()->format('Y-m-d'));
+        $defaultStartDate = now()->startOfMonth()->format('Y-m-d');
+        $defaultEndDate = now()->format('Y-m-d');
 
-        $query = Employee::with(['branch:id,name', 'division:id,name'])
+        $hasAllDates = $request->boolean('all_dates') || $request->input('period') === 'all';
+        $hasExplicitDate = $request->filled('start_date') || $request->filled('end_date');
+        $hasAnyDateQuery = $request->query->has('start_date') || $request->query->has('end_date');
+
+        if ($hasAllDates) {
+            $isInitialLoad = false;
+            $startDate = null;
+            $endDate = null;
+        } elseif ($hasExplicitDate) {
+            $isInitialLoad = false;
+            $startDate = $request->input('start_date');
+            $endDate = $request->input('end_date');
+        } elseif ($hasAnyDateQuery) {
+            $isInitialLoad = false;
+            $startDate = null;
+            $endDate = null;
+        } else {
+            $isInitialLoad = true;
+            $startDate = $defaultStartDate;
+            $endDate = $defaultEndDate;
+        }
+
+        $status = $request->input('status', 'approved');
+
+        $query = Employee::with(['branch:id,name', 'division:id,name', 'position:id,name', 'user:id,avatar'])
             ->where('company_id', $company->id)
             ->where('is_active', true);
 
@@ -272,14 +471,39 @@ class AttendanceController extends Controller
             });
         }
 
-        $employees = $query->paginate(15)->withQueryString();
+        // Hanya tampilkan karyawan yang benar-benar memiliki data lembur pada periode & status yang dipilih
+        $query->whereHas('overtimes', function ($q) use ($startDate, $endDate, $status) {
+            if ($status && $status !== 'all') {
+                $q->where('status', $status);
+            }
+            if (!empty($startDate) && !empty($endDate)) {
+                $q->whereBetween('date', [$startDate, $endDate]);
+            } elseif (!empty($startDate)) {
+                $q->where('date', '>=', $startDate);
+            } elseif (!empty($endDate)) {
+                $q->where('date', '<=', $endDate);
+            }
+        });
+
+        $query->orderBy('name', 'asc');
+
+        $employees = $query->paginate($request->input('per_page', 10))->withQueryString();
         $employeeIds = collect($employees->items())->pluck('id')->toArray();
 
-        $overtimes = Overtime::whereIn('employee_id', $employeeIds)
-            ->where('status', 'approved')
-            ->whereBetween('date', [$startDate, $endDate])
-            ->get()
-            ->groupBy('employee_id');
+        $overtimesQuery = Overtime::whereIn('employee_id', $employeeIds);
+        if ($status && $status !== 'all') {
+            $overtimesQuery->where('status', $status);
+        }
+
+        if (!empty($startDate) && !empty($endDate)) {
+            $overtimesQuery->whereBetween('date', [$startDate, $endDate]);
+        } elseif (!empty($startDate)) {
+            $overtimesQuery->where('date', '>=', $startDate);
+        } elseif (!empty($endDate)) {
+            $overtimesQuery->where('date', '<=', $endDate);
+        }
+
+        $overtimes = $overtimesQuery->get()->groupBy('employee_id');
 
         $recap = [];
         foreach ($employees->items() as $emp) {
@@ -300,17 +524,65 @@ class AttendanceController extends Controller
             ];
         }
 
+        // Global summary calculation for all filtered data
+        $allOvertimeQuery = Overtime::whereHas('employee', function($q) use ($company, $request) {
+            $q->where('company_id', $company->id)->where('is_active', true);
+            if ($request->filled('branch_id')) $q->where('branch_id', $request->branch_id);
+            if ($request->filled('division_id')) $q->where('division_id', $request->division_id);
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $q->where(function($sq) use ($search) {
+                    $sq->where('name', 'like', "%{$search}%")->orWhere('nip', 'like', "%{$search}%");
+                });
+            }
+        });
+
+        if ($status && $status !== 'all') {
+            $allOvertimeQuery->where('status', $status);
+        }
+
+        if (!empty($startDate) && !empty($endDate)) {
+            $allOvertimeQuery->whereBetween('date', [$startDate, $endDate]);
+        } elseif (!empty($startDate)) {
+            $allOvertimeQuery->where('date', '>=', $startDate);
+        } elseif (!empty($endDate)) {
+            $allOvertimeQuery->where('date', '<=', $endDate);
+        }
+
+        $allApprovedOvertimes = $allOvertimeQuery->get(['employee_id', 'duration_minutes']);
+        $totalEmployeesWithOt = $allApprovedOvertimes->pluck('employee_id')->unique()->count();
+        $totalRequests = $allApprovedOvertimes->count();
+        $totalMinutes = $allApprovedOvertimes->sum('duration_minutes');
+        $hours = floor($totalMinutes / 60);
+        $mins = $totalMinutes % 60;
+        $totalDurationFormatted = $totalMinutes > 0 ? "{$hours}j {$mins}m" : '0j';
+
+        $summary = [
+            'employeesWithOt' => $totalEmployeesWithOt,
+            'totalRequests' => $totalRequests,
+            'durationFormatted' => $totalDurationFormatted,
+        ];
+
         $branches = Branch::where('company_id', $company->id)->select('id', 'name')->get();
         $divisions = Division::where('company_id', $company->id)->select('id', 'name')->get();
 
         return Inertia::render('Owner/Reports/Attendances/Overtime/Index', [
             'employees' => $employees,
             'overtimeData' => $recap,
+            'summary' => $summary,
             'branches' => $branches,
             'divisions' => $divisions,
             'startDate' => $startDate,
             'endDate' => $endDate,
-            'filters' => $request->only(['branch_id', 'division_id', 'search', 'start_date', 'end_date']),
+            'filters' => array_merge(
+                $request->only(['branch_id', 'division_id', 'search']),
+                [
+                    'status' => $status,
+                    'start_date' => $startDate,
+                    'end_date' => $endDate,
+                    'all_dates' => ($hasAllDates || (!$isInitialLoad && empty($startDate) && empty($endDate))) ? 1 : 0,
+                ]
+            ),
         ]);
     }
 
@@ -388,7 +660,7 @@ class AttendanceController extends Controller
             ->where('status', 'approved')
             ->whereBetween('date', [$startDate, $endDate])
             ->latest('date')
-            ->paginate(15)
+            ->paginate($request->input('per_page', 10))
             ->withQueryString();
 
         return Inertia::render('Owner/Reports/Attendances/Overtime/Show', [
@@ -441,7 +713,7 @@ class AttendanceController extends Controller
 
     private function getRecapQuery($company, Request $request)
     {
-        $query = Employee::with(['branch:id,name', 'division:id,name', 'position:id,name'])
+        $query = Employee::with(['branch:id,name', 'division:id,name', 'position:id,name', 'user:id,avatar'])
             ->where('company_id', $company->id)
             ->where('is_active', true);
 
@@ -457,41 +729,62 @@ class AttendanceController extends Controller
             });
         }
 
+        $query->orderBy('name', 'asc');
+
         return $query;
     }
 
-    private function calculateEmployeeRecap($employees, $startDate, $endDate)
+    private function calculateEmployeeRecap($employees, $startDate = null, $endDate = null)
     {
         $employeeIds = collect($employees)->pluck('id')->toArray();
 
-        $workSchedules = WorkSchedule::whereIn('employee_id', $employeeIds)
-            ->where('is_day_off', false)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->get()
-            ->groupBy('employee_id');
+        $workSchedulesQuery = WorkSchedule::whereIn('employee_id', $employeeIds)
+            ->where('is_day_off', false);
+        if (!empty($startDate) && !empty($endDate)) {
+            $workSchedulesQuery->whereBetween('date', [$startDate, $endDate]);
+        } elseif (!empty($startDate)) {
+            $workSchedulesQuery->where('date', '>=', $startDate);
+        } elseif (!empty($endDate)) {
+            $workSchedulesQuery->where('date', '<=', $endDate);
+        }
+        $workSchedules = $workSchedulesQuery->get()->groupBy('employee_id');
 
-        $attendances = Attendance::whereIn('employee_id', $employeeIds)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->get()
-            ->groupBy('employee_id');
+        $attendancesQuery = Attendance::whereIn('employee_id', $employeeIds);
+        if (!empty($startDate) && !empty($endDate)) {
+            $attendancesQuery->whereBetween('date', [$startDate, $endDate]);
+        } elseif (!empty($startDate)) {
+            $attendancesQuery->where('date', '>=', $startDate);
+        } elseif (!empty($endDate)) {
+            $attendancesQuery->where('date', '<=', $endDate);
+        }
+        $attendances = $attendancesQuery->get()->groupBy('employee_id');
 
-        $leaves = LeaveRequest::whereIn('employee_id', $employeeIds)
-            ->where('status', 'approved')
-            ->where(function ($q) use ($startDate, $endDate) {
+        $leavesQuery = LeaveRequest::whereIn('employee_id', $employeeIds)
+            ->where('status', 'approved');
+        if (!empty($startDate) && !empty($endDate)) {
+            $leavesQuery->where(function ($q) use ($startDate, $endDate) {
                 $q->whereBetween('start_date', [$startDate, $endDate])
                   ->orWhereBetween('end_date', [$startDate, $endDate]);
-            })
-            ->get()
-            ->groupBy('employee_id');
+            });
+        }
+        $leaves = $leavesQuery->get()->groupBy('employee_id');
 
-        $overtimes = Overtime::whereIn('employee_id', $employeeIds)
-            ->where('status', 'approved')
-            ->whereBetween('date', [$startDate, $endDate])
-            ->get()
-            ->groupBy('employee_id');
+        $overtimesQuery = Overtime::whereIn('employee_id', $employeeIds)
+            ->where('status', 'approved');
+        if (!empty($startDate) && !empty($endDate)) {
+            $overtimesQuery->whereBetween('date', [$startDate, $endDate]);
+        } elseif (!empty($startDate)) {
+            $overtimesQuery->where('date', '>=', $startDate);
+        } elseif (!empty($endDate)) {
+            $overtimesQuery->where('date', '<=', $endDate);
+        }
+        $overtimes = $overtimesQuery->get()->groupBy('employee_id');
 
-        $start = Carbon::parse($startDate);
-        $end = Carbon::parse($endDate);
+        $minDate = !empty($startDate) ? $startDate : (Attendance::whereIn('employee_id', $employeeIds)->min('date') ?? now()->startOfMonth()->format('Y-m-d'));
+        $maxDate = !empty($endDate) ? $endDate : now()->format('Y-m-d');
+
+        $start = Carbon::parse($minDate);
+        $end = Carbon::parse($maxDate);
 
         $recapList = [];
 
@@ -528,12 +821,19 @@ class AttendanceController extends Controller
             $mins = $totalOvertimeMinutes % 60;
             $overtimeDurationFormatted = $totalOvertimeMinutes > 0 ? "{$hours}j {$mins}m" : '0j';
 
+            $totalViolations = $totalLate + $totalEarlyLeaving;
             $rate = round(($totalPresent / max(1, $totalSchedule)) * 100);
 
-            $evaluation = 'Kurang';
-            if ($rate >= 95) $evaluation = 'Sangat Baik';
-            elseif ($rate >= 85) $evaluation = 'Baik';
-            elseif ($rate >= 75) $evaluation = 'Cukup';
+            $setting = AttendanceSetting::where('company_id', $emp->company_id)->first();
+            $labelVeryGood = $setting->status_very_good ?? 'Sangat Baik';
+            $labelGood = $setting->status_good ?? 'Baik';
+            $labelFair = $setting->status_fair ?? 'Cukup';
+            $labelPoor = $setting->status_poor ?? 'Kurang';
+
+            $evaluation = $labelPoor;
+            if ($rate >= 95) $evaluation = $labelVeryGood;
+            elseif ($rate >= 85) $evaluation = $labelGood;
+            elseif ($rate >= 75) $evaluation = $labelFair;
 
             $recapList[$emp->id] = [
                 'employee' => $emp,
@@ -543,6 +843,7 @@ class AttendanceController extends Controller
                 'total_late' => $totalLate,
                 'total_early_leaving' => $totalEarlyLeaving,
                 'total_alpha' => $totalAlpha,
+                'total_violations' => $totalViolations,
                 'total_overtime_count' => $totalOvertimeCount,
                 'total_overtime_minutes' => $totalOvertimeMinutes,
                 'overtime_duration_formatted' => $overtimeDurationFormatted,

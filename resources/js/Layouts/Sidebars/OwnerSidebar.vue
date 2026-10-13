@@ -52,7 +52,6 @@ const accordions = ref({
     karyawan: false,
     perusahaan: false,
     penjadwalan: false,
-    kehadiran: false,
     cuti: false,
     lembur: false,
     klaimBiaya: false,
@@ -63,6 +62,7 @@ const accordions = ref({
     laporanKehadiran: false,
     laporanKinerja: false,
     pengumuman: false,
+    pengaturan: false,
 });
 
 // Auto-expand active group
@@ -70,17 +70,17 @@ const initAccordions = () => {
     if (route().current('owner.management.employees.*')) accordions.value.karyawan = true;
     if (route().current('owner.management.company.*')) accordions.value.perusahaan = true;
     if (route().current('owner.management.schedules.*')) accordions.value.penjadwalan = true;
-    if (route().current('owner.management.attendance.*')) accordions.value.kehadiran = true;
     if (route().current('owner.management.leaves.*')) accordions.value.cuti = true;
     if (route().current('owner.management.overtimes.*')) accordions.value.lembur = true;
     if (route().current('owner.finance.reimbursements.*')) accordions.value.klaimBiaya = true;
-    if (route().current('owner.finance.loans.*')) accordions.value.pinjaman = true;
+    if (route().current('owner.finance.loans.*') && !route().current('owner.finance.loans.settings.*')) accordions.value.pinjaman = true;
     if (route().current('owner.finance.payrolls.*')) accordions.value.penggajian = true;
     if (route().current('owner.finance.taxes.*')) accordions.value.pajak = true;
     if (route().current('owner.finance.thr.*')) accordions.value.thr = true;
     if (route().current('owner.reports.attendances.*')) accordions.value.laporanKehadiran = true;
     if (route().current('owner.reports.performances.*')) accordions.value.laporanKinerja = true;
     if (route().current('owner.announcements.*')) accordions.value.pengumuman = true;
+    if (route().current('owner.management.attendance.settings.*') || route().current('owner.finance.loans.settings.*')) accordions.value.pengaturan = true;
 };
 initAccordions();
 
@@ -215,28 +215,6 @@ const toggleAccordion = (key) => {
                 </div>
             </div>
 
-            <!-- Kehadiran -->
-            <!-- <div>
-                <button
-                    type="button"
-                    @click="toggleAccordion('kehadiran')"
-                    class="sidebar-link-light w-full justify-between"
-                    :class="{ 'active-parent': route().current('owner.management.attendance.*') }"
-                >
-                    <span class="flex items-center gap-3">
-                        <svg class="sidebar-icon-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span>Kehadiran</span>
-                    </span>
-                    <svg :class="accordions.kehadiran ? 'rotate-180' : ''" class="w-4 h-4 transition-transform text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                </button>
-                <div v-show="accordions.kehadiran" class="mt-1 sidebar-submenu-light">
-                    <Link :href="route('owner.management.attendance.settings.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.attendance.settings.*') }">Pengaturan Absensi</Link>
-                </div>
-            </div> -->
 
             <!-- Cuti & Izin -->
             <div>
@@ -323,7 +301,7 @@ const toggleAccordion = (key) => {
                     type="button"
                     @click="toggleAccordion('pinjaman')"
                     class="sidebar-link-light w-full justify-between"
-                    :class="{ 'active-parent': route().current('owner.finance.loans.*') }"
+                    :class="{ 'active-parent': route().current('owner.finance.loans.*') && !route().current('owner.finance.loans.settings.*') }"
                 >
                     <span class="flex items-center gap-3">
                         <svg class="sidebar-icon-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -470,9 +448,9 @@ const toggleAccordion = (key) => {
                 </div>
             </div>
 
-            <!-- Section Label: KOMUNIKASI -->
+            <!-- Section Label: SISTEM -->
             <div class="!mt-6 !mb-2 px-3">
-                <span class="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Komunikasi</span>
+                <span class="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Sistem</span>
             </div>
 
             <!-- Pengumuman -->
@@ -496,6 +474,31 @@ const toggleAccordion = (key) => {
                 <div v-show="accordions.pengumuman" class="mt-1 sidebar-submenu-light">
                     <Link :href="route('owner.announcements.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.announcements.index') }">Data Pengumuman</Link>
                     <Link :href="route('owner.announcements.create')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.announcements.create') }">Tambah Pengumuman</Link>
+                </div>
+            </div>
+
+            <!-- Pengaturan -->
+            <div>
+                <button
+                    type="button"
+                    @click="toggleAccordion('pengaturan')"
+                    class="sidebar-link-light w-full justify-between"
+                    :class="{ 'active-parent': route().current('owner.management.attendance.settings.*') || route().current('owner.finance.loans.settings.*') }"
+                >
+                    <span class="flex items-center gap-3">
+                        <svg class="sidebar-icon-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span>Pengaturan</span>
+                    </span>
+                    <svg :class="accordions.pengaturan ? 'rotate-180' : ''" class="w-4 h-4 transition-transform text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+                <div v-show="accordions.pengaturan" class="mt-1 sidebar-submenu-light">
+                    <Link :href="route('owner.management.attendance.settings.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.attendance.settings.*') }">Pengaturan Absensi</Link>
+                    <Link :href="route('owner.finance.loans.settings.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.finance.loans.settings.*') }">Pengaturan Pinjaman</Link>
                 </div>
             </div>
         </nav>
