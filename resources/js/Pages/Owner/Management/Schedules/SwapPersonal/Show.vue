@@ -50,6 +50,16 @@ const formatDateTime = (dateStr) => {
     });
 };
 
+const formatShiftTime = (shift) => {
+    if (!shift) return "";
+    const inTime = (shift.clock_in || shift.start_time)?.slice(0, 5);
+    const outTime = (shift.clock_out || shift.end_time)?.slice(0, 5);
+    if (inTime && outTime) {
+        return `(${inTime} - ${outTime})`;
+    }
+    return "";
+};
+
 const statusVariant = (status) => {
     switch (status) {
         case "approved":
@@ -110,56 +120,66 @@ const executeReject = () => {
 
     <div class="w-full space-y-6">
         <!-- Top Banner / Header -->
-        <div class="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
-            <div class="space-y-1.5">
-                <div class="flex flex-wrap items-center gap-2.5">
-                    <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                        Detail Permohonan Tukar Jadwal Mandiri
-                    </h1>
-                    <Badge :variant="statusVariant(swap.status)" size="sm">
-                        {{ statusLabel(swap.status) }}
-                    </Badge>
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="flex items-start gap-3.5 sm:gap-4">
+                <Link
+                    :href="route('owner.management.schedules.swap-personal.index')"
+                    class="group inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white border border-slate-200/80 text-slate-600 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-50 shadow-xs transition-all shrink-0 mt-0.5 cursor-pointer"
+                    title="Kembali ke Daftar Tukar Jadwal Mandiri"
+                >
+                    <svg
+                        class="w-5 h-5 transition-transform duration-200 group-hover:-translate-x-0.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                        />
+                    </svg>
+                </Link>
+                <div class="space-y-1.5">
+                    <div class="flex flex-wrap items-center gap-2.5">
+                        <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+                            Detail Permohonan Tukar Jadwal Mandiri
+                        </h1>
+                        <Badge :variant="statusVariant(swap.status)" size="sm">
+                            {{ statusLabel(swap.status) }}
+                        </Badge>
+                    </div>
+                    <p class="text-xs sm:text-sm text-slate-500">
+                        ID Permohonan: <span class="font-mono font-medium text-slate-700">#SWAP-P-{{ swap.id }}</span>
+                        &bull; Diajukan pada {{ formatDateTime(swap.created_at) }}
+                    </p>
                 </div>
-                <p class="text-xs sm:text-sm text-slate-500">
-                    ID Permohonan: <span class="font-mono font-medium text-slate-700">#SWAP-P-{{ swap.id }}</span>
-                    &bull; Diajukan pada {{ formatDateTime(swap.created_at) }}
-                </p>
             </div>
 
             <!-- Action Buttons -->
-            <div class="flex items-center gap-2.5 shrink-0 flex-wrap">
-                <Link :href="route('owner.management.schedules.swap-personal.index')">
-                    <Button variant="secondary">
-                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
-                        <span>Kembali ke Daftar</span>
-                    </Button>
-                </Link>
+            <div v-if="swap.status === 'pending'" class="flex items-center gap-2.5 shrink-0 flex-wrap">
+                <button
+                    type="button"
+                    @click="isRejectModalOpen = true"
+                    class="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition cursor-pointer"
+                >
+                    <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                    </svg>
+                    <span>Tolak</span>
+                </button>
 
-                <template v-if="swap.status === 'pending'">
-                    <button
-                        type="button"
-                        @click="isRejectModalOpen = true"
-                        class="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition cursor-pointer"
-                    >
-                        <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-                        </svg>
-                        <span>Tolak</span>
-                    </button>
-
-                    <button
-                        type="button"
-                        @click="isApproveModalOpen = true"
-                        class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition cursor-pointer shadow-xs"
-                    >
-                        <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
-                        </svg>
-                        <span>Setujui Permohonan</span>
-                    </button>
-                </template>
+                <button
+                    type="button"
+                    @click="isApproveModalOpen = true"
+                    class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition cursor-pointer shadow-xs"
+                >
+                    <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                    </svg>
+                    <span>Setujui Permohonan</span>
+                </button>
             </div>
         </div>
 
@@ -232,7 +252,7 @@ const executeReject = () => {
                                     Libur
                                 </span>
                                 <span v-else-if="originalSchedule?.shift" class="text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md inline-block mt-0.5">
-                                    {{ originalSchedule.shift.name }} ({{ originalSchedule.shift.start_time?.slice(0, 5) }} - {{ originalSchedule.shift.end_time?.slice(0, 5) }})
+                                    {{ originalSchedule.shift.name }} {{ formatShiftTime(originalSchedule.shift) }}
                                 </span>
                                 <span v-else class="text-xs text-slate-500">
                                     Jadwal Reguler
@@ -265,7 +285,7 @@ const executeReject = () => {
                                     Libur
                                 </span>
                                 <span v-else-if="targetSchedule?.shift" class="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md inline-block mt-0.5">
-                                    {{ targetSchedule.shift.name }} ({{ targetSchedule.shift.start_time?.slice(0, 5) }} - {{ targetSchedule.shift.end_time?.slice(0, 5) }})
+                                    {{ targetSchedule.shift.name }} {{ formatShiftTime(targetSchedule.shift) }}
                                 </span>
                                 <span v-else class="text-xs text-slate-500">
                                     Jadwal Reguler

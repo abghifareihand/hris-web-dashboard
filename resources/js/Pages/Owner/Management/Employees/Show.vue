@@ -55,44 +55,45 @@ const perDayAlphaCut = computed(() => {
     <Head :title="`Detail Karyawan - ${employee.name}`" />
 
     <div class="w-full space-y-6">
-        <!-- Top Profile Banner -->
-        <div class="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
-            <div class="flex items-center gap-4 sm:gap-5">
-                <!-- Avatar with soft ring -->
-                <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-bold text-2xl flex items-center justify-center shrink-0 shadow-xs ring-4 ring-emerald-50">
-                    {{ employee.name?.charAt(0).toUpperCase() }}
-                </div>
-                <div class="space-y-1.5">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="flex items-start gap-3.5 sm:gap-4">
+                <Link
+                    :href="route('owner.management.employees.index')"
+                    class="group inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white border border-slate-200/80 text-slate-600 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-50 shadow-xs transition-all shrink-0 mt-0.5 cursor-pointer"
+                    title="Kembali ke Daftar Karyawan"
+                >
+                    <svg
+                        class="w-5 h-5 transition-transform duration-200 group-hover:-translate-x-0.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                        />
+                    </svg>
+                </Link>
+                <div>
                     <div class="flex flex-wrap items-center gap-2.5">
-                        <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                            {{ employee.name }}
+                        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
+                            Detail Data Karyawan
                         </h1>
                         <Badge :variant="employee.is_active ? 'success' : 'danger'" size="sm">
                             {{ employee.is_active ? 'Karyawan Aktif' : 'Nonaktif' }}
                         </Badge>
                     </div>
-
-                    <!-- Metadata Pills -->
-                    <div class="text-xs text-slate-500 flex flex-wrap items-center gap-2">
-                        <span v-if="employee.nip" class="font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-medium">
-                            NIP: {{ employee.nip }}
-                        </span>
-                        <span>{{ employee.email }}</span>
-                        <span class="text-slate-300">&bull;</span>
-                        <span>{{ employee.phone || 'No. Telp belum diatur' }}</span>
-                        <span v-if="employee.position" class="text-slate-300">&bull;</span>
-                        <span v-if="employee.position" class="font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100/80">
-                            {{ employee.position.name }}
-                        </span>
-                    </div>
+                    <p class="text-xs sm:text-sm text-slate-500 mt-1">
+                        Informasi lengkap profil, struktur penugasan, dan komponen penggajian karyawan.
+                    </p>
                 </div>
             </div>
 
             <!-- Actions -->
             <div class="flex items-center gap-2.5 shrink-0">
-                <Link :href="route('owner.management.employees.index')">
-                    <Button variant="secondary">Kembali</Button>
-                </Link>
                 <Link :href="route('owner.management.employees.edit', employee.id)">
                     <Button variant="primary">
                         <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

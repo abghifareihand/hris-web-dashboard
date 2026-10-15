@@ -26,9 +26,9 @@ class AuthController extends Controller
             $request->session()->regenerate();
 
             if ($user->role === 'owner') {
-                return redirect()->intended(route('owner.dashboard'))->with('success', 'Selamat datang kembali, ' . $user->name);
+                return redirect()->intended(route('owner.dashboard'));
             } elseif ($user->role === 'employee') {
-                return redirect()->intended(route('employee.dashboard'))->with('success', 'Selamat datang kembali, ' . $user->name);
+                return redirect()->intended(route('employee.dashboard'));
             }
 
             Auth::logout();

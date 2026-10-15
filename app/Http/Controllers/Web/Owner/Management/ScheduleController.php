@@ -726,28 +726,38 @@ class ScheduleController extends Controller
         DB::transaction(function () use ($swap) {
             $swap->update(['status' => 'approved', 'approved_by' => auth()->id()]);
             
-            $schedule1 = WorkSchedule::where('employee_id', $swap->employee_id)
-                ->where('date', Carbon::parse($swap->original_work_date)->format('Y-m-d'))
-                ->first();
-                
-            $schedule2 = WorkSchedule::where('employee_id', $swap->employee_id)
-                ->where('date', Carbon::parse($swap->target_work_date)->format('Y-m-d'))
-                ->first();
-                
-            if ($schedule1 && $schedule2) {
-                $tempShiftId = $schedule1->shift_id;
-                $tempIsDayOff = $schedule1->is_day_off;
-                
-                $schedule1->update([
-                    'shift_id' => $schedule2->shift_id,
-                    'is_day_off' => $schedule2->is_day_off,
-                ]);
-                
-                $schedule2->update([
-                    'shift_id' => $tempShiftId,
-                    'is_day_off' => $tempIsDayOff,
-                ]);
-            }
+            $origDate = Carbon::parse($swap->original_work_date)->format('Y-m-d');
+            $tarDate = Carbon::parse($swap->target_work_date)->format('Y-m-d');
+            $companyId = $swap->company_id;
+
+            $schedule1 = WorkSchedule::firstOrCreate(
+                ['employee_id' => $swap->employee_id, 'date' => $origDate],
+                ['company_id' => $companyId, 'is_day_off' => true, 'attendance_type' => 'all']
+            );
+
+            $schedule2 = WorkSchedule::firstOrCreate(
+                ['employee_id' => $swap->employee_id, 'date' => $tarDate],
+                ['company_id' => $companyId, 'is_day_off' => true, 'attendance_type' => 'all']
+            );
+
+            $tempShiftId = $schedule1->shift_id;
+            $tempIsDayOff = $schedule1->is_day_off;
+            $tempAttendanceType = $schedule1->attendance_type;
+            $tempAllowedBranches = $schedule1->allowed_branches;
+
+            $schedule1->update([
+                'shift_id' => $schedule2->shift_id,
+                'is_day_off' => $schedule2->is_day_off,
+                'attendance_type' => $schedule2->attendance_type,
+                'allowed_branches' => $schedule2->allowed_branches,
+            ]);
+
+            $schedule2->update([
+                'shift_id' => $tempShiftId,
+                'is_day_off' => $tempIsDayOff,
+                'attendance_type' => $tempAttendanceType,
+                'allowed_branches' => $tempAllowedBranches,
+            ]);
         });
 
         return redirect()->back()
@@ -845,20 +855,42 @@ class ScheduleController extends Controller
         $reqDate = Carbon::parse($swap->requestor_work_date)->format('Y-m-d');
         $tarDate = Carbon::parse($swap->target_work_date)->format('Y-m-d');
 
-        $requestorSchedule = WorkSchedule::with('shift')
-            ->where('employee_id', $swap->requestor_id)
-            ->where('date', $reqDate)
-            ->first();
+        if ($swap->status === 'approved') {
+            // Saat permohonan sudah disetujui, shift asli pemohon di reqDate kini diemban oleh targetEmployee,
+            // dan shift asli targetEmployee di tarDate kini diemban oleh requestor.
+            $requestorSchedule = WorkSchedule::with('shift')
+                ->where('employee_id', $swap->target_employee_id)
+                ->where('date', $reqDate)
+                ->first();
 
-        $targetSchedule = WorkSchedule::with('shift')
-            ->where('employee_id', $swap->target_employee_id)
-            ->where('date', $tarDate)
-            ->first();
+            $targetSchedule = WorkSchedule::with('shift')
+                ->where('employee_id', $swap->requestor_id)
+                ->where('date', $tarDate)
+                ->first();
+        } else {
+            $requestorSchedule = WorkSchedule::with('shift')
+                ->where('employee_id', $swap->requestor_id)
+                ->where('date', $reqDate)
+                ->first();
+
+            $targetSchedule = WorkSchedule::with('shift')
+                ->where('employee_id', $swap->target_employee_id)
+                ->where('date', $tarDate)
+                ->first();
+        }
+
+        $currentSchedules = [
+            'requestor_on_req_date' => WorkSchedule::with('shift')->where('employee_id', $swap->requestor_id)->where('date', $reqDate)->first(),
+            'target_on_req_date' => WorkSchedule::with('shift')->where('employee_id', $swap->target_employee_id)->where('date', $reqDate)->first(),
+            'requestor_on_tar_date' => WorkSchedule::with('shift')->where('employee_id', $swap->requestor_id)->where('date', $tarDate)->first(),
+            'target_on_tar_date' => WorkSchedule::with('shift')->where('employee_id', $swap->target_employee_id)->where('date', $tarDate)->first(),
+        ];
 
         return Inertia::render('Owner/Management/Schedules/SwapTeam/Show', [
             'swap' => $swap,
             'requestorSchedule' => $requestorSchedule,
             'targetSchedule' => $targetSchedule,
+            'currentSchedules' => $currentSchedules,
         ]);
     }
 
@@ -871,53 +903,68 @@ class ScheduleController extends Controller
             
             $reqDate = Carbon::parse($swap->requestor_work_date)->format('Y-m-d');
             $tarDate = Carbon::parse($swap->target_work_date)->format('Y-m-d');
+            $companyId = $swap->company_id;
 
-            $scheduleReqDay1 = WorkSchedule::where('employee_id', $swap->requestor_id)
-                ->where('date', $reqDate)
-                ->first();
-                
-            $scheduleTarDay1 = WorkSchedule::where('employee_id', $swap->target_employee_id)
-                ->where('date', $reqDate)
-                ->first();
-                
-            $scheduleReqDay2 = WorkSchedule::where('employee_id', $swap->requestor_id)
-                ->where('date', $tarDate)
-                ->first();
-                
-            $scheduleTarDay2 = WorkSchedule::where('employee_id', $swap->target_employee_id)
-                ->where('date', $tarDate)
-                ->first();
-                
-            if ($scheduleReqDay1 && $scheduleTarDay1) {
-                $tempShiftId = $scheduleReqDay1->shift_id;
-                $tempIsDayOff = $scheduleReqDay1->is_day_off;
-                
-                $scheduleReqDay1->update([
-                    'shift_id' => $scheduleTarDay1->shift_id,
-                    'is_day_off' => $scheduleTarDay1->is_day_off,
-                ]);
-                
-                $scheduleTarDay1->update([
-                    'shift_id' => $tempShiftId,
-                    'is_day_off' => $tempIsDayOff,
-                ]);
-            }
-            
+            $scheduleReqDay1 = WorkSchedule::firstOrCreate(
+                ['employee_id' => $swap->requestor_id, 'date' => $reqDate],
+                ['company_id' => $companyId, 'is_day_off' => true, 'attendance_type' => 'all']
+            );
+
+            $scheduleTarDay1 = WorkSchedule::firstOrCreate(
+                ['employee_id' => $swap->target_employee_id, 'date' => $reqDate],
+                ['company_id' => $companyId, 'is_day_off' => true, 'attendance_type' => 'all']
+            );
+
+            $scheduleReqDay2 = WorkSchedule::firstOrCreate(
+                ['employee_id' => $swap->requestor_id, 'date' => $tarDate],
+                ['company_id' => $companyId, 'is_day_off' => true, 'attendance_type' => 'all']
+            );
+
+            $scheduleTarDay2 = WorkSchedule::firstOrCreate(
+                ['employee_id' => $swap->target_employee_id, 'date' => $tarDate],
+                ['company_id' => $companyId, 'is_day_off' => true, 'attendance_type' => 'all']
+            );
+
+            // Swap Hari 1 (reqDate)
+            $tempShiftId = $scheduleReqDay1->shift_id;
+            $tempIsDayOff = $scheduleReqDay1->is_day_off;
+            $tempAttendanceType = $scheduleReqDay1->attendance_type;
+            $tempAllowedBranches = $scheduleReqDay1->allowed_branches;
+
+            $scheduleReqDay1->update([
+                'shift_id' => $scheduleTarDay1->shift_id,
+                'is_day_off' => $scheduleTarDay1->is_day_off,
+                'attendance_type' => $scheduleTarDay1->attendance_type,
+                'allowed_branches' => $scheduleTarDay1->allowed_branches,
+            ]);
+
+            $scheduleTarDay1->update([
+                'shift_id' => $tempShiftId,
+                'is_day_off' => $tempIsDayOff,
+                'attendance_type' => $tempAttendanceType,
+                'allowed_branches' => $tempAllowedBranches,
+            ]);
+
+            // Swap Hari 2 (tarDate) jika tanggalnya berbeda
             if ($reqDate !== $tarDate) {
-                if ($scheduleReqDay2 && $scheduleTarDay2) {
-                    $tempShiftId = $scheduleReqDay2->shift_id;
-                    $tempIsDayOff = $scheduleReqDay2->is_day_off;
-                    
-                    $scheduleReqDay2->update([
-                        'shift_id' => $scheduleTarDay2->shift_id,
-                        'is_day_off' => $scheduleTarDay2->is_day_off,
-                    ]);
-                    
-                    $scheduleTarDay2->update([
-                        'shift_id' => $tempShiftId,
-                        'is_day_off' => $tempIsDayOff,
-                    ]);
-                }
+                $tempShiftId2 = $scheduleReqDay2->shift_id;
+                $tempIsDayOff2 = $scheduleReqDay2->is_day_off;
+                $tempAttendanceType2 = $scheduleReqDay2->attendance_type;
+                $tempAllowedBranches2 = $scheduleReqDay2->allowed_branches;
+
+                $scheduleReqDay2->update([
+                    'shift_id' => $scheduleTarDay2->shift_id,
+                    'is_day_off' => $scheduleTarDay2->is_day_off,
+                    'attendance_type' => $scheduleTarDay2->attendance_type,
+                    'allowed_branches' => $scheduleTarDay2->allowed_branches,
+                ]);
+
+                $scheduleTarDay2->update([
+                    'shift_id' => $tempShiftId2,
+                    'is_day_off' => $tempIsDayOff2,
+                    'attendance_type' => $tempAttendanceType2,
+                    'allowed_branches' => $tempAllowedBranches2,
+                ]);
             }
         });
 

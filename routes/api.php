@@ -15,8 +15,11 @@ Route::prefix('auth')->group(function () {
         Route::get('/profile/employee', [AuthController::class, 'profileEmployee']);
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
+        Route::post('/fcm-token', [AuthController::class, 'updateFcmToken']);
     });
 });
+
+Route::middleware('auth:sanctum')->post('/fcm-token', [AuthController::class, 'updateFcmToken']);
 
 // API Company Public Routes (Without Auth)
 Route::get('/companies/search', [\App\Http\Controllers\Api\CompanyController::class, 'searchCompany']);

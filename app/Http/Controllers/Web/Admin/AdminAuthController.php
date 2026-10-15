@@ -25,7 +25,7 @@ class AdminAuthController extends Controller
             $user = Auth::user();
             if ($user->role === 'admin') {
                 $request->session()->regenerate();
-                return redirect()->intended(route('admin.dashboard'))->with('success', 'Selamat datang di Platform Admin.');
+                return redirect()->intended(route('admin.dashboard'));
             }
 
             Auth::logout();

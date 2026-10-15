@@ -130,6 +130,7 @@ class AuthController extends Controller
         $request->validate([
             'email' => 'required|string|email',
             'password' => 'required|string',
+            'fcm_token' => 'nullable|string',
         ]);
 
         $user = User::where('email', $request->email)->first();
@@ -141,19 +142,19 @@ class AuthController extends Controller
             ], 401);
         }
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        if ($request->filled('fcm_token')) {
+            $user->update([
+                'fcm_token' => $request->fcm_token,
+            ]);
+        }
 
-        $userLoad = match($user->role) {
-            'company' => $user->load('company'),
-            'employee' => $user->load('employee.company'),
-            default => $user,
-        };
+        $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'status' => true,
             'message' => 'Login berhasil.',
             'access_token' => $token,
-            'user' => $userLoad,
+            'user' => $user,
         ]);
     }
 
@@ -214,4 +215,26 @@ class AuthController extends Controller
             'profile' => $user->load('employee.company'),
         ]);
     }
+
+    public function updateFcmToken(Request $request)
+    {
+        $request->validate([
+            'fcm_token' => 'required|string',
+        ]);
+
+        $user = $request->user();
+        $user->update([
+            'fcm_token' => $request->fcm_token,
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'FCM token berhasil disimpan.',
+            'data' => [
+                'user_id' => $user->id,
+                'fcm_token' => $user->fcm_token,
+            ],
+        ]);
+    }
 }
+

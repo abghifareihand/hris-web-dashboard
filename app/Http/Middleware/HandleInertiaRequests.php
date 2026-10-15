@@ -71,6 +71,18 @@ class HandleInertiaRequests extends Middleware
                     ] : null,
                 ] : null,
                 'unreadNotificationsCount' => $user ? $user->unreadNotifications()->count() : 0,
+                'recentNotifications' => $user ? $user->notifications()->latest()->take(5)->get()->map(function ($n) use ($user) {
+                    return [
+                        'id' => $n->id,
+                        'type' => $n->data['type'] ?? 'system',
+                        'title' => $n->data['title'] ?? 'Pemberitahuan Sistem',
+                        'message' => $n->data['message'] ?? $n->data['content'] ?? '',
+                        'link' => ($user->role === 'owner') ? route('owner.notifications.read', $n->id) : '#',
+                        'read_at' => $n->read_at,
+                        'created_at' => $n->created_at ? $n->created_at->toISOString() : null,
+                        'time_ago' => $n->created_at ? $n->created_at->diffForHumans() : '',
+                    ];
+                }) : [],
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

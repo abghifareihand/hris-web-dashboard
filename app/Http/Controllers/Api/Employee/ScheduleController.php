@@ -347,7 +347,7 @@ class ScheduleController extends Controller
             if ($requestorTargetSchedule && !$requestorTargetSchedule->is_day_off) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Anda sudah memiliki jadwal kerja aktif pada tanggal rekan kerja Anda (' . Carbon::parse($targetDate)->format('d M Y') . ').'
+                    'message' => 'Anda sudah memiliki jadwal kerja aktif pada tanggal rekan kerja Anda (' . Carbon::parse($targetDate)->locale('id')->translatedFormat('d F Y') . ').'
                 ], 422);
             }
 
@@ -358,7 +358,7 @@ class ScheduleController extends Controller
             if ($targetRequestorSchedule && !$targetRequestorSchedule->is_day_off) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Rekan kerja Anda sudah memiliki jadwal kerja aktif pada tanggal Anda (' . Carbon::parse($requestorDate)->format('d M Y') . ').'
+                    'message' => 'Rekan kerja Anda sudah memiliki jadwal kerja aktif pada tanggal Anda (' . Carbon::parse($requestorDate)->locale('id')->translatedFormat('d F Y') . ').'
                 ], 422);
             }
         }
@@ -505,15 +505,27 @@ class ScheduleController extends Controller
             return response()->json(['status' => false, 'message' => 'Data pertukaran jadwal tim tidak ditemukan.'], 404);
         }
 
-        $requestorSchedule = WorkSchedule::with(['shift:id,name,clock_in,clock_out'])
-            ->where('employee_id', $swap->requestor_id)
-            ->where('date', $swap->requestor_work_date->format('Y-m-d'))
-            ->first();
+        if ($swap->status === 'approved') {
+            $requestorSchedule = WorkSchedule::with(['shift:id,name,clock_in,clock_out'])
+                ->where('employee_id', $swap->target_employee_id)
+                ->where('date', $swap->requestor_work_date->format('Y-m-d'))
+                ->first();
 
-        $targetSchedule = WorkSchedule::with(['shift:id,name,clock_in,clock_out'])
-            ->where('employee_id', $swap->target_employee_id)
-            ->where('date', $swap->target_work_date->format('Y-m-d'))
-            ->first();
+            $targetSchedule = WorkSchedule::with(['shift:id,name,clock_in,clock_out'])
+                ->where('employee_id', $swap->requestor_id)
+                ->where('date', $swap->target_work_date->format('Y-m-d'))
+                ->first();
+        } else {
+            $requestorSchedule = WorkSchedule::with(['shift:id,name,clock_in,clock_out'])
+                ->where('employee_id', $swap->requestor_id)
+                ->where('date', $swap->requestor_work_date->format('Y-m-d'))
+                ->first();
+
+            $targetSchedule = WorkSchedule::with(['shift:id,name,clock_in,clock_out'])
+                ->where('employee_id', $swap->target_employee_id)
+                ->where('date', $swap->target_work_date->format('Y-m-d'))
+                ->first();
+        }
 
         $branches = \App\Models\Branch::where('company_id', $employee->company_id)->pluck('name', 'id');
         if ($requestorSchedule) {

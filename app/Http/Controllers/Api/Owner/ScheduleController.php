@@ -428,7 +428,7 @@ class ScheduleController extends Controller
             return response()->json(['status' => false, 'message' => 'Data pertukaran jadwal tidak ditemukan.'], 404);
         }
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($swap) {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($swap, $company) {
             $swap->update([
                 'status' => 'approved',
                 'approved_by' => request()->user()->id,
@@ -446,15 +446,21 @@ class ScheduleController extends Controller
 
             $tempShiftId = $schedule1->shift_id;
             $tempIsDayOff = $schedule1->is_day_off;
+            $tempAttendanceType = $schedule1->attendance_type;
+            $tempAllowedBranches = $schedule1->allowed_branches;
 
             $schedule1->update([
                 'shift_id' => $schedule2->shift_id,
                 'is_day_off' => $schedule2->is_day_off,
+                'attendance_type' => $schedule2->attendance_type,
+                'allowed_branches' => $schedule2->allowed_branches,
             ]);
 
             $schedule2->update([
                 'shift_id' => $tempShiftId,
                 'is_day_off' => $tempIsDayOff,
+                'attendance_type' => $tempAttendanceType,
+                'allowed_branches' => $tempAllowedBranches,
             ]);
         });
 
@@ -535,15 +541,27 @@ class ScheduleController extends Controller
         }
 
         // Get schedules for requestor date and target employee's target date
-        $requestorSchedule = WorkSchedule::with(['shift:id,name,clock_in,clock_out'])
-            ->where('employee_id', $swap->requestor_id)
-            ->where('date', $swap->requestor_work_date->format('Y-m-d'))
-            ->first();
+        if ($swap->status === 'approved') {
+            $requestorSchedule = WorkSchedule::with(['shift:id,name,clock_in,clock_out'])
+                ->where('employee_id', $swap->target_employee_id)
+                ->where('date', $swap->requestor_work_date->format('Y-m-d'))
+                ->first();
 
-        $targetSchedule = WorkSchedule::with(['shift:id,name,clock_in,clock_out'])
-            ->where('employee_id', $swap->target_employee_id)
-            ->where('date', $swap->target_work_date->format('Y-m-d'))
-            ->first();
+            $targetSchedule = WorkSchedule::with(['shift:id,name,clock_in,clock_out'])
+                ->where('employee_id', $swap->requestor_id)
+                ->where('date', $swap->target_work_date->format('Y-m-d'))
+                ->first();
+        } else {
+            $requestorSchedule = WorkSchedule::with(['shift:id,name,clock_in,clock_out'])
+                ->where('employee_id', $swap->requestor_id)
+                ->where('date', $swap->requestor_work_date->format('Y-m-d'))
+                ->first();
+
+            $targetSchedule = WorkSchedule::with(['shift:id,name,clock_in,clock_out'])
+                ->where('employee_id', $swap->target_employee_id)
+                ->where('date', $swap->target_work_date->format('Y-m-d'))
+                ->first();
+        }
 
         // Convert allowed branches for requestor schedule
         $branches = \App\Models\Branch::where('company_id', $company->id)->pluck('name', 'id');
@@ -602,7 +620,7 @@ class ScheduleController extends Controller
             return response()->json(['status' => false, 'message' => 'Data pertukaran jadwal tim tidak ditemukan.'], 404);
         }
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($swap) {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($swap, $company) {
             $swap->update([
                 'status' => 'approved',
                 'approved_by' => request()->user()->id,
@@ -630,30 +648,42 @@ class ScheduleController extends Controller
 
             $tempShiftId = $scheduleReqDay1->shift_id;
             $tempIsDayOff = $scheduleReqDay1->is_day_off;
+            $tempAttendanceType = $scheduleReqDay1->attendance_type;
+            $tempAllowedBranches = $scheduleReqDay1->allowed_branches;
 
             $scheduleReqDay1->update([
                 'shift_id' => $scheduleTarDay1->shift_id,
                 'is_day_off' => $scheduleTarDay1->is_day_off,
+                'attendance_type' => $scheduleTarDay1->attendance_type,
+                'allowed_branches' => $scheduleTarDay1->allowed_branches,
             ]);
 
             $scheduleTarDay1->update([
                 'shift_id' => $tempShiftId,
                 'is_day_off' => $tempIsDayOff,
+                'attendance_type' => $tempAttendanceType,
+                'allowed_branches' => $tempAllowedBranches,
             ]);
 
             // Lakukan swap hari ke-2 HANYA JIKA tanggalnya berbeda, agar tidak melakukan swap dua kali (revert)
             if ($swap->requestor_work_date->format('Y-m-d') !== $swap->target_work_date->format('Y-m-d')) {
                 $tempShiftId2 = $scheduleReqDay2->shift_id;
                 $tempIsDayOff2 = $scheduleReqDay2->is_day_off;
+                $tempAttendanceType2 = $scheduleReqDay2->attendance_type;
+                $tempAllowedBranches2 = $scheduleReqDay2->allowed_branches;
 
                 $scheduleReqDay2->update([
                     'shift_id' => $scheduleTarDay2->shift_id,
                     'is_day_off' => $scheduleTarDay2->is_day_off,
+                    'attendance_type' => $scheduleTarDay2->attendance_type,
+                    'allowed_branches' => $scheduleTarDay2->allowed_branches,
                 ]);
 
                 $scheduleTarDay2->update([
                     'shift_id' => $tempShiftId2,
                     'is_day_off' => $tempIsDayOff2,
+                    'attendance_type' => $tempAttendanceType2,
+                    'allowed_branches' => $tempAllowedBranches2,
                 ]);
             }
         });

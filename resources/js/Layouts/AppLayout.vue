@@ -9,6 +9,7 @@ const page = usePage();
 const authUser = computed(() => page.props.auth?.user);
 const companyName = computed(() => authUser.value?.company?.name || authUser.value?.company?.name_company || '');
 const unreadNotificationsCount = computed(() => page.props.auth?.unreadNotificationsCount || 0);
+const recentNotifications = computed(() => page.props.auth?.recentNotifications || []);
 const appName = computed(() => page.props.appName || 'HRIS Company');
 const flash = computed(() => page.props.flash || {});
 
@@ -21,6 +22,8 @@ let startTime = 0;
 let remainingTime = 4000;
 const progress = ref(100);
 let progressInterval = null;
+let pollInterval = null;
+let isPolling = false;
 
 const startProgress = (duration) => {
     progress.value = 100;
@@ -74,9 +77,22 @@ const resumeToast = () => {
     startProgress(remainingTime);
 };
 
+let lastFlashMessage = null;
+
 watch(
     () => page.props.flash,
     (newFlash) => {
+        if (isPolling) return;
+
+        const currentMsg = newFlash?.success || newFlash?.error || newFlash?.warning || newFlash?.info;
+        if (!currentMsg) {
+            lastFlashMessage = null;
+            return;
+        }
+
+        if (currentMsg === lastFlashMessage) return;
+        lastFlashMessage = currentMsg;
+
         if (newFlash?.success) {
             triggerToast(newFlash.success, 'success');
         } else if (newFlash?.error) {
@@ -94,29 +110,70 @@ const sidebarOpen = ref(false);
 const desktopSidebarOpen = ref(true);
 const isUserDropdownOpen = ref(false);
 const userDropdownRef = ref(null);
+const isNotificationDropdownOpen = ref(false);
+const notificationDropdownRef = ref(null);
+
+const markAllNotificationsRead = () => {
+    router.post(route('owner.notifications.mark-all-read'), {}, {
+        preserveScroll: true,
+    });
+};
 
 const handleGlobalClick = (event) => {
     if (isUserDropdownOpen.value && userDropdownRef.value && !userDropdownRef.value.contains(event.target)) {
         isUserDropdownOpen.value = false;
     }
+    if (isNotificationDropdownOpen.value && notificationDropdownRef.value && !notificationDropdownRef.value.contains(event.target)) {
+        isNotificationDropdownOpen.value = false;
+    }
 };
 
 const handleGlobalKeydown = (event) => {
-    if (event.key === 'Escape' && isUserDropdownOpen.value) {
-        isUserDropdownOpen.value = false;
+    if (event.key === 'Escape') {
+        if (isUserDropdownOpen.value) isUserDropdownOpen.value = false;
+        if (isNotificationDropdownOpen.value) isNotificationDropdownOpen.value = false;
+    }
+};
+
+
+
+const pollNotifications = () => {
+    if (document.hidden || isPolling || authUser.value?.role !== 'owner') return;
+    isPolling = true;
+    router.reload({
+        only: ['auth'],
+        preserveScroll: true,
+        preserveState: true,
+        onFinish: () => {
+            isPolling = false;
+        },
+    });
+};
+
+const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+        pollNotifications();
     }
 };
 
 onMounted(() => {
     document.addEventListener('click', handleGlobalClick);
     document.addEventListener('keydown', handleGlobalKeydown);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    if (authUser.value?.role === 'owner') {
+        // Polling cepat setiap 8 detik (antara 5-10 detik)
+        pollInterval = setInterval(pollNotifications, 8000);
+    }
 });
 
 onUnmounted(() => {
     if (toastTimer) clearTimeout(toastTimer);
     if (progressInterval) clearInterval(progressInterval);
+    if (pollInterval) clearInterval(pollInterval);
     document.removeEventListener('click', handleGlobalClick);
     document.removeEventListener('keydown', handleGlobalKeydown);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
 });
 
 
@@ -305,21 +362,128 @@ const logout = () => {
                         <span class="text-sm font-medium text-red-700">{{ companyName }}</span>
                     </div>
 
-                    <!-- Notifications -->
-                    <Link
+                    <!-- Notifications Dropdown -->
+                    <div
                         v-if="authUser?.role === 'owner'"
-                        :href="route('owner.notifications.index')"
-                        class="relative p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-                        title="Notifikasi"
+                        ref="notificationDropdownRef"
+                        class="relative"
                     >
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                        </svg>
-                        <span
-                            v-if="unreadNotificationsCount > 0"
-                            class="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full"
-                        ></span>
-                    </Link>
+                        <button
+                            type="button"
+                            @click="isNotificationDropdownOpen = !isNotificationDropdownOpen"
+                            class="relative p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                            :class="{ 'bg-slate-100 text-slate-800': isNotificationDropdownOpen }"
+                            title="Notifikasi"
+                            aria-label="Notifikasi"
+                        >
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                            </svg>
+                            <span
+                                v-if="unreadNotificationsCount > 0"
+                                class="absolute top-1 right-1 min-w-4 h-4 px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white"
+                            >
+                                {{ unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount }}
+                            </span>
+                        </button>
+
+                        <!-- Dropdown Menu Panel -->
+                        <transition
+                            enter-active-class="transition duration-150 ease-out"
+                            enter-from-class="opacity-0 scale-95 -translate-y-1"
+                            enter-to-class="opacity-100 scale-100 translate-y-0"
+                            leave-active-class="transition duration-100 ease-in"
+                            leave-from-class="opacity-100 scale-100 translate-y-0"
+                            leave-to-class="opacity-0 scale-95 -translate-y-1"
+                        >
+                            <div
+                                v-if="isNotificationDropdownOpen"
+                                class="dropdown-menu w-80 sm:w-96 right-0 z-50 text-left origin-top-right overflow-hidden shadow-xl border border-slate-200/80 rounded-2xl bg-white"
+                            >
+                                <!-- Header -->
+                                <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+                                    <div class="flex items-center gap-2">
+                                        <h3 class="text-sm font-bold text-slate-900">Notifikasi</h3>
+                                        <span
+                                            v-if="unreadNotificationsCount > 0"
+                                            class="px-2 py-0.5 text-[11px] font-semibold bg-emerald-100 text-emerald-800 rounded-full"
+                                        >
+                                            {{ unreadNotificationsCount }} Baru
+                                        </span>
+                                    </div>
+                                    <button
+                                        v-if="unreadNotificationsCount > 0"
+                                        type="button"
+                                        @click="markAllNotificationsRead"
+                                        class="text-xs font-medium text-emerald-600 hover:text-emerald-700 transition cursor-pointer"
+                                    >
+                                        Tandai semua dibaca
+                                    </button>
+                                </div>
+
+                                <!-- Notification Items List -->
+                                <div class="divide-y divide-slate-100 max-h-[360px] overflow-y-auto">
+                                    <template v-if="recentNotifications.length > 0">
+                                        <a
+                                            v-for="item in recentNotifications"
+                                            :key="item.id"
+                                            :href="item.link"
+                                            @click="isNotificationDropdownOpen = false"
+                                            :class="[
+                                                'block p-3.5 transition hover:bg-slate-50/80 cursor-pointer',
+                                                !item.read_at ? 'bg-emerald-50/30' : 'bg-white'
+                                            ]"
+                                        >
+                                            <div class="flex items-start gap-3">
+                                                <span
+                                                    :class="[
+                                                        'w-2 h-2 rounded-full mt-1.5 shrink-0',
+                                                        !item.read_at ? 'bg-emerald-500 ring-4 ring-emerald-100' : 'bg-slate-200'
+                                                    ]"
+                                                ></span>
+                                                <div class="flex-1 min-w-0">
+                                                    <div class="flex items-center justify-between gap-2">
+                                                        <p :class="['text-xs font-semibold truncate', !item.read_at ? 'text-slate-900' : 'text-slate-700']">
+                                                            {{ item.title }}
+                                                        </p>
+                                                        <span class="text-[10px] text-slate-400 shrink-0">
+                                                            {{ item.time_ago || '' }}
+                                                        </span>
+                                                    </div>
+                                                    <p class="text-xs text-slate-500 mt-0.5 line-clamp-2 leading-relaxed">
+                                                        {{ item.message }}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </template>
+                                    <div v-else class="py-8 px-4 text-center">
+                                        <div class="w-10 h-10 mx-auto rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-2">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                            </svg>
+                                        </div>
+                                        <p class="text-xs font-medium text-slate-600">Tidak ada notifikasi baru</p>
+                                        <p class="text-[11px] text-slate-400 mt-0.5">Semua pemberitahuan sistem telah dibaca.</p>
+                                    </div>
+                                </div>
+
+                                <!-- Dropdown Footer -->
+                                <div class="p-2.5 border-t border-slate-100 bg-slate-50/70 text-center">
+                                    <Link
+                                        :href="route('owner.notifications.index')"
+                                        @click="isNotificationDropdownOpen = false"
+                                        class="inline-flex items-center justify-center gap-1.5 w-full py-2 px-3 text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 rounded-xl transition"
+                                    >
+                                        <span>Lihat semua notifikasi</span>
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </Link>
+                                </div>
+                            </div>
+                        </transition>
+                    </div>
 
                     <!-- User Profile Dropdown -->
                     <div ref="userDropdownRef" class="relative">
