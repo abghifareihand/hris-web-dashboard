@@ -64,9 +64,12 @@ const removeLogo = () => {
 };
 
 const submit = () => {
-    form.post(route("owner.management.company.profile.update"), {
-        _method: "put",
+    form.transform((data) => ({
+        ...data,
+        _method: "PUT",
+    })).post(route("owner.management.company.profile.update"), {
         forceFormData: true,
+        preserveScroll: true,
     });
 };
 </script>

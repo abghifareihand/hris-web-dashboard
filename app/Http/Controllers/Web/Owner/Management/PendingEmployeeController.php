@@ -108,7 +108,7 @@ class PendingEmployeeController extends Controller
                 'company_id' => $company->id,
             ]);
 
-            Employee::create([
+            $newEmployee = Employee::create([
                 'user_id' => $user->id,
                 'company_id' => $company->id,
                 'branch_id' => $pending->branch_id,
@@ -120,6 +120,21 @@ class PendingEmployeeController extends Controller
                 'address' => $pending->address,
                 'is_active' => true,
             ]);
+
+            // Auto-generate leave balances for the new employee
+            $categories = \App\Models\LeaveCategory::where('company_id', $company->id)->get();
+            $currentYear = (int) date('Y');
+            foreach ($categories as $cat) {
+                \App\Models\LeaveBalance::firstOrCreate([
+                    'company_id' => $company->id,
+                    'employee_id' => $newEmployee->id,
+                    'leave_category_id' => $cat->id,
+                    'year' => $currentYear,
+                ], [
+                    'quota' => $cat->default_quota,
+                    'used' => 0,
+                ]);
+            }
 
             $pending->update(['status' => 'approved']);
 

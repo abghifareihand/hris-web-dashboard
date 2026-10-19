@@ -250,6 +250,32 @@ class LeaveController extends Controller
 
         $currentYear = (int) $request->input('year', date('Y'));
         
+        // Self-healing check: pastikan semua karyawan aktif memiliki saldo cuti untuk kategori perusahaan
+        $categoriesCount = LeaveCategory::where('company_id', $company->id)->count();
+        if ($categoriesCount > 0) {
+            $employeesCount = Employee::where('company_id', $company->id)->count();
+            $expectedCount = $categoriesCount * $employeesCount;
+            $actualCount = LeaveBalance::where('company_id', $company->id)->where('year', $currentYear)->count();
+
+            if ($actualCount < $expectedCount) {
+                $categories = LeaveCategory::where('company_id', $company->id)->get();
+                $employees = Employee::where('company_id', $company->id)->get();
+                foreach ($employees as $emp) {
+                    foreach ($categories as $cat) {
+                        LeaveBalance::firstOrCreate([
+                            'company_id' => $company->id,
+                            'employee_id' => $emp->id,
+                            'leave_category_id' => $cat->id,
+                            'year' => $currentYear,
+                        ], [
+                            'quota' => $cat->default_quota,
+                            'used' => 0,
+                        ]);
+                    }
+                }
+            }
+        }
+
         $query = LeaveBalance::with([
             'employee:id,name,nip,branch_id,division_id',
             'employee.branch:id,name',

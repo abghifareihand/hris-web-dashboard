@@ -226,7 +226,7 @@
                 </thead>
                 <tbody>
                     <tr>
-                        <td>Gaji Pokok</td>
+                        <td>{{ ($item->employee->payroll_cycle ?? $item->payroll->payroll_cycle ?? 'monthly') === 'daily' ? 'Gaji Harian' : (($item->employee->payroll_cycle ?? $item->payroll->payroll_cycle ?? 'monthly') === 'weekly' ? 'Gaji Mingguan' : 'Gaji Bulanan') }}</td>
                         <td class="text-right">{{ number_format($item->basic_salary, 0, ',', '.') }}</td>
                     </tr>
                     @if ($item->fixed_allowance > 0)
@@ -290,14 +290,14 @@
                     @if ($item->late_penalty_amount > 0)
                         @php $hasPotongan = true; @endphp
                         <tr>
-                            <td>Pinalty</td>
+                            <td>Denda Keterlambatan</td>
                             <td class="text-right">- {{ number_format($item->late_penalty_amount, 0, ',', '.') }}</td>
                         </tr>
                     @endif
                     @if ($item->alpha_penalty_amount > 0)
                         @php $hasPotongan = true; @endphp
                         <tr>
-                            <td>Alpha</td>
+                            <td>Potongan Ketidakhadiran (Alpha)</td>
                             <td class="text-right">- {{ number_format($item->alpha_penalty_amount, 0, ',', '.') }}</td>
                         </tr>
                     @endif

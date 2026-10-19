@@ -79,6 +79,11 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
     Route::post('/daily-reports', [\App\Http\Controllers\Api\Owner\DailyReportController::class, 'store']);
     Route::post('/daily-reports/{id}', [\App\Http\Controllers\Api\Owner\DailyReportController::class, 'update']);
     Route::delete('/daily-reports/{id}', [\App\Http\Controllers\Api\Owner\DailyReportController::class, 'destroy']);
+
+    // Profile & Security for Owner
+    Route::get('/profile', [\App\Http\Controllers\Api\Owner\ProfileController::class, 'show']);
+    Route::post('/profile', [\App\Http\Controllers\Api\Owner\ProfileController::class, 'update']);
+    Route::post('/change-password', [\App\Http\Controllers\Api\Owner\ProfileController::class, 'changePassword']);
 });
 
 // API Employee Routes
@@ -131,6 +136,7 @@ Route::middleware('auth:sanctum')->prefix('employee')->group(function () {
 
     // Loans (Kasbon / Pinjaman) for Employee
     Route::get('/loans', [\App\Http\Controllers\Api\Employee\LoanController::class, 'index']);
+    Route::get('/loans/settings', [\App\Http\Controllers\Api\Employee\LoanController::class, 'settings']);
     Route::post('/loans', [\App\Http\Controllers\Api\Employee\LoanController::class, 'store']);
 
     // Reimbursements (Klaim Biaya Operasional) for Employee

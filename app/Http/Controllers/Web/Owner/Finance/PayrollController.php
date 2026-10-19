@@ -216,7 +216,7 @@ class PayrollController extends Controller
         $request->validate([
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
-            'payroll_cycle' => 'nullable|in:all,monthly,weekly',
+            'payroll_cycle' => 'nullable|in:all,monthly,weekly,daily',
             'branch_id' => 'nullable|exists:branches,id',
             'division_id' => 'nullable|exists:divisions,id',
         ]);
@@ -295,6 +295,17 @@ class PayrollController extends Controller
             $totalAmount = 0;
             $bpjsTk = $company->bpjsKetenagakerjaan()->firstOrCreate(['company_id' => $company->id]);
             $bpjsKes = $company->bpjsKesehatan()->firstOrCreate(['company_id' => $company->id]);
+            $payrollSetting = $company->payrollSetting()->firstOrCreate(
+                ['company_id' => $company->id],
+                [
+                    'default_payroll_cycle' => 'monthly',
+                    'monthly_working_days' => 25,
+                    'weekly_working_days' => 6,
+                ]
+            );
+
+            $monthlyWorkingDays = (int) ($payrollSetting->monthly_working_days ?: 25);
+            $weeklyWorkingDays = (int) ($payrollSetting->weekly_working_days ?: 6);
 
             foreach ($employees as $emp) {
                 $attendances = Attendance::where('employee_id', $emp->id)
@@ -354,13 +365,37 @@ class PayrollController extends Controller
                     }
                 }
 
+                // Kalkulasi Gaji Pokok & Potongan Ketidakhadiran (Alpha) sesuai siklus penggajian
+                $cycle = $emp->payroll_cycle ?: $payrollSetting->default_payroll_cycle ?: 'monthly';
+                $itemBasicSalary = $emp->basic_salary;
                 $alphaPenaltyAmount = 0;
-                if ($alphaDays > 0) {
-                    if ($emp->alpha_penalty_type === 'flat') {
-                        $alphaPenaltyAmount = $alphaDays * $emp->alpha_penalty_nominal;
-                    } else {
-                        $dailyRate = $emp->basic_salary > 0 ? ($emp->basic_salary / 30) : 0;
-                        $alphaPenaltyAmount = round($alphaDays * $dailyRate);
+
+                if ($cycle === 'daily') {
+                    // Karyawan Harian:
+                    $scheduledDays = $scheduledWorkSchedules->count() > 0 ? $scheduledWorkSchedules->count() : $monthlyWorkingDays;
+                    $itemBasicSalary = $scheduledDays * $emp->basic_salary;
+                    $alphaPenaltyAmount = $alphaDays * $emp->basic_salary;
+                } elseif ($cycle === 'weekly') {
+                    // Karyawan Mingguan (standar 6 hari kerja):
+                    $itemBasicSalary = $emp->basic_salary;
+                    if ($alphaDays > 0) {
+                        if ($emp->alpha_penalty_type === 'flat' && $emp->alpha_penalty_nominal > 0) {
+                            $alphaPenaltyAmount = $alphaDays * $emp->alpha_penalty_nominal;
+                        } else {
+                            $dailyRate = $emp->basic_salary > 0 ? ($emp->basic_salary / $weeklyWorkingDays) : 0;
+                            $alphaPenaltyAmount = round($alphaDays * $dailyRate);
+                        }
+                    }
+                } else {
+                    // Karyawan Bulanan (standar 25 hari kerja):
+                    $itemBasicSalary = $emp->basic_salary;
+                    if ($alphaDays > 0) {
+                        if ($emp->alpha_penalty_type === 'flat' && $emp->alpha_penalty_nominal > 0) {
+                            $alphaPenaltyAmount = $alphaDays * $emp->alpha_penalty_nominal;
+                        } else {
+                            $dailyRate = $emp->basic_salary > 0 ? ($emp->basic_salary / $monthlyWorkingDays) : 0;
+                            $alphaPenaltyAmount = round($alphaDays * $dailyRate);
+                        }
                     }
                 }
 
@@ -493,7 +528,7 @@ class PayrollController extends Controller
                 $presentDays = $attendances->whereNotIn('attendance_status', ['alpha', 'leave'])->count();
                 $totalDailyAllowance = ($emp->daily_allowance ?? 0) * $presentDays;
 
-                $totalEarnings = $emp->basic_salary + ($emp->fixed_allowance ?? 0) + $totalDailyAllowance + ($emp->other_allowance ?? 0) + $overtimeAmount + $bonus + $reimbursementAmount;
+                $totalEarnings = $itemBasicSalary + ($emp->fixed_allowance ?? 0) + $totalDailyAllowance + ($emp->other_allowance ?? 0) + $overtimeAmount + $bonus + $reimbursementAmount;
                 
                 $totalPenalty = $latePenaltyAmount + $alphaPenaltyAmount;
                 $totalDeductions = $totalPenalty + $otherDeductions + $pph21Amount + $bpjsKesEmp + $jhtEmp + $jpEmp;
@@ -503,7 +538,7 @@ class PayrollController extends Controller
 
                 $payrollItem = $payroll->items()->create([
                     'employee_id' => $emp->id,
-                    'basic_salary' => $emp->basic_salary,
+                    'basic_salary' => $itemBasicSalary,
                     'fixed_allowance' => $emp->fixed_allowance ?? 0,
                     'daily_allowance' => $totalDailyAllowance,
                     'other_allowance' => $emp->other_allowance ?? 0,

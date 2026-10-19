@@ -275,14 +275,16 @@ const perDayAlphaCut = computed(() => {
                             Gaji & Tunjangan
                         </h2>
                         <span class="text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100/80">
-                            {{ employee.payroll_cycle === 'weekly' ? 'Mingguan' : 'Bulanan' }}
+                            {{ employee.payroll_cycle === 'daily' ? 'Harian' : (employee.payroll_cycle === 'weekly' ? 'Mingguan' : 'Bulanan') }}
                         </span>
                     </div>
 
                     <div class="p-6">
                         <div class="space-y-2.5 text-xs sm:text-sm">
                             <div class="flex justify-between items-center py-1">
-                                <span class="text-slate-500 text-xs">Gaji Pokok</span>
+                                <span class="text-slate-500 text-xs">
+                                    {{ employee.payroll_cycle === 'daily' ? 'Gaji Harian' : (employee.payroll_cycle === 'weekly' ? 'Gaji Mingguan' : 'Gaji Bulanan') }}
+                                </span>
                                 <span class="font-semibold text-slate-800 font-mono">{{ formatCurrency(employee.basic_salary) }}</span>
                             </div>
                             <div class="flex justify-between items-center py-1">

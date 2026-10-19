@@ -80,7 +80,7 @@ const initAccordions = () => {
     if (route().current('owner.reports.attendances.*')) accordions.value.laporanKehadiran = true;
     if (route().current('owner.reports.performances.*')) accordions.value.laporanKinerja = true;
     if (route().current('owner.announcements.*')) accordions.value.pengumuman = true;
-    if (route().current('owner.management.attendance.settings.*') || route().current('owner.finance.loans.settings.*')) accordions.value.pengaturan = true;
+    if (route().current('owner.management.attendance.settings.*') || route().current('owner.finance.loans.settings.*') || route().current('owner.finance.payrolls.settings.*')) accordions.value.pengaturan = true;
 };
 initAccordions();
 
@@ -483,7 +483,7 @@ const toggleAccordion = (key) => {
                     type="button"
                     @click="toggleAccordion('pengaturan')"
                     class="sidebar-link-light w-full justify-between"
-                    :class="{ 'active-parent': route().current('owner.management.attendance.settings.*') || route().current('owner.finance.loans.settings.*') }"
+                    :class="{ 'active-parent': route().current('owner.management.attendance.settings.*') || route().current('owner.finance.loans.settings.*') || route().current('owner.finance.payrolls.settings.*') }"
                 >
                     <span class="flex items-center gap-3">
                         <svg class="sidebar-icon-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -498,6 +498,7 @@ const toggleAccordion = (key) => {
                 </button>
                 <div v-show="accordions.pengaturan" class="mt-1 sidebar-submenu-light">
                     <Link :href="route('owner.management.attendance.settings.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.attendance.settings.*') }">Pengaturan Absensi</Link>
+                    <Link :href="route('owner.finance.payrolls.settings.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.finance.payrolls.settings.*') }">Pengaturan Penggajian</Link>
                     <Link :href="route('owner.finance.loans.settings.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.finance.loans.settings.*') }">Pengaturan Pinjaman</Link>
                 </div>
             </div>

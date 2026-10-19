@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Web\Owner\Management;
 
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
+use App\Models\LeaveCategory;
+use App\Models\LeaveBalance;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -118,7 +120,7 @@ class EmployeeController extends Controller
             'bank_name' => ['nullable', 'string', 'max:100'],
             'bank_account_number' => ['nullable', 'string', 'max:50'],
             'bank_account_name' => ['nullable', 'string', 'max:255'],
-            'payroll_cycle' => ['required', 'in:monthly,weekly'],
+            'payroll_cycle' => ['required', 'in:monthly,weekly,daily'],
             'basic_salary' => ['nullable', 'numeric', 'min:0'],
             'fixed_allowance' => ['nullable', 'numeric', 'min:0'],
             'daily_allowance' => ['nullable', 'numeric', 'min:0'],
@@ -145,7 +147,7 @@ class EmployeeController extends Controller
                 'company_id' => $company->id,
             ]);
 
-            Employee::create([
+            $newEmployee = Employee::create([
                 'user_id' => $user->id,
                 'company_id' => $company->id,
                 'name' => $request->input('name'),
@@ -194,6 +196,21 @@ class EmployeeController extends Controller
                 'jkk_no' => $request->input('bpjs_ketenagakerjaan_number'),
                 'jkm_no' => $request->input('bpjs_ketenagakerjaan_number'),
             ]);
+
+            // Auto-generate leave balances for the new employee
+            $categories = LeaveCategory::where('company_id', $company->id)->get();
+            $currentYear = (int) date('Y');
+            foreach ($categories as $cat) {
+                LeaveBalance::firstOrCreate([
+                    'company_id' => $company->id,
+                    'employee_id' => $newEmployee->id,
+                    'leave_category_id' => $cat->id,
+                    'year' => $currentYear,
+                ], [
+                    'quota' => $cat->default_quota,
+                    'used' => 0,
+                ]);
+            }
         });
 
         return redirect()->route('owner.management.employees.index')
@@ -273,7 +290,7 @@ class EmployeeController extends Controller
             'bank_name' => ['nullable', 'string', 'max:100'],
             'bank_account_number' => ['nullable', 'string', 'max:50'],
             'bank_account_name' => ['nullable', 'string', 'max:255'],
-            'payroll_cycle' => ['required', 'in:monthly,weekly'],
+            'payroll_cycle' => ['required', 'in:monthly,weekly,daily'],
             'basic_salary' => ['nullable', 'numeric', 'min:0'],
             'fixed_allowance' => ['nullable', 'numeric', 'min:0'],
             'daily_allowance' => ['nullable', 'numeric', 'min:0'],

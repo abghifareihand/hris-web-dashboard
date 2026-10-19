@@ -58,7 +58,7 @@ return new class extends Migration
             $table->string('jkk_no')->nullable();
             $table->string('jkm_no')->nullable();
 
-            $table->enum('payroll_cycle', ['monthly', 'weekly'])->default('monthly');
+            $table->enum('payroll_cycle', ['monthly', 'weekly', 'daily'])->default('monthly');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });

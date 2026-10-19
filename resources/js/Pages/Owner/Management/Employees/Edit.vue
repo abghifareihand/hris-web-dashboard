@@ -588,13 +588,14 @@ const submit = () => {
                             :options="[
                                 { value: 'monthly', label: 'Bulanan' },
                                 { value: 'weekly', label: 'Mingguan' },
+                                { value: 'daily', label: 'Harian' },
                             ]"
                             placeholder="Pilih Siklus"
                             :error="form.errors.payroll_cycle"
                         />
 
                         <Input
-                            label="Gaji Pokok (Rp)"
+                            :label="form.payroll_cycle === 'daily' ? 'Gaji Harian' : (form.payroll_cycle === 'weekly' ? 'Gaji Mingguan' : 'Gaji Bulanan')"
                             v-model="form.basic_salary"
                             currency
                             placeholder="0"
@@ -602,7 +603,7 @@ const submit = () => {
                         />
 
                         <Input
-                            label="Tunjangan Tetap (Rp)"
+                            label="Tunjangan Tetap"
                             v-model="form.fixed_allowance"
                             currency
                             placeholder="0"
@@ -610,7 +611,7 @@ const submit = () => {
                         />
 
                         <Input
-                            label="Tunjangan Harian / Kehadiran (Rp)"
+                            label="Tunjangan Harian"
                             v-model="form.daily_allowance"
                             currency
                             placeholder="0"
@@ -618,7 +619,7 @@ const submit = () => {
                         />
 
                         <Input
-                            label="Tunjangan Lainnya (Rp)"
+                            label="Tunjangan Lainnya"
                             v-model="form.other_allowance"
                             currency
                             placeholder="0"
@@ -626,7 +627,7 @@ const submit = () => {
                         />
 
                         <Input
-                            label="Tarif Lembur per Jam (Rp)"
+                            label="Tarif Lembur per Jam"
                             v-model="form.overtime_rate_per_hour"
                             currency
                             placeholder="0"

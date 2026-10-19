@@ -154,9 +154,10 @@ const openGenerateModal = () => {
 }
 
 const payrollCycleOptions = [
-    { value: 'all', label: 'Semua Siklus (Bulanan & Mingguan)' },
+    { value: 'all', label: 'Semua Siklus (Bulanan, Mingguan, Harian)' },
     { value: 'monthly', label: 'Bulanan' },
     { value: 'weekly', label: 'Mingguan' },
+    { value: 'daily', label: 'Harian' },
 ]
 
 const filteredMissingSalary = computed(() => {

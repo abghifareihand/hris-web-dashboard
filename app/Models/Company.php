@@ -95,6 +95,11 @@ class Company extends Model
         return $this->hasOne(CompanyLoanSetting::class);
     }
 
+    public function payrollSetting()
+    {
+        return $this->hasOne(CompanyPayrollSetting::class);
+    }
+
     public function announcements(): HasMany
     {
         return $this->hasMany(Announcement::class);

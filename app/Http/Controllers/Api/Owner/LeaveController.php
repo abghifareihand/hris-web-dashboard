@@ -193,7 +193,33 @@ class LeaveController extends Controller
             return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
         }
 
-        $currentYear = $request->input('year', date('Y'));
+        $currentYear = (int) $request->input('year', date('Y'));
+
+        // Self-healing check: pastikan semua karyawan aktif memiliki saldo cuti untuk kategori perusahaan
+        $categoriesCount = \App\Models\LeaveCategory::where('company_id', $company->id)->count();
+        if ($categoriesCount > 0) {
+            $employeesCount = Employee::where('company_id', $company->id)->count();
+            $expectedCount = $categoriesCount * $employeesCount;
+            $actualCount = LeaveBalance::where('company_id', $company->id)->where('year', $currentYear)->count();
+
+            if ($actualCount < $expectedCount) {
+                $categories = \App\Models\LeaveCategory::where('company_id', $company->id)->get();
+                $employees = Employee::where('company_id', $company->id)->get();
+                foreach ($employees as $emp) {
+                    foreach ($categories as $cat) {
+                        LeaveBalance::firstOrCreate([
+                            'company_id' => $company->id,
+                            'employee_id' => $emp->id,
+                            'leave_category_id' => $cat->id,
+                            'year' => $currentYear,
+                        ], [
+                            'quota' => $cat->default_quota,
+                            'used' => 0,
+                        ]);
+                    }
+                }
+            }
+        }
 
         $query = Employee::select('id', 'name', 'email')
             ->where('company_id', $company->id);

@@ -2,16 +2,21 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use App\Models\Company;
-use App\Models\Employee;
 use App\Models\Branch;
+use App\Models\Company;
+use App\Models\CompanyBpjsKesehatan;
+use App\Models\CompanyBpjsKetenagakerjaan;
+use App\Models\CompanyPayrollSetting;
 use App\Models\Division;
+use App\Models\Employee;
+use App\Models\LeaveBalance;
+use App\Models\LeaveCategory;
 use App\Models\Position;
+use App\Models\Shift;
+use App\Models\User;
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Faker\Factory as Faker;
 
 class DatabaseSeeder extends Seeder
 {
@@ -19,486 +24,322 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
-        $faker = Faker::create('id_ID');
+        $currentYear = (int) date('Y');
+        $defaultPassword = Hash::make('password123');
 
-        // 1. Admin
+        // =========================================================================
+        // 1. ADMIN
+        // =========================================================================
         User::create([
             'name' => 'Super Admin',
             'email' => 'admin@gmail.com',
-            'password' => Hash::make('password123'),
+            'password' => $defaultPassword,
             'role' => 'admin',
         ]);
 
-        // 2. PT ADR Project
-        $ownerAdr = User::create([
-            'name' => 'HR Manager ADR',
-            'email' => 'hrd@adrproject.com',
-            'password' => Hash::make('password123'),
+        // =========================================================================
+        // 2. OWNER 1 - PT GOYS MEDIA
+        // =========================================================================
+        $ownerGoys = User::create([
+            'name' => 'HRD GOYS',
+            'email' => 'hrd@goysmedia.com',
+            'password' => $defaultPassword,
             'role' => 'owner',
         ]);
+
+        $companyGoys = Company::create([
+            'user_id' => $ownerGoys->id,
+            'name_company' => 'PT Goys Media',
+            'email' => 'info@goysmedia.com',
+            'phone' => '081298765432',
+            'business_type' => 'Technology',
+            'province' => 'DKI Jakarta',
+            'city' => 'Jakarta Selatan',
+        ]);
+
+        // =========================================================================
+        // 3. OWNER 2 - PT ADR PROJECT
+        // =========================================================================
+        $ownerAdr = User::create([
+            'name' => 'HRD ADR',
+            'email' => 'hrd@adrproject.com',
+            'password' => $defaultPassword,
+            'role' => 'owner',
+        ]);
+
         $companyAdr = Company::create([
             'user_id' => $ownerAdr->id,
             'name_company' => 'PT ADR Project',
             'email' => 'info@adrproject.com',
             'phone' => '081298765432',
             'business_type' => 'Technology',
-            'province' => 'DKI Jakarta',
-            'city' => 'Jakarta Selatan'
-        ]);
-
-        \App\Models\CompanyBpjsKesehatan::create([
-            'company_id' => $companyAdr->id ?? 1, // Will use DB ID
-            'employee_percent' => 1.00,
-            'company_percent' => 4.00,
-            'minimum_wage' => null,
-            'maximum_wage' => 12000000,
-        ]);
-
-        \App\Models\CompanyBpjsKetenagakerjaan::create([
-            'company_id' => $companyAdr->id ?? 1,
-            'jht_active' => true,
-            'jht_employee_percent' => 2.00,
-            'jht_company_percent' => 3.70,
-            'jp_active' => true,
-            'jp_employee_percent' => 1.00,
-            'jp_company_percent' => 2.00,
-            'jp_maximum_wage' => 10042300,
-            'jkk_active' => true,
-            'jkk_percent' => 0.24,
-            'jkm_active' => true,
-            'jkm_percent' => 0.30,
-        ]);
-
-        // 3. PT Goys Media
-        $ownerGoys = User::create([
-            'name' => 'HR Manager Goys',
-            'email' => 'hrd@goysmedia.com',
-            'password' => Hash::make('password123'),
-            'role' => 'owner',
-        ]);
-        $goysMedia = Company::create([
-            'user_id' => $ownerGoys->id,
-            'name_company' => 'PT Goys Media',
-            'email' => 'info@goysmedia.com',
-            'phone' => '081234567890',
-            'business_type' => 'Technology',
             'province' => 'Jawa Barat',
-            'city' => 'Bandung'
+            'city' => 'Bandung',
         ]);
 
-        \App\Models\CompanyBpjsKesehatan::create([
-            'company_id' => $goysMedia->id,
-            'employee_percent' => 1.00,
-            'company_percent' => 4.00,
-            'minimum_wage' => null,
-            'maximum_wage' => 12000000,
-        ]);
-
-        \App\Models\CompanyBpjsKetenagakerjaan::create([
-            'company_id' => $goysMedia->id,
-            'jht_active' => true,
-            'jht_employee_percent' => 2.00,
-            'jht_company_percent' => 3.70,
-            'jp_active' => true,
-            'jp_employee_percent' => 1.00,
-            'jp_company_percent' => 2.00,
-            'jp_maximum_wage' => 10042300,
-            'jkk_active' => true,
-            'jkk_percent' => 0.24,
-            'jkm_active' => true,
-            'jkm_percent' => 0.30,
-        ]);
-
-        // Setup PT Goys Media
-        // Branches
-        $branchBandung = Branch::create([
-            'company_id' => $goysMedia->id,
-            'name' => 'Cabang Bandung',
-            'code' => 'CBG-BDO',
-            'address' => 'Jl. Asia Afrika, Bandung'
-        ]);
-        $branchJakarta = Branch::create([
-            'company_id' => $goysMedia->id,
-            'name' => 'Cabang Jakarta',
-            'code' => 'CBG-JKT',
-            'address' => 'Jl. Sudirman, Jakarta'
-        ]);
-        $branchDepok = Branch::create([
-            'company_id' => $goysMedia->id,
-            'name' => 'Cabang Depok',
-            'code' => 'CBG-DPK',
-            'address' => 'Jl. Margonda Raya, Depok'
-        ]);
-        $branches = [$branchBandung, $branchJakarta, $branchDepok];
-
-        // Divisions
-        $divIt = Division::create(['company_id' => $goysMedia->id, 'name' => 'IT']);
-        $divSales = Division::create(['company_id' => $goysMedia->id, 'name' => 'Sales']);
-        $divHr = Division::create(['company_id' => $goysMedia->id, 'name' => 'HR & Operasional']);
-        $divFinance = Division::create(['company_id' => $goysMedia->id, 'name' => 'Finance & Accounting']);
-        $divisions = [$divIt, $divSales, $divHr, $divFinance];
-
-        // Positions
-        $posManager = Position::create(['company_id' => $goysMedia->id, 'name' => 'Manager']);
-        $posSupervisor = Position::create(['company_id' => $goysMedia->id, 'name' => 'Supervisor']);
-        $posSenior = Position::create(['company_id' => $goysMedia->id, 'name' => 'Senior Staff']);
-        $posStaff = Position::create(['company_id' => $goysMedia->id, 'name' => 'Staff']);
-
-        // 15 Shifts
-        $shiftsList = [
-            ['name' => 'Shift Reguler', 'clock_in' => '08:00:00', 'clock_out' => '17:00:00'],
-            ['name' => 'Shift Reguler IT', 'clock_in' => '08:00:00', 'clock_out' => '17:00:00'],
-            ['name' => 'Shift Pagi Operasional', 'clock_in' => '07:00:00', 'clock_out' => '15:30:00'],
-            ['name' => 'Shift Siang Operasional', 'clock_in' => '15:00:00', 'clock_out' => '23:30:00'],
-            ['name' => 'Shift Malam / NOC 24 Jam', 'clock_in' => '23:00:00', 'clock_out' => '07:30:00'],
-            ['name' => 'Shift Customer Support Pagi', 'clock_in' => '06:00:00', 'clock_out' => '14:30:00'],
-            ['name' => 'Shift Customer Support Sore', 'clock_in' => '14:00:00', 'clock_out' => '22:30:00'],
-            ['name' => 'Shift Customer Support Malam', 'clock_in' => '22:00:00', 'clock_out' => '06:30:00'],
-            ['name' => 'Shift Middle Fleksibel', 'clock_in' => '09:00:00', 'clock_out' => '18:00:00'],
-            ['name' => 'Shift Eksekutif / Head Office', 'clock_in' => '08:30:00', 'clock_out' => '17:30:00'],
-            ['name' => 'Shift Logistik & Gudang Pagi', 'clock_in' => '06:30:00', 'clock_out' => '15:00:00'],
-            ['name' => 'Shift Logistik & Gudang Siang', 'clock_in' => '14:30:00', 'clock_out' => '23:00:00'],
-            ['name' => 'Shift Weekend Standby', 'clock_in' => '08:00:00', 'clock_out' => '16:00:00'],
-            ['name' => 'Shift Part Time Sesi Pagi', 'clock_in' => '08:00:00', 'clock_out' => '12:00:00'],
-            ['name' => 'Shift Maintenance Server Subuh', 'clock_in' => '00:00:00', 'clock_out' => '06:00:00'],
+        // =========================================================================
+        // 4. SETUP PERUSAHAAN (SETTINGS, CABANG, DIVISI, JABATAN, KATEGORI CUTI, SHIFT)
+        // =========================================================================
+        $companies = [
+            [
+                'model' => $companyGoys,
+                'branches' => ['Kantor Pusat Jakarta', 'Cabang Bandung'],
+                'domain' => 'goysmedia.com',
+                'prefix_nip' => 'EMP-GM',
+                'main_employee' => [
+                    'name' => 'Abghi Fareihan',
+                    'email' => 'abghi@goysmedia.com',
+                    'gender' => 'male',
+                    'phone' => '081234567001',
+                    'basic_salary' => 15000000,
+                ],
+                'other_employees' => [
+                    ['name' => 'Budi Santoso', 'gender' => 'male', 'salary' => 8500000],
+                    ['name' => 'Citra Lestari', 'gender' => 'female', 'salary' => 7500000],
+                    ['name' => 'Dimas Anggara', 'gender' => 'male', 'salary' => 9000000],
+                    ['name' => 'Eka Prasetya', 'gender' => 'male', 'salary' => 8000000],
+                    ['name' => 'Fajar Nugraha', 'gender' => 'male', 'salary' => 7000000],
+                    ['name' => 'Gita Permata', 'gender' => 'female', 'salary' => 7500000],
+                    ['name' => 'Hendra Gunawan', 'gender' => 'male', 'salary' => 11000000],
+                    ['name' => 'Intan Maharani', 'gender' => 'female', 'salary' => 8000000],
+                    ['name' => 'Joko Widodo', 'gender' => 'male', 'salary' => 9500000],
+                    ['name' => 'Kartika Dewi', 'gender' => 'female', 'salary' => 7200000],
+                    ['name' => 'Lukman Hakim', 'gender' => 'male', 'salary' => 8200000],
+                    ['name' => 'Maya Anggraini', 'gender' => 'female', 'salary' => 7800000],
+                    ['name' => 'Nanda Pratama', 'gender' => 'male', 'salary' => 8800000],
+                    ['name' => 'Olivia Rahma', 'gender' => 'female', 'salary' => 7400000],
+                    ['name' => 'Pandu Wicaksono', 'gender' => 'male', 'salary' => 10500000],
+                    ['name' => 'Qori Amalia', 'gender' => 'female', 'salary' => 7600000],
+                    ['name' => 'Rizky Ramadhan', 'gender' => 'male', 'salary' => 8900000],
+                    ['name' => 'Sari Indah', 'gender' => 'female', 'salary' => 7100000],
+                    ['name' => 'Taufik Hidayat', 'gender' => 'male', 'salary' => 9200000],
+                    ['name' => 'Utami Putri', 'gender' => 'female', 'salary' => 7300000],
+                    ['name' => 'Vicky Firmansyah', 'gender' => 'male', 'salary' => 8400000],
+                    ['name' => 'Wahyu Hidayat', 'gender' => 'male', 'salary' => 8700000],
+                    ['name' => 'Yuda Pratama', 'gender' => 'male', 'salary' => 9100000],
+                    ['name' => 'Zahra Aulia', 'gender' => 'female', 'salary' => 7500000],
+                ],
+            ],
+            [
+                'model' => $companyAdr,
+                'branches' => ['Kantor Pusat Bandung', 'Cabang Jakarta'],
+                'domain' => 'adrproject.com',
+                'prefix_nip' => 'EMP-ADR',
+                'main_employee' => [
+                    'name' => 'Agus Wicaksono',
+                    'email' => 'agus@adrproject.com',
+                    'gender' => 'male',
+                    'phone' => '081234568001',
+                    'basic_salary' => 14000000,
+                ],
+                'other_employees' => [
+                    ['name' => 'Aditya Pratama', 'gender' => 'male', 'salary' => 8500000],
+                    ['name' => 'Bella Safitri', 'gender' => 'female', 'salary' => 7200000],
+                    ['name' => 'Candra Wijaya', 'gender' => 'male', 'salary' => 9000000],
+                    ['name' => 'Dwi Cahyono', 'gender' => 'male', 'salary' => 7800000],
+                    ['name' => 'Erna Wulandari', 'gender' => 'female', 'salary' => 7500000],
+                    ['name' => 'Farhan Maulana', 'gender' => 'male', 'salary' => 8200000],
+                    ['name' => 'Gilang Ramadhan', 'gender' => 'male', 'salary' => 8900000],
+                    ['name' => 'Hesti Yuliana', 'gender' => 'female', 'salary' => 7400000],
+                    ['name' => 'Irfan Setiawan', 'gender' => 'male', 'salary' => 9500000],
+                    ['name' => 'Julia Rahmawati', 'gender' => 'female', 'salary' => 7600000],
+                    ['name' => 'Kevin Sanjaya', 'gender' => 'male', 'salary' => 11000000],
+                    ['name' => 'Larasati Kusuma', 'gender' => 'female', 'salary' => 7900000],
+                    ['name' => 'Muhammad Fikri', 'gender' => 'male', 'salary' => 8700000],
+                    ['name' => 'Nadia Novita', 'gender' => 'female', 'salary' => 7300000],
+                    ['name' => 'Oki Kurniawan', 'gender' => 'male', 'salary' => 8400000],
+                    ['name' => 'Putri Anggita', 'gender' => 'female', 'salary' => 7100000],
+                    ['name' => 'Rendy Syahputra', 'gender' => 'male', 'salary' => 9100000],
+                    ['name' => 'Siska Amelia', 'gender' => 'female', 'salary' => 7700000],
+                    ['name' => 'Tri Wahyuni', 'gender' => 'female', 'salary' => 8300000],
+                    ['name' => 'Umar Faruq', 'gender' => 'male', 'salary' => 8600000],
+                    ['name' => 'Vina Panduwinata', 'gender' => 'female', 'salary' => 7500000],
+                    ['name' => 'Wawan Setiawan', 'gender' => 'male', 'salary' => 8800000],
+                    ['name' => 'Yogi Pratama', 'gender' => 'male', 'salary' => 9200000],
+                    ['name' => 'Zulkifli Hasan', 'gender' => 'male', 'salary' => 9800000],
+                ],
+            ],
         ];
 
-        foreach ($shiftsList as $sData) {
-            \App\Models\Shift::create([
-                'company_id' => $goysMedia->id,
-                'name' => $sData['name'],
-                'clock_in' => $sData['clock_in'],
-                'clock_out' => $sData['clock_out'],
-            ]);
-        }
+        foreach ($companies as $compData) {
+            $company = $compData['model'];
 
-        // Announcements
-        \App\Models\Announcement::create([
-            'company_id' => $goysMedia->id,
-            'title' => 'Pembaruan Kebijakan Jam Kerja Fleksibel',
-            'content' => 'Mulai tanggal 15 September 2026, seluruh staf dapat memanfaatkan waktu fleksibel kedatangan maksimal 15 menit dengan tetap memenuhi 8 jam kerja efektif harian.',
-            'start_date' => '2026-09-15',
-            'end_date' => '2026-09-30',
-            'is_active' => true,
-        ]);
-        \App\Models\Announcement::create([
-            'company_id' => $goysMedia->id,
-            'title' => 'Jadwal Town Hall Meeting Q3 2026',
-            'content' => 'Town Hall Perusahaan kuartal ketiga akan diadakan secara hybrid pada tanggal 25 September 2026 pukul 14:00 WIB. Seluruh karyawan diharapkan hadir tepat waktu.',
-            'start_date' => '2026-09-16',
-            'end_date' => '2026-09-26',
-            'is_active' => true,
-        ]);
+            // 4a. Settings Perusahaan (Otomatis menggunakan nilai default database)
+            CompanyBpjsKesehatan::create(['company_id' => $company->id]);
+            CompanyBpjsKetenagakerjaan::create(['company_id' => $company->id]);
+            CompanyPayrollSetting::create(['company_id' => $company->id]);
 
-        // Employee templates per branch (8 employees per branch = 24 employees total)
-        // Designed to have both full tenure (>12 months) and prorata (<12 months)
-        $empProfiles = [
-            0 => ['pos' => $posManager, 'salary' => 14000000, 'allowance' => 2000000, 'join' => '2023-03-01'], // 36 bln (1x Gaji Penuh)
-            1 => ['pos' => $posSupervisor, 'salary' => 9500000, 'allowance' => 1000000, 'join' => '2024-02-15'], // 25 bln (1x Gaji Penuh)
-            2 => ['pos' => $posSenior, 'salary' => 7500000, 'allowance' => 500000, 'join' => '2024-09-10'], // 18 bln (1x Gaji Penuh)
-            3 => ['pos' => $posStaff, 'salary' => 6200000, 'allowance' => 300000, 'join' => '2025-01-20'], // 14 bln (1x Gaji Penuh)
-            4 => ['pos' => $posStaff, 'salary' => 5800000, 'allowance' => 200000, 'join' => '2025-06-15'], // 9 bln (Prorata 9/12)
-            5 => ['pos' => $posStaff, 'salary' => 5500000, 'allowance' => 0, 'join' => '2025-09-15'], // 6 bln (Prorata 6/12)
-            6 => ['pos' => $posStaff, 'salary' => 5200000, 'allowance' => 0, 'join' => '2025-11-15'], // 4 bln (Prorata 4/12)
-            7 => ['pos' => $posStaff, 'salary' => 5000000, 'allowance' => 0, 'join' => '2026-01-15'], // 2 bln (Prorata 2/12)
-        ];
-
-        $empCounter = 1;
-        foreach ($branches as $branchIndex => $branch) {
-            for ($i = 0; $i < 8; $i++) {
-                $prof = $empProfiles[$i];
-                $position = $prof['pos'];
-                $division = $divisions[($branchIndex + $i) % count($divisions)];
-                
-                $genderEnum = $faker->randomElement(['male', 'female']);
-                $firstName = $faker->firstName($genderEnum);
-                $lastName = $faker->lastName($genderEnum);
-                $fullName = $firstName . ' ' . $lastName;
-                
-                $empUser = User::create([
-                    'name' => $fullName,
-                    'email' => strtolower($firstName . '.' . $lastName . '.' . $empCounter) . '@goysmedia.com',
-                    'password' => Hash::make('password123'),
-                    'role' => 'employee',
+            // 4c. Cabang (Branches)
+            $branchIds = [];
+            foreach ($compData['branches'] as $bName) {
+                $b = Branch::create([
+                    'company_id' => $company->id,
+                    'name' => $bName,
+                    'address' => $company->city . ', Indonesia',
+                    'latitude' => -6.9175,
+                    'longitude' => 107.6191,
+                    'radius' => 100,
                 ]);
-
-                $bankName = $faker->randomElement(['BCA', 'Mandiri', 'BRI', 'BNI']);
-                $nip = 'EMP-' . str_pad($empCounter, 4, '0', STR_PAD_LEFT);
-
-                $employee = Employee::create([
-                    'user_id' => $empUser->id,
-                    'company_id' => $goysMedia->id,
-                    'name' => $fullName,
-                    'email' => $empUser->email,
-                    'phone' => '08' . $faker->numerify('##########'),
-                    'gender' => $genderEnum,
-                    'nik' => '327' . str_pad($empCounter, 13, '0', STR_PAD_LEFT),
-                    'nip' => $nip,
-                    'birth_date' => $faker->dateTimeBetween('-35 years', '-22 years')->format('Y-m-d'),
-                    'address' => $faker->address,
-                    'branch_id' => $branch->id,
-                    'division_id' => $division->id,
-                    'position_id' => $position->id,
-                    'joined_at' => $prof['join'],
-                    
-                    // Bank Details
-                    'bank_name' => $bankName,
-                    'bank_account_number' => $faker->numerify('##########'),
-                    'bank_account_name' => $fullName,
-
-                    // Payroll Data
-                    'basic_salary' => $prof['salary'],
-                    'fixed_allowance' => $prof['allowance'],
-                    'daily_allowance' => 50000,
-                    'other_allowance' => 0,
-                    'overtime_rate_per_hour' => 50000,
-                    'late_penalty_type' => 'flat',
-                    'late_penalty_nominal' => 50000,
-                    'alpha_penalty_type' => 'flat',
-                    'alpha_penalty_nominal' => 150000,
-                    'npwp' => $faker->numerify('##.###.###.#-###.###'),
-                    'ptkp_status' => $faker->randomElement(['TK/0', 'TK/1', 'K/0', 'K/1']),
-                    'taxable' => true,
-                    'bpjs_kesehatan_no' => '000' . str_pad($empCounter, 9, '0', STR_PAD_LEFT),
-                    'jht_no' => '120' . str_pad($empCounter, 9, '0', STR_PAD_LEFT),
-                    'jp_no' => '130' . str_pad($empCounter, 9, '0', STR_PAD_LEFT),
-                    'jkk_no' => '140' . str_pad($empCounter, 9, '0', STR_PAD_LEFT),
-                    'jkm_no' => '150' . str_pad($empCounter, 9, '0', STR_PAD_LEFT),
-                ]);
-
-                $empCounter++;
-
-                // Create Mock Attendance for September 2026
-                \App\Models\Attendance::create([
-                    'company_id' => $goysMedia->id,
-                    'employee_id' => $employee->id,
-                    'date' => '2026-09-02',
-                    'clock_in_time' => '2026-09-02 08:30:00',
-                    'clock_out_time' => '2026-09-02 17:00:00',
-                    'late_minutes' => 30,
-                    'attendance_status' => 'present',
-                ]);
-
-                if ($i % 2 === 0) {
-                    \App\Models\Attendance::create([
-                        'company_id' => $goysMedia->id,
-                        'employee_id' => $employee->id,
-                        'date' => '2026-09-05',
-                        'attendance_status' => 'alpha',
-                        'late_minutes' => 0,
-                    ]);
-                }
-
-                // Create Mock Approved Overtime for September 2026
-                if ($i % 2 !== 0) {
-                    \App\Models\Overtime::create([
-                        'company_id' => $goysMedia->id,
-                        'employee_id' => $employee->id,
-                        'title' => 'Lembur Pekerjaan Akhir Bulan',
-                        'date' => '2026-09-10',
-                        'start_time' => '17:00:00',
-                        'end_time' => '20:00:00',
-                        'duration_minutes' => 180, // 3 hours
-                        'description' => 'Project milestone release',
-                        'status' => 'approved',
-                        'approved_at' => '2026-09-10 20:30:00',
-                    ]);
-                }
+                $branchIds[] = $b->id;
             }
-        }
-        // Add 5 specific employees for PRORATA testing
-        // Add employees for THR Testing & Payroll Mid-Month Prorata Testing
-        $prorataConfigs = [
-            // THR Testing Employees (Joined prior to Sept 2026)
-            [
-                'name' => 'Tester THR 1 Bulan (Ags 2026)',
-                'email' => 'thr1bln@goysmedia.com',
-                'nip' => 'EMP-THR-1',
-                'joined_at' => '2026-08-14',
-                'basic_salary' => 6000000,
-                'fixed_allowance' => 1000000,
-            ],
-            [
-                'name' => 'Tester THR 3 Bulan (Jun 2026)',
-                'email' => 'thr3bln@goysmedia.com',
-                'nip' => 'EMP-THR-3',
-                'joined_at' => '2026-06-14',
-                'basic_salary' => 6000000,
-                'fixed_allowance' => 1000000,
-            ],
-            [
-                'name' => 'Tester THR 6 Bulan (Mar 2026)',
-                'email' => 'thr6bln@goysmedia.com',
-                'nip' => 'EMP-THR-6',
-                'joined_at' => '2026-03-14',
-                'basic_salary' => 6000000,
-                'fixed_allowance' => 1000000,
-            ],
 
-            // Payroll Mid-Month Joiners (2 minggu lalu & baru bergabung)
-            [
-                'name' => 'Dimas Anggara (Masuk 23 Sep)',
-                'email' => 'dimas.prorata@goysmedia.com',
-                'nip' => 'EMP-PRO-23',
-                'joined_at' => '2026-09-23', // 2 minggu lalu dari 7 Oktober 2026
-                'basic_salary' => 6000000,
-                'fixed_allowance' => 500000,
-            ],
-            [
-                'name' => 'Rina Kartika (Masuk 01 Okt)',
-                'email' => 'rina.prorata@goysmedia.com',
-                'nip' => 'EMP-PRO-01O',
-                'joined_at' => '2026-10-01',
-                'basic_salary' => 7000000,
-                'fixed_allowance' => 1000000,
-            ],
-            [
-                'name' => 'Bayu Setiawan (Masuk 03 Okt)',
-                'email' => 'bayu.prorata@goysmedia.com',
-                'nip' => 'EMP-PRO-03O',
-                'joined_at' => '2026-10-03',
-                'basic_salary' => 5500000,
-                'fixed_allowance' => 0,
-            ],
-            [
-                'name' => 'Budi Santoso (Masuk 10 Sep)',
-                'email' => 'budi.prorata@goysmedia.com',
-                'nip' => 'EMP-PRO-10S',
-                'joined_at' => '2026-09-10',
-                'basic_salary' => 6500000,
-                'fixed_allowance' => 500000,
-            ],
-            [
-                'name' => 'Kevin Sanjaya (Masuk 25 Sep)',
-                'email' => 'kevin.prorata@goysmedia.com',
-                'nip' => 'EMP-PRO-25S',
-                'joined_at' => '2026-09-25',
-                'basic_salary' => 5500000,
-                'fixed_allowance' => 0,
-            ],
-        ];
+            // 4d. Divisi (Divisions)
+            $divisionNames = ['IT & Engineering', 'Human Resources', 'Finance & Accounting', 'Marketing & Sales', 'Operations'];
+            $divisionIds = [];
+            foreach ($divisionNames as $dName) {
+                $d = Division::create(['company_id' => $company->id, 'name' => $dName]);
+                $divisionIds[] = $d->id;
+            }
 
-        foreach ($prorataConfigs as $index => $pro) {
-            $userPro = User::create([
-                'name' => $pro['name'],
-                'email' => $pro['email'],
-                'password' => Hash::make('password123'),
+            // 4e. Jabatan (Positions)
+            $positionNames = ['Manager', 'Team Lead', 'Senior Staff', 'Staff', 'Junior Staff'];
+            $positionIds = [];
+            foreach ($positionNames as $pName) {
+                $p = Position::create(['company_id' => $company->id, 'name' => $pName]);
+                $positionIds[] = $p->id;
+            }
+
+            // 4f. Kategori Cuti (Leave Categories)
+            $leaveCatData = [
+                ['name' => 'Cuti Tahunan', 'quota' => 12],
+                ['name' => 'Cuti Bersama', 'quota' => 5],
+                ['name' => 'Cuti Khusus / Menikah', 'quota' => 3],
+                ['name' => 'Izin Sakit', 'quota' => 10],
+            ];
+            $categories = [];
+            foreach ($leaveCatData as $lcd) {
+                $categories[] = LeaveCategory::create([
+                    'company_id' => $company->id,
+                    'name' => $lcd['name'],
+                    'default_quota' => $lcd['quota'],
+                ]);
+            }
+
+            // 4g. Shift Kerja
+            Shift::create([
+                'company_id' => $company->id,
+                'name' => 'Shift Reguler (08:00 - 17:00)',
+                'clock_in' => '08:00:00',
+                'clock_out' => '17:00:00',
+            ]);
+            Shift::create([
+                'company_id' => $company->id,
+                'name' => 'Shift Siang (13:00 - 21:00)',
+                'clock_in' => '13:00:00',
+                'clock_out' => '21:00:00',
+            ]);
+
+            // =========================================================================
+            // 5. EMPLOYEE #1 (UTAMA)
+            // =========================================================================
+            $mainEmpData = $compData['main_employee'];
+            $mainUser = User::create([
+                'name' => $mainEmpData['name'],
+                'email' => $mainEmpData['email'],
+                'password' => $defaultPassword,
                 'role' => 'employee',
             ]);
 
-            Employee::create([
-                'user_id' => $userPro->id,
-                'company_id' => $goysMedia->id,
-                'name' => $pro['name'],
-                'email' => $pro['email'],
-                'phone' => '0899999999' . str_pad($index + 1, 2, '0', STR_PAD_LEFT),
-                'gender' => 'male',
-                'nik' => '99999999999999' . str_pad($index + 1, 2, '0', STR_PAD_LEFT),
-                'nip' => $pro['nip'],
-                'birth_date' => '1995-01-15',
-                'address' => 'Jl. Uji Coba Prorata No. ' . ($index + 1),
-                'branch_id' => $branchJakarta->id,
-                'division_id' => $divIt->id,
-                'position_id' => $posStaff->id,
-                'joined_at' => $pro['joined_at'],
+            $mainEmp = Employee::create([
+                'user_id' => $mainUser->id,
+                'company_id' => $company->id,
+                'name' => $mainEmpData['name'],
+                'email' => $mainEmpData['email'],
+                'phone' => $mainEmpData['phone'],
+                'gender' => $mainEmpData['gender'],
+                'nik' => '3271' . rand(100000000000, 999999999999),
+                'nip' => $compData['prefix_nip'] . '-001',
+                'branch_id' => $branchIds[0],
+                'division_id' => $divisionIds[0], // IT & Engineering
+                'position_id' => $positionIds[1], // Team Lead
+                'joined_at' => '2024-01-01',
+                'birth_date' => '1996-05-15',
+                'address' => $company->city,
                 'bank_name' => 'BCA',
-                'bank_account_number' => '12345678' . str_pad($index + 1, 2, '0', STR_PAD_LEFT),
-                'bank_account_name' => $pro['name'],
-                'basic_salary' => $pro['basic_salary'],
-                'fixed_allowance' => $pro['fixed_allowance'],
+                'bank_account_number' => '8271' . rand(100000, 999999),
+                'bank_account_name' => $mainEmpData['name'],
+                'payroll_cycle' => 'monthly',
+                'basic_salary' => $mainEmpData['basic_salary'],
+                'fixed_allowance' => 1500000,
                 'daily_allowance' => 50000,
-                'other_allowance' => 0,
+                'other_allowance' => 500000,
                 'overtime_rate_per_hour' => 50000,
-                'late_penalty_type' => 'flat',
-                'late_penalty_nominal' => 0,
-                'alpha_penalty_type' => 'flat',
-                'alpha_penalty_nominal' => 0,
-                'npwp' => '00.000.000.0-000.0' . str_pad($index + 1, 2, '0', STR_PAD_LEFT),
-                'ptkp_status' => 'TK/0',
-                'taxable' => true,
-                'bpjs_kesehatan_no' => '000123456' . str_pad($index + 1, 3, '0', STR_PAD_LEFT),
-                'jht_no' => '120123456' . str_pad($index + 1, 3, '0', STR_PAD_LEFT),
-                'jp_no' => '130123456' . str_pad($index + 1, 3, '0', STR_PAD_LEFT),
-                'jkk_no' => '140123456' . str_pad($index + 1, 3, '0', STR_PAD_LEFT),
-                'jkm_no' => '150123456' . str_pad($index + 1, 3, '0', STR_PAD_LEFT),
+                'is_active' => true,
             ]);
+
+            // Kuota cuti Employee #1
+            foreach ($categories as $cat) {
+                LeaveBalance::create([
+                    'company_id' => $company->id,
+                    'employee_id' => $mainEmp->id,
+                    'leave_category_id' => $cat->id,
+                    'year' => $currentYear,
+                    'quota' => $cat->default_quota,
+                    'used' => 0,
+                ]);
+            }
+
+            // =========================================================================
+            // 6. 24 EMPLOYEES LAINNYA (TOTAL 25 PER PERUSAHAAN)
+            // =========================================================================
+            $counter = 2;
+            foreach ($compData['other_employees'] as $other) {
+                $emailSlug = strtolower(str_replace(' ', '.', $other['name']));
+                $email = $emailSlug . '@' . $compData['domain'];
+
+                $u = User::create([
+                    'name' => $other['name'],
+                    'email' => $email,
+                    'password' => $defaultPassword,
+                    'role' => 'employee',
+                ]);
+
+                $nip = sprintf('%s-%03d', $compData['prefix_nip'], $counter);
+                $branchId = $branchIds[$counter % count($branchIds)];
+                $divisionId = $divisionIds[$counter % count($divisionIds)];
+                $positionId = $positionIds[$counter % count($positionIds)];
+
+                $emp = Employee::create([
+                    'user_id' => $u->id,
+                    'company_id' => $company->id,
+                    'name' => $other['name'],
+                    'email' => $email,
+                    'phone' => '0812' . rand(10000000, 99999999),
+                    'gender' => $other['gender'],
+                    'nik' => '3271' . rand(100000000000, 999999999999),
+                    'nip' => $nip,
+                    'branch_id' => $branchId,
+                    'division_id' => $divisionId,
+                    'position_id' => $positionId,
+                    'joined_at' => '2024-' . sprintf('%02d', rand(1, 12)) . '-01',
+                    'birth_date' => '199' . rand(0, 9) . '-' . sprintf('%02d', rand(1, 12)) . '-' . sprintf('%02d', rand(1, 28)),
+                    'address' => $company->city,
+                    'bank_name' => ($counter % 2 === 0) ? 'BCA' : 'Mandiri',
+                    'bank_account_number' => '5210' . rand(100000, 999999),
+                    'bank_account_name' => $other['name'],
+                    'payroll_cycle' => 'monthly',
+                    'basic_salary' => $other['salary'],
+                    'fixed_allowance' => 1000000,
+                    'daily_allowance' => 40000,
+                    'other_allowance' => 250000,
+                    'overtime_rate_per_hour' => 40000,
+                    'is_active' => true,
+                ]);
+
+                // Kuota cuti karyawan
+                foreach ($categories as $cat) {
+                    LeaveBalance::create([
+                        'company_id' => $company->id,
+                        'employee_id' => $emp->id,
+                        'leave_category_id' => $cat->id,
+                        'year' => $currentYear,
+                        'quota' => $cat->default_quota,
+                        'used' => 0,
+                    ]);
+                }
+
+                $counter++;
+            }
         }
-
-        // Seed September 2026 Payroll for Goys Media in 'process' status
-        $allEmployees = Employee::where('company_id', $goysMedia->id)->get();
-
-        // Seed an approved Kasbon / Loan for testing
-        $firstEmployee = $allEmployees->first();
-        if ($firstEmployee) {
-            $loan = \App\Models\Loan::create([
-                'company_id' => $goysMedia->id,
-                'employee_id' => $firstEmployee->id,
-                'date' => '2026-08-25',
-                'amount' => 1500000,
-                'tenor' => 3,
-                'description' => 'Pinjaman Kasbon Operasional Pribadi',
-                'status' => 'approved',
-            ]);
-
-            \App\Models\LoanInstallment::create([
-                'loan_id' => $loan->id,
-                'due_date' => '2026-09-25',
-                'amount' => 500000,
-                'status' => 'unpaid',
-            ]);
-            \App\Models\LoanInstallment::create([
-                'loan_id' => $loan->id,
-                'due_date' => '2026-10-25',
-                'amount' => 500000,
-                'status' => 'unpaid',
-            ]);
-            \App\Models\LoanInstallment::create([
-                'loan_id' => $loan->id,
-                'due_date' => '2026-11-25',
-                'amount' => 500000,
-                'status' => 'unpaid',
-            ]);
-        }
-
-        // Seed second employee loan
-        $secondEmployee = $allEmployees->where('id', '!=', $firstEmployee?->id)->first();
-        if ($secondEmployee) {
-            $loan2 = \App\Models\Loan::create([
-                'company_id' => $goysMedia->id,
-                'employee_id' => $secondEmployee->id,
-                'date' => '2026-09-01',
-                'amount' => 1000000,
-                'tenor' => 2,
-                'description' => 'Pinjaman Kasbon Darurat Keluarga',
-                'status' => 'approved',
-            ]);
-
-            \App\Models\LoanInstallment::create([
-                'loan_id' => $loan2->id,
-                'due_date' => '2026-09-25',
-                'amount' => 500000,
-                'status' => 'unpaid',
-            ]);
-            \App\Models\LoanInstallment::create([
-                'loan_id' => $loan2->id,
-                'due_date' => '2026-10-25',
-                'amount' => 500000,
-                'status' => 'unpaid',
-            ]);
-        }
-
-        $bpjsTk = $goysMedia->bpjsKetenagakerjaan()->firstOrCreate(['company_id' => $goysMedia->id]);
-        $bpjsKes = $goysMedia->bpjsKesehatan()->firstOrCreate(['company_id' => $goysMedia->id]);
-
-        $this->call(ReimbursementSeeder::class);
-        $this->call(AttendanceRecapSeeder::class);
-        $this->call(WorkScheduleSeeder::class);
-        $this->call(AnnouncementSeeder::class);
-        $this->call(AbghiFareihanSeeder::class);
-        $this->call(PendingEmployeeSeeder::class);
-        $this->call(ScheduleManagementSeeder::class);
-        $this->call(LoanSeeder::class);
-        $this->call(PendingLeaveSeeder::class);
-        $this->call(PendingOvertimeSeeder::class);
     }
 }

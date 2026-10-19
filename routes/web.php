@@ -25,6 +25,7 @@ use App\Http\Controllers\Web\Owner\Finance\ReimbursementController;
 use App\Http\Controllers\Web\Owner\Finance\LoanController;
 use App\Http\Controllers\Web\Owner\Finance\LoanSettingController;
 use App\Http\Controllers\Web\Owner\Finance\PayrollController;
+use App\Http\Controllers\Web\Owner\Finance\PayrollSettingController;
 use App\Http\Controllers\Web\Owner\Finance\TaxController;
 use App\Http\Controllers\Web\Owner\Finance\ThrController;
 use App\Http\Controllers\Web\Owner\Finance\ThrSettingController;
@@ -101,7 +102,7 @@ Route::middleware('auth')->group(function () {
             // Company Organization
             Route::prefix('company')->name('company.')->group(function () {
                 Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
-                Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+                Route::match(['put', 'post'], '/profile', [ProfileController::class, 'update'])->name('profile.update');
                 Route::resource('branches', BranchController::class)->except(['show']);
                 Route::resource('divisions', DivisionController::class)->except(['show']);
                 Route::resource('positions', PositionController::class)->except(['show']);
@@ -213,6 +214,8 @@ Route::middleware('auth')->group(function () {
 
             // Payrolls
             Route::prefix('payrolls')->name('payrolls.')->group(function () {
+                Route::get('/settings', [PayrollSettingController::class, 'index'])->name('settings.index');
+                Route::post('/settings', [PayrollSettingController::class, 'store'])->name('settings.store');
                 Route::get('/check-employees', [PayrollController::class, 'checkEmployees'])->name('check');
                 Route::get('/master', [PayrollController::class, 'master'])->name('master.index');
                 Route::get('/', [PayrollController::class, 'index'])->name('index');

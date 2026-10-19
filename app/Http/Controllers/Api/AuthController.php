@@ -176,7 +176,16 @@ class AuthController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Detail user berhasil diambil.',
-            'user' => $user->only(['id', 'name', 'email', 'role', 'created_at', 'updated_at']),
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'avatar' => $user->avatar,
+                'avatar_url' => $user->avatar ? asset('storage/' . $user->avatar) : null,
+                'created_at' => $user->created_at,
+                'updated_at' => $user->updated_at,
+            ],
         ]);
     }
 

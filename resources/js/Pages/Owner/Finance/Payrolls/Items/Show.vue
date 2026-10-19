@@ -257,7 +257,9 @@ const deductionBreakdown = computed(() => {
 
                     <div class="p-4 divide-y divide-slate-100 text-sm">
                         <div class="py-2.5 flex items-center justify-between">
-                            <span class="text-slate-600">Gaji Pokok (Basic Salary)</span>
+                            <span class="text-slate-600">
+                                {{ (item.employee?.payroll_cycle || payroll?.payroll_cycle) === 'daily' ? 'Gaji Harian' : ((item.employee?.payroll_cycle || payroll?.payroll_cycle) === 'weekly' ? 'Gaji Mingguan' : 'Gaji Bulanan') }}
+                            </span>
                             <span class="font-semibold text-slate-900">{{ formatCurrency(item.basic_salary) }}</span>
                         </div>
 
@@ -268,7 +270,7 @@ const deductionBreakdown = computed(() => {
 
                         <div v-if="Number(item.daily_allowance || 0) > 0" class="py-2.5 flex items-center justify-between">
                             <div>
-                                <div class="text-slate-600">Tunjangan Harian / Kehadiran</div>
+                                <div class="text-slate-600">Tunjangan Harian</div>
                                 <div class="text-[11px] text-slate-400">Total kehadiran: {{ attendanceSummary?.present || 0 }} hari</div>
                             </div>
                             <span class="font-semibold text-slate-900">{{ formatCurrency(item.daily_allowance) }}</span>
@@ -332,10 +334,10 @@ const deductionBreakdown = computed(() => {
                             <span class="font-semibold text-rose-600">-{{ formatCurrency(item.late_penalty_amount) }}</span>
                         </div>
 
-                        <!-- Denda Alpha / Absen -->
+                        <!-- Potongan Ketidakhadiran (Alpha) -->
                         <div v-if="Number(item.alpha_penalty_amount || 0) > 0" class="py-2.5 flex items-center justify-between">
                             <div>
-                                <div class="text-slate-600">Denda Alpha / Absen</div>
+                                <div class="text-slate-600">Potongan Ketidakhadiran (Alpha)</div>
                                 <div class="text-[11px] text-rose-500 font-medium">Alpha {{ attendanceSummary?.absent || 0 }} hari kerja</div>
                             </div>
                             <span class="font-semibold text-rose-600">-{{ formatCurrency(item.alpha_penalty_amount) }}</span>

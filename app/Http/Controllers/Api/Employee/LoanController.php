@@ -72,6 +72,45 @@ class LoanController extends Controller
         return $this->paginatedResponse($loans, 'Daftar pinjaman berhasil diambil.');
     }
 
+    /**
+     * Get loan settings, policies and employee limits.
+     */
+    public function settings(Request $request)
+    {
+        $employee = $request->user()->employee;
+        if (!$employee) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Data karyawan tidak ditemukan.'
+            ], 404);
+        }
+
+        $company = $employee->company;
+        $loanSetting = $company ? $company->loanSetting : null;
+
+        $basicSalary = (int) ($employee->basic_salary ?? 0);
+        $maxPercentage = 35;
+        $maxMonthlyInstallment = (int) round($basicSalary * ($maxPercentage / 100));
+
+        $defaultTenors = [1, 2, 3, 4, 5, 6, 9, 12, 18, 24];
+        if ($loanSetting && $loanSetting->max_tenor_months) {
+            $filteredTenors = array_values(array_filter($defaultTenors, fn($t) => $t <= $loanSetting->max_tenor_months));
+            $tenorOptions = !empty($filteredTenors) ? $filteredTenors : [(int) $loanSetting->max_tenor_months];
+        } else {
+            $tenorOptions = $defaultTenors;
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Pengaturan pinjaman berhasil diambil.',
+            'data' => [
+                'basic_salary' => $basicSalary,
+                'max_percentage' => $maxPercentage,
+                'max_monthly_installment' => $maxMonthlyInstallment,
+                'tenor_options' => $tenorOptions,
+            ],
+        ]);
+    }
 
     /**
      * Submit a new loan request from employee.
