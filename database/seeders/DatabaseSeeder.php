@@ -218,13 +218,13 @@ class DatabaseSeeder extends Seeder
             // 4g. Shift Kerja
             Shift::create([
                 'company_id' => $company->id,
-                'name' => 'Shift Reguler (08:00 - 17:00)',
+                'name' => 'Shift Reguler',
                 'clock_in' => '08:00:00',
                 'clock_out' => '17:00:00',
             ]);
             Shift::create([
                 'company_id' => $company->id,
-                'name' => 'Shift Siang (13:00 - 21:00)',
+                'name' => 'Shift Siang',
                 'clock_in' => '13:00:00',
                 'clock_out' => '21:00:00',
             ]);

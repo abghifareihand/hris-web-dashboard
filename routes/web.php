@@ -103,7 +103,7 @@ Route::middleware('auth')->group(function () {
             Route::prefix('company')->name('company.')->group(function () {
                 Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
                 Route::match(['put', 'post'], '/profile', [ProfileController::class, 'update'])->name('profile.update');
-                Route::resource('branches', BranchController::class)->except(['show']);
+                Route::resource('branches', BranchController::class);
                 Route::resource('divisions', DivisionController::class)->except(['show']);
                 Route::resource('positions', PositionController::class)->except(['show']);
             });

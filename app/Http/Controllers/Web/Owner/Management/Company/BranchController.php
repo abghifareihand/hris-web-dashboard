@@ -81,6 +81,16 @@ class BranchController extends Controller
             ->with('success', 'Cabang baru berhasil ditambahkan.');
     }
 
+    public function show(Branch $branch)
+    {
+        abort_if($branch->company_id !== Auth::user()->company->id, 403);
+        $branch->loadCount('employees');
+
+        return Inertia::render('Owner/Management/Company/Branches/Show', [
+            'branch' => $branch,
+        ]);
+    }
+
     public function edit(Branch $branch)
     {
         abort_if($branch->company_id !== Auth::user()->company->id, 403);

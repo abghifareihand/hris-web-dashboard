@@ -38,6 +38,10 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    readonly: {
+        type: Boolean,
+        default: false,
+    },
     required: {
         type: Boolean,
         default: false,
@@ -250,6 +254,7 @@ const onClick = (event) => {
                 :value="displayValue"
                 :placeholder="placeholder"
                 :disabled="disabled"
+                :readonly="readonly"
                 :required="required"
                 @input="onInput"
                 @focus="onFocus"
@@ -258,6 +263,7 @@ const onClick = (event) => {
                 class="flex-1 w-full h-full px-3 py-2 text-[0.8125rem] text-slate-800 border-0 focus:outline-hidden focus:ring-0 bg-transparent min-w-0"
                 :class="[
                     type === 'time' || type === 'date' ? 'cursor-pointer' : '',
+                    readonly ? 'bg-slate-50/80 cursor-default select-all' : '',
                 ]"
             />
 
@@ -303,6 +309,7 @@ const onClick = (event) => {
                 :value="displayValue"
                 :placeholder="placeholder"
                 :disabled="disabled"
+                :readonly="readonly"
                 :required="required"
                 @input="onInput"
                 @focus="onFocus"
@@ -314,6 +321,7 @@ const onClick = (event) => {
                     { 'border-danger-500': error },
                     clearable && modelValue ? '!pr-9' : '',
                     type === 'time' || type === 'date' ? 'cursor-pointer' : '',
+                    readonly ? '!bg-slate-50/80 !text-slate-700 cursor-default select-all' : '',
                 ]"
             />
             <button

@@ -154,6 +154,7 @@ class AuthController extends Controller
             'status' => true,
             'message' => 'Login berhasil.',
             'access_token' => $token,
+            'web_dashboard_url' => rtrim(config('app.url') ?: $request->root(), '/') . '/login',
             'user' => $user,
         ]);
     }

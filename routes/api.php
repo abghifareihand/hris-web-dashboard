@@ -57,16 +57,16 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
     Route::get('/leaves/balances', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'getBalances']);
     Route::put('/leaves/balances/{id}', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'updateBalance']);
 
-    Route::get('/leaves/requests', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'getRequests']);
-    Route::post('/leaves/requests/{id}/approve', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'approveRequest']);
-    Route::post('/leaves/requests/{id}/reject', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'rejectRequest']);
-    Route::delete('/leaves/requests/{id}', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'deleteRequest']);
+    Route::get('/leaves', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'getRequests']);
+    Route::post('/leaves/{id}/approve', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'approveRequest']);
+    Route::post('/leaves/{id}/reject', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'rejectRequest']);
+    Route::delete('/leaves/{id}', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'deleteRequest']);
 
     // Overtimes for Owner
-    Route::get('/overtimes/requests', [\App\Http\Controllers\Api\Owner\OvertimeController::class, 'index']);
-    Route::post('/overtimes/requests/{id}/approve', [\App\Http\Controllers\Api\Owner\OvertimeController::class, 'approve']);
-    Route::post('/overtimes/requests/{id}/reject', [\App\Http\Controllers\Api\Owner\OvertimeController::class, 'reject']);
-    Route::delete('/overtimes/requests/{id}', [\App\Http\Controllers\Api\Owner\OvertimeController::class, 'destroy']);
+    Route::get('/overtimes', [\App\Http\Controllers\Api\Owner\OvertimeController::class, 'index']);
+    Route::post('/overtimes/{id}/approve', [\App\Http\Controllers\Api\Owner\OvertimeController::class, 'approve']);
+    Route::post('/overtimes/{id}/reject', [\App\Http\Controllers\Api\Owner\OvertimeController::class, 'reject']);
+    Route::delete('/overtimes/{id}', [\App\Http\Controllers\Api\Owner\OvertimeController::class, 'destroy']);
 
     // Agendas for Owner
     Route::get('/agendas', [\App\Http\Controllers\Api\Owner\AgendaController::class, 'index']);
@@ -79,6 +79,24 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
     Route::post('/daily-reports', [\App\Http\Controllers\Api\Owner\DailyReportController::class, 'store']);
     Route::post('/daily-reports/{id}', [\App\Http\Controllers\Api\Owner\DailyReportController::class, 'update']);
     Route::delete('/daily-reports/{id}', [\App\Http\Controllers\Api\Owner\DailyReportController::class, 'destroy']);
+
+    // Attendances for Owner
+    Route::get('/attendances', [\App\Http\Controllers\Api\Owner\AttendanceController::class, 'index']);
+
+    // Reimbursements for Owner
+    Route::get('/reimbursements', [\App\Http\Controllers\Api\Owner\ReimbursementController::class, 'index']);
+    Route::post('/reimbursements/{id}/approve', [\App\Http\Controllers\Api\Owner\ReimbursementController::class, 'approve']);
+    Route::post('/reimbursements/{id}/reject', [\App\Http\Controllers\Api\Owner\ReimbursementController::class, 'reject']);
+    Route::delete('/reimbursements/{id}', [\App\Http\Controllers\Api\Owner\ReimbursementController::class, 'destroy']);
+
+    // Loans for Owner
+    Route::get('/loans', [\App\Http\Controllers\Api\Owner\LoanController::class, 'index']);
+    Route::post('/loans', [\App\Http\Controllers\Api\Owner\LoanController::class, 'store']);
+    Route::post('/loans/{id}/approve', [\App\Http\Controllers\Api\Owner\LoanController::class, 'approve']);
+    Route::post('/loans/{id}/reject', [\App\Http\Controllers\Api\Owner\LoanController::class, 'reject']);
+    Route::delete('/loans/{id}', [\App\Http\Controllers\Api\Owner\LoanController::class, 'destroy']);
+    Route::post('/loans/{id}/installments/{installmentId}/pay', [\App\Http\Controllers\Api\Owner\LoanController::class, 'updateInstallment']);
+    Route::post('/loans/{id}/installments/{installmentId}/update', [\App\Http\Controllers\Api\Owner\LoanController::class, 'updateInstallment']);
 
     // Profile & Security for Owner
     Route::get('/profile', [\App\Http\Controllers\Api\Owner\ProfileController::class, 'show']);
@@ -123,12 +141,14 @@ Route::middleware('auth:sanctum')->prefix('employee')->group(function () {
     Route::post('/daily-reports/{id}', [\App\Http\Controllers\Api\Employee\DailyReportController::class, 'update']);
     Route::delete('/daily-reports/{id}', [\App\Http\Controllers\Api\Employee\DailyReportController::class, 'destroy']);
 
-    // Attendance for Employee
-    Route::get('/attendance/history', [\App\Http\Controllers\Api\Employee\AttendanceController::class, 'history']);
-    Route::get('/attendance/check-radius', [\App\Http\Controllers\Api\Employee\AttendanceController::class, 'checkRadius']);
-    Route::get('/attendance/camera', [\App\Http\Controllers\Api\Employee\AttendanceController::class, 'checkCamera']);
-    Route::get('/attendance/today', [\App\Http\Controllers\Api\Employee\AttendanceController::class, 'todayStatus']);
-    Route::post('/attendance', [\App\Http\Controllers\Api\Employee\AttendanceController::class, 'store']);
+    // Attendances (Riwayat Kehadiran)
+    Route::get('/attendances', [\App\Http\Controllers\Api\Employee\AttendanceController::class, 'index']);
+
+    // Presence (Aksi & Validasi Presensi Realtime)
+    Route::get('/presence/today', [\App\Http\Controllers\Api\Employee\PresenceController::class, 'todayStatus']);
+    Route::get('/presence/check-radius', [\App\Http\Controllers\Api\Employee\PresenceController::class, 'checkRadius']);
+    Route::get('/presence/camera', [\App\Http\Controllers\Api\Employee\PresenceController::class, 'checkCamera']);
+    Route::post('/presence', [\App\Http\Controllers\Api\Employee\PresenceController::class, 'store']);
 
     // Payrolls (Slip Gaji) for Employee
     Route::get('/payrolls', [\App\Http\Controllers\Api\Employee\PayrollController::class, 'index']);

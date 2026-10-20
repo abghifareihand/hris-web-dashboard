@@ -93,10 +93,18 @@ const modeOptions = [
 
 const shiftOptionsWithOff = computed(() => [
     { value: '', label: 'Libur (kosongkan jadwal)' },
-    ...props.shifts.map((s) => ({
-        value: s.id,
-        label: `${s.name} (${s.clock_in?.substring(0, 5)} - ${s.clock_out?.substring(0, 5)})`,
-    })),
+    ...props.shifts.map((s) => {
+        const timeStr = (s.clock_in && s.clock_out)
+            ? `${s.clock_in.substring(0, 5)} - ${s.clock_out.substring(0, 5)}`
+            : '';
+        const label = (!timeStr || s.name.includes(timeStr))
+            ? s.name
+            : `${s.name} (${timeStr})`;
+        return {
+            value: s.id,
+            label,
+        };
+    }),
 ]);
 
 const areaOptions = [

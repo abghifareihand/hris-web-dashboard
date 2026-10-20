@@ -5,6 +5,7 @@ import Button from "@/Components/UI/Button.vue";
 import Input from "@/Components/UI/Input.vue";
 import Select from "@/Components/UI/Select.vue";
 import Textarea from "@/Components/UI/Textarea.vue";
+import LocationPickerMap from "@/Components/UI/LocationPickerMap.vue";
 
 defineOptions({
     layout: AppLayout,
@@ -67,9 +68,16 @@ const submit = () => {
         </div>
 
         <form @submit.prevent="submit" class="space-y-6">
-            <!-- Main Card -->
-            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <!-- 1. Informasi Cabang -->
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+                <div class="px-6 py-4 border-b border-slate-100 rounded-t-2xl">
+                    <h2 class="text-base font-bold text-slate-900">
+                        Informasi Cabang
+                    </h2>
+                </div>
+
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <Input
                             label="Nama Cabang"
                             v-model="form.name"
@@ -103,20 +111,42 @@ const submit = () => {
                             required
                             :error="form.errors.radius"
                         />
+                    </div>
+                </div>
+            </div>
 
+            <!-- 2. Lokasi Kantor & Titik Koordinat -->
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+                <div class="px-6 py-4 border-b border-slate-100 rounded-t-2xl">
+                    <h2 class="text-base font-bold text-slate-900">
+                        Lokasi Kantor & Titik Koordinat
+                    </h2>
+                </div>
+
+                <div class="p-6 space-y-5">
+                    <!-- Peta Lokasi OpenStreetMap -->
+                    <LocationPickerMap
+                        v-model:latitude="form.latitude"
+                        v-model:longitude="form.longitude"
+                        @addressResolved="(addr) => (form.address = addr)"
+                    />
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <Input
                             label="Latitude"
                             v-model="form.latitude"
-                            placeholder="misal: -6.2088"
+                            placeholder="-6.200000"
                             required
+                            readonly
                             :error="form.errors.latitude"
                         />
 
                         <Input
                             label="Longitude"
                             v-model="form.longitude"
-                            placeholder="misal: 106.8456"
+                            placeholder="106.816666"
                             required
+                            readonly
                             :error="form.errors.longitude"
                         />
 
@@ -125,12 +155,13 @@ const submit = () => {
                                 label="Alamat Lengkap"
                                 v-model="form.address"
                                 rows="3"
-                                placeholder="Tuliskan alamat lengkap kantor cabang..."
+                                placeholder="Alamat otomatis terisi saat memilih lokasi di peta"
                                 required
                                 :error="form.errors.address"
                             />
                         </div>
                     </div>
+                </div>
             </div>
 
             <!-- Submit Section -->
