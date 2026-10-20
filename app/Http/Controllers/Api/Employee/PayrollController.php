@@ -34,7 +34,7 @@ class PayrollController extends Controller
         ])
         ->where('employee_id', $employee->id)
         ->whereHas('payroll', function ($q) {
-            $q->whereIn('status', ['process', 'paid']);
+            $q->where('status', 'paid');
         });
 
         if ($request->filled('year')) {
@@ -53,11 +53,13 @@ class PayrollController extends Controller
 
         $payrollItems->getCollection()->transform(function ($item) {
             $payroll = $item->payroll;
+            $cycle = $item->employee?->payroll_cycle ?? $payroll?->payroll_cycle ?? 'monthly';
 
             return [
                 'id' => $item->id,
                 'payroll_id' => $item->payroll_id,
                 'payroll_code' => $payroll ? $payroll->code : null,
+                'payroll_cycle' => $cycle,
                 'period_start' => $payroll ? Carbon::parse($payroll->start_date)->format('Y-m-d') : null,
                 'period_end' => $payroll ? Carbon::parse($payroll->end_date)->format('Y-m-d') : null,
                 'payment_status' => $payroll ? $payroll->status : 'process',
@@ -133,6 +135,9 @@ class PayrollController extends Controller
         ])
         ->where('id', $id)
         ->where('employee_id', $employee->id)
+        ->whereHas('payroll', function ($q) {
+            $q->where('status', 'paid');
+        })
         ->firstOrFail();
 
         $payroll = $item->payroll;

@@ -98,6 +98,14 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
     Route::post('/loans/{id}/installments/{installmentId}/pay', [\App\Http\Controllers\Api\Owner\LoanController::class, 'updateInstallment']);
     Route::post('/loans/{id}/installments/{installmentId}/update', [\App\Http\Controllers\Api\Owner\LoanController::class, 'updateInstallment']);
 
+    // Payrolls for Owner
+    Route::get('/payrolls', [\App\Http\Controllers\Api\Owner\PayrollController::class, 'index']);
+    Route::get('/payrolls/{id}/items', [\App\Http\Controllers\Api\Owner\PayrollController::class, 'items']);
+    Route::get('/payrolls/{id}/items/{itemId}', [\App\Http\Controllers\Api\Owner\PayrollController::class, 'showItem']);
+    Route::get('/payrolls/{id}/items/{itemId}/download', [\App\Http\Controllers\Api\Owner\PayrollController::class, 'downloadItem'])->name('api.owner.payrolls.download-item');
+    Route::post('/payrolls/{id}/pay', [\App\Http\Controllers\Api\Owner\PayrollController::class, 'markAsPaid']);
+    Route::delete('/payrolls/{id}', [\App\Http\Controllers\Api\Owner\PayrollController::class, 'destroy']);
+
     // Profile & Security for Owner
     Route::get('/profile', [\App\Http\Controllers\Api\Owner\ProfileController::class, 'show']);
     Route::post('/profile', [\App\Http\Controllers\Api\Owner\ProfileController::class, 'update']);

@@ -255,7 +255,7 @@
                     @endif
                     @if (($item->reimbursement_amount ?? 0) > 0)
                         <tr>
-                            <td>Reimbursement / Klaim Biaya</td>
+                            <td>Klaim Biaya</td>
                             <td class="text-right">{{ number_format($item->reimbursement_amount, 0, ',', '.') }}</td>
                         </tr>
                     @endif
