@@ -98,15 +98,15 @@ const perMinuteLatePenalty = computed(() => {
 });
 
 const lateProrateRate = computed(() => {
-    return Number(form.late_penalty_nominal) > 0 ? Number(form.late_penalty_nominal) : 20000;
+    return Number(form.late_penalty_nominal || 0);
 });
 
 const lateFlatRate = computed(() => {
-    return Number(form.late_penalty_nominal) > 0 ? Number(form.late_penalty_nominal) : 20000;
+    return Number(form.late_penalty_nominal || 0);
 });
 
 const alphaProrateSalary = computed(() => {
-    return Number(form.basic_salary) > 0 ? Number(form.basic_salary) : 3000000;
+    return Number(form.basic_salary || 0);
 });
 
 const alphaProratePerDay = computed(() => {
@@ -114,7 +114,7 @@ const alphaProratePerDay = computed(() => {
 });
 
 const alphaFlatRate = computed(() => {
-    return Number(form.alpha_penalty_nominal) > 0 ? Number(form.alpha_penalty_nominal) : 100000;
+    return Number(form.alpha_penalty_nominal || 0);
 });
 
 const submit = () => {
@@ -1036,12 +1036,12 @@ const submit = () => {
                                     </span>
                                 </div>
                                 <p class="text-xs text-slate-600">
-                                    Denda per hari = <span class="font-semibold text-slate-900">Rp {{ formatRupiah(alphaFlatRate) }}</span>:
+                                    Denda flat = <span class="font-semibold text-slate-900">Rp {{ formatRupiah(alphaFlatRate) }}</span>:
                                 </p>
                                 <ul class="text-xs text-slate-600 space-y-1 pl-3.5 list-disc marker:text-slate-400">
                                     <li>1 hari alpha = Rp {{ formatRupiah(alphaFlatRate) }}</li>
-                                    <li>2 hari alpha = Rp {{ formatRupiah(alphaFlatRate * 2) }}</li>
-                                    <li>3 hari alpha = Rp {{ formatRupiah(alphaFlatRate * 3) }}</li>
+                                    <li>2 hari alpha = Rp {{ formatRupiah(alphaFlatRate) }}</li>
+                                    <li>3 hari alpha = Rp {{ formatRupiah(alphaFlatRate) }}</li>
                                 </ul>
                             </div>
                         </div>
