@@ -27,11 +27,17 @@ Route::get('/companies/{id}/structures', [\App\Http\Controllers\Api\CompanyContr
 
 // API Owner Routes
 Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
-    // Schedules & Swaps for Owner
-    Route::get('/shifts', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'getShifts']);
+    // Shifts for Owner
+    Route::get('/shifts', [\App\Http\Controllers\Api\Owner\ShiftController::class, 'index']);
+    Route::post('/shifts', [\App\Http\Controllers\Api\Owner\ShiftController::class, 'store']);
+    Route::get('/shifts/{id}', [\App\Http\Controllers\Api\Owner\ShiftController::class, 'show']);
+    Route::match(['post', 'put'], '/shifts/{id}', [\App\Http\Controllers\Api\Owner\ShiftController::class, 'update']);
+    Route::delete('/shifts/{id}', [\App\Http\Controllers\Api\Owner\ShiftController::class, 'destroy']);
+
+    // Schedules for Owner
     Route::get('/schedules', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'getSchedules']);
     Route::post('/schedules/bulk-store', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'bulkStore']);
-    Route::put('/schedules/{id}', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'update']);
+    Route::match(['post', 'put'], '/schedules/{id}', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'update']);
     Route::delete('/schedules/{id}', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'destroy']);
     
     Route::get('/schedule-swaps/personal', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'getPersonalSwaps']);
@@ -56,6 +62,27 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
     Route::post('/employees/{id}/toggle-status', [\App\Http\Controllers\Api\Owner\EmployeeController::class, 'toggleStatus']);
     Route::delete('/employees/{id}', [\App\Http\Controllers\Api\Owner\EmployeeController::class, 'destroy']);
     Route::get('/company-structure', [\App\Http\Controllers\Api\Owner\EmployeeController::class, 'getCompanyStructure']);
+
+    // Branches for Owner
+    Route::get('/branches', [\App\Http\Controllers\Api\Owner\BranchController::class, 'index']);
+    Route::post('/branches', [\App\Http\Controllers\Api\Owner\BranchController::class, 'store']);
+    Route::get('/branches/{id}', [\App\Http\Controllers\Api\Owner\BranchController::class, 'show']);
+    Route::match(['post', 'put'], '/branches/{id}', [\App\Http\Controllers\Api\Owner\BranchController::class, 'update']);
+    Route::delete('/branches/{id}', [\App\Http\Controllers\Api\Owner\BranchController::class, 'destroy']);
+
+    // Positions for Owner
+    Route::get('/positions', [\App\Http\Controllers\Api\Owner\PositionController::class, 'index']);
+    Route::post('/positions', [\App\Http\Controllers\Api\Owner\PositionController::class, 'store']);
+    Route::get('/positions/{id}', [\App\Http\Controllers\Api\Owner\PositionController::class, 'show']);
+    Route::match(['post', 'put'], '/positions/{id}', [\App\Http\Controllers\Api\Owner\PositionController::class, 'update']);
+    Route::delete('/positions/{id}', [\App\Http\Controllers\Api\Owner\PositionController::class, 'destroy']);
+
+    // Divisions for Owner
+    Route::get('/divisions', [\App\Http\Controllers\Api\Owner\DivisionController::class, 'index']);
+    Route::post('/divisions', [\App\Http\Controllers\Api\Owner\DivisionController::class, 'store']);
+    Route::get('/divisions/{id}', [\App\Http\Controllers\Api\Owner\DivisionController::class, 'show']);
+    Route::match(['post', 'put'], '/divisions/{id}', [\App\Http\Controllers\Api\Owner\DivisionController::class, 'update']);
+    Route::delete('/divisions/{id}', [\App\Http\Controllers\Api\Owner\DivisionController::class, 'destroy']);
 
     // Leaves for Owner
     Route::get('/leaves/categories', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'getCategories']);
