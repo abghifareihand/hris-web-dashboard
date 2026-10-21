@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('name_company');
             $table->string('email')->unique();
             $table->string('phone');
+            $table->text('address')->nullable();
             $table->string('province');
             $table->string('city');
             $table->string('business_type');

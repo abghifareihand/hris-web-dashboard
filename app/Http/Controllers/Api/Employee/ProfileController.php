@@ -60,9 +60,9 @@ class ProfileController extends Controller
                 'company' => $company ? [
                     'id' => $company->id,
                     'name' => $company->name_company,
-                    'email' => $company->email_company,
-                    'phone' => $company->phone_company,
-                    'address' => $company->address_company,
+                    'email' => $company->email_company ?? $company->email,
+                    'phone' => $company->phone_company ?? $company->phone,
+                    'address' => $company->address_company ?? $company->address,
                     'logo_url' => $company->logo ? asset('storage/' . $company->logo) : null,
                 ] : null,
                 'placement' => [

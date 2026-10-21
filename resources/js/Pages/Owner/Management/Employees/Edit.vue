@@ -103,6 +103,12 @@ const form = useForm({
 
 const formatRupiah = (val) => new Intl.NumberFormat("id-ID").format(Math.round(val || 0));
 
+const overtimePerMinute = computed(() => {
+    const rate = Number(form.overtime_rate_per_hour || 0);
+    if (!rate || rate <= 0) return "0";
+    return formatRupiah(Math.floor(rate / 60));
+});
+
 const perMinuteLatePenalty = computed(() => {
     const nominal = Number(form.late_penalty_nominal || 0);
     const perMinute = Math.round(nominal / 60);
@@ -627,10 +633,11 @@ const submit = () => {
                         />
 
                         <Input
-                            label="Tarif Lembur per Jam"
+                            label="Upah Lembur per Jam"
                             v-model="form.overtime_rate_per_hour"
                             currency
                             placeholder="0"
+                            :help="`Akan mendapatkan Rp ${overtimePerMinute} pada setiap menit`"
                             :error="form.errors.overtime_rate_per_hour"
                         />
                     </div>

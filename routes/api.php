@@ -44,8 +44,17 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
     Route::post('/schedule-swaps/team/{id}/approve', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'approveTeamSwap']);
     Route::post('/schedule-swaps/team/{id}/reject', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'rejectTeamSwap']);
     
+    // Company Profile for Owner
+    Route::get('/company', [\App\Http\Controllers\Api\Owner\CompanyController::class, 'show']);
+    Route::post('/company', [\App\Http\Controllers\Api\Owner\CompanyController::class, 'update']);
+
     // Employees & Company Structure for Owner
     Route::get('/employees', [\App\Http\Controllers\Api\Owner\EmployeeController::class, 'getEmployees']);
+    Route::post('/employees', [\App\Http\Controllers\Api\Owner\EmployeeController::class, 'store']);
+    Route::get('/employees/{id}', [\App\Http\Controllers\Api\Owner\EmployeeController::class, 'show']);
+    Route::post('/employees/{id}', [\App\Http\Controllers\Api\Owner\EmployeeController::class, 'update']);
+    Route::post('/employees/{id}/toggle-status', [\App\Http\Controllers\Api\Owner\EmployeeController::class, 'toggleStatus']);
+    Route::delete('/employees/{id}', [\App\Http\Controllers\Api\Owner\EmployeeController::class, 'destroy']);
     Route::get('/company-structure', [\App\Http\Controllers\Api\Owner\EmployeeController::class, 'getCompanyStructure']);
 
     // Leaves for Owner

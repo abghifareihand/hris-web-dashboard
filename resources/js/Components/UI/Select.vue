@@ -62,6 +62,14 @@ const props = defineProps({
         type: String,
         default: 'md',
     },
+    searchable: {
+        type: Boolean,
+        default: false,
+    },
+    searchPlaceholder: {
+        type: String,
+        default: 'Cari...',
+    },
 });
 
 const emit = defineEmits(['update:modelValue', 'change']);
@@ -84,6 +92,8 @@ const emit = defineEmits(['update:modelValue', 'change']);
         :disabled="disabled"
         :error="error"
         :size="size"
+        :searchable="searchable"
+        :search-placeholder="searchPlaceholder"
         @update:model-value="emit('update:modelValue', $event)"
         @change="emit('change', $event)"
     />

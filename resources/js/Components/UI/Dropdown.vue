@@ -65,6 +65,14 @@ const props = defineProps({
         type: String,
         default: 'md', // 'xs', 'sm', 'md', 'lg'
     },
+    searchable: {
+        type: Boolean,
+        default: false,
+    },
+    searchPlaceholder: {
+        type: String,
+        default: 'Cari...',
+    },
 });
 
 const emit = defineEmits(['update:modelValue', 'change']);
@@ -72,6 +80,8 @@ const emit = defineEmits(['update:modelValue', 'change']);
 const isOpen = ref(false);
 const dropdownRef = ref(null);
 const panelRef = ref(null);
+const searchInputRef = ref(null);
+const searchQuery = ref('');
 
 const scrollToSelected = () => {
     if (!panelRef.value) return;
@@ -89,12 +99,18 @@ const scrollToSelected = () => {
 
 watch(isOpen, (val) => {
     if (val) {
+        searchQuery.value = '';
         nextTick(() => {
+            if (props.searchable && searchInputRef.value) {
+                searchInputRef.value.focus();
+            }
             scrollToSelected();
             requestAnimationFrame(() => {
                 scrollToSelected();
             });
         });
+    } else {
+        searchQuery.value = '';
     }
 });
 
@@ -138,6 +154,16 @@ const normalizedOptions = computed(() => {
     return list;
 });
 
+const displayedOptions = computed(() => {
+    if (!props.searchable || !searchQuery.value.trim()) {
+        return normalizedOptions.value;
+    }
+    const q = searchQuery.value.toLowerCase().trim();
+    return normalizedOptions.value.filter((opt) =>
+        opt.label.toLowerCase().includes(q)
+    );
+});
+
 const selectedOption = computed(() => {
     return normalizedOptions.value.find((opt) => String(opt.value) === String(props.modelValue ?? ''));
 });
@@ -160,6 +186,7 @@ const toggleDropdown = () => {
 
 const closeDropdown = () => {
     isOpen.value = false;
+    searchQuery.value = '';
 };
 
 const selectOption = (value) => {
@@ -294,19 +321,44 @@ const isPlaceholderState = computed(() => {
         >
             <div
                 v-if="isOpen"
-                ref="panelRef"
                 :class="[
-                    'absolute left-0 top-full mt-1.5 w-full rounded-xl bg-white shadow-xl border border-slate-200/80 py-1.5 max-h-60 overflow-y-auto focus:outline-none z-50 dropdown-scroll',
+                    'absolute left-0 top-full mt-1.5 w-full rounded-xl bg-white shadow-xl border border-slate-200/80 focus:outline-none z-50 overflow-hidden flex flex-col',
                     sizeClasses.panel,
                     panelClass,
                 ]"
             >
-                <div v-if="normalizedOptions.length === 0" class="px-4 py-3 text-xs text-slate-400 text-center">
-                    Tidak ada opsi tersedia
+                <!-- Fixed Search Bar Header (completely outside scroll viewport) -->
+                <div
+                    v-if="searchable"
+                    class="p-2 border-b border-slate-100 bg-white shrink-0"
+                    @click.stop
+                >
+                    <div class="relative flex items-center">
+                        <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input
+                            ref="searchInputRef"
+                            type="text"
+                            v-model="searchQuery"
+                            :placeholder="searchPlaceholder"
+                            class="w-full pl-8 pr-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-emerald-500 focus:bg-white transition-all text-slate-800 placeholder-slate-400"
+                            @keydown.esc="closeDropdown"
+                        />
+                    </div>
                 </div>
 
-                <button
-                    v-for="opt in normalizedOptions"
+                <!-- Scrollable Options List -->
+                <div
+                    ref="panelRef"
+                    class="py-1.5 max-h-60 overflow-y-auto dropdown-scroll focus:outline-none"
+                >
+                    <div v-if="displayedOptions.length === 0" class="px-4 py-3 text-xs text-slate-400 text-center">
+                        {{ searchQuery ? 'Tidak ada hasil pencarian' : 'Tidak ada opsi tersedia' }}
+                    </div>
+
+                    <button
+                        v-for="opt in displayedOptions"
                     :key="String(opt.value)"
                     type="button"
                     :data-selected="isSelected(opt.value) ? 'true' : undefined"
@@ -340,6 +392,7 @@ const isPlaceholderState = computed(() => {
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
                     </svg>
                 </button>
+                </div>
             </div>
         </transition>
 

@@ -34,6 +34,7 @@ class ProfileController extends Controller
             'name_company' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:companies,email,' . $company->id,
             'phone' => 'nullable|string|max:20',
+            'address' => 'nullable|string|max:500',
             'business_type' => 'required|string|max:100',
             'province' => 'required|string|max:100',
             'city' => 'required|string|max:100',

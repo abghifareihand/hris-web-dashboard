@@ -4,6 +4,9 @@ import { Head, useForm } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import Button from "@/Components/UI/Button.vue";
 import Input from "@/Components/UI/Input.vue";
+import Select from "@/Components/UI/Select.vue";
+import Textarea from "@/Components/UI/Textarea.vue";
+import { indonesiaRegions, businessTypes } from "@/data/indonesiaRegions";
 
 defineOptions({
     layout: AppLayout,
@@ -34,12 +37,81 @@ const form = useForm({
     name_company: props.company.name_company || props.company.name || "",
     email: props.company.email || "",
     phone: props.company.phone || "",
+    address: props.company.address || "",
     business_type: props.company.business_type || "",
     province: props.company.province || "",
     city: props.company.city || "",
     logo: null,
     delete_logo: false,
 });
+
+const businessTypeOptions = computed(() => {
+    const options = businessTypes.map((item) => ({
+        value: item,
+        label: item,
+    }));
+    if (form.business_type && !businessTypes.includes(form.business_type)) {
+        options.unshift({
+            value: form.business_type,
+            label: form.business_type,
+        });
+    }
+    return options;
+});
+
+const provinceOptions = computed(() => {
+    const list = indonesiaRegions.map((region) => ({
+        value: region.name,
+        label: region.name,
+    }));
+    if (
+        form.province &&
+        !indonesiaRegions.some(
+            (r) => r.name.toLowerCase() === form.province.toLowerCase()
+        )
+    ) {
+        list.unshift({ value: form.province, label: form.province });
+    }
+    return list;
+});
+
+const cityOptions = computed(() => {
+    if (!form.province) return [];
+    const region = indonesiaRegions.find(
+        (r) => r.name.toLowerCase() === form.province.toLowerCase()
+    );
+    if (!region || !region.cities) {
+        return form.city ? [{ value: form.city, label: form.city }] : [];
+    }
+    const list = region.cities.map((city) => ({
+        value: city,
+        label: city,
+    }));
+    if (
+        form.city &&
+        !region.cities.some(
+            (c) => c.toLowerCase() === form.city.toLowerCase()
+        )
+    ) {
+        list.unshift({ value: form.city, label: form.city });
+    }
+    return list;
+});
+
+const handleProvinceChange = (newProvince) => {
+    form.province = newProvince;
+    const region = indonesiaRegions.find(
+        (r) => r.name.toLowerCase() === (newProvince || "").toLowerCase()
+    );
+    if (
+        !region ||
+        !region.cities.some(
+            (c) => c.toLowerCase() === (form.city || "").toLowerCase()
+        )
+    ) {
+        form.city = "";
+    }
+};
 
 const handleLogoChange = (event) => {
     const file = event.target.files[0];
@@ -167,10 +239,12 @@ const submit = () => {
                             :error="form.errors.name_company"
                         />
 
-                        <Input
+                        <Select
                             label="Bidang Usaha"
                             v-model="form.business_type"
-                            placeholder="Technology"
+                            :options="businessTypeOptions"
+                            placeholder="Pilih Bidang Usaha"
+                            searchable
                             required
                             :error="form.errors.business_type"
                         />
@@ -191,21 +265,37 @@ const submit = () => {
                             :error="form.errors.phone"
                         />
 
-                        <Input
+                        <Select
                             label="Provinsi"
                             v-model="form.province"
-                            placeholder="Jawa Barat"
+                            :options="provinceOptions"
+                            placeholder="Pilih Provinsi"
+                            searchable
                             required
                             :error="form.errors.province"
+                            @change="handleProvinceChange"
                         />
 
-                        <Input
-                            label="Kota"
+                        <Select
+                            label="Kota / Kabupaten"
                             v-model="form.city"
-                            placeholder="Bandung"
+                            :options="cityOptions"
+                            :placeholder="form.province ? 'Pilih Kota / Kabupaten' : 'Pilih Provinsi terlebih dahulu'"
+                            :disabled="!form.province || cityOptions.length === 0"
+                            searchable
                             required
                             :error="form.errors.city"
                         />
+
+                        <div class="sm:col-span-2">
+                            <Textarea
+                                label="Alamat Lengkap Perusahaan"
+                                v-model="form.address"
+                                placeholder="Masukkan alamat lengkap kantor / perusahaan..."
+                                :rows="3"
+                                :error="form.errors.address"
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
