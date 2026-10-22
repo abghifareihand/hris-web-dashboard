@@ -5,6 +5,19 @@ import { Head, Link, usePage } from '@inertiajs/vue3';
 const page = usePage();
 const authUser = computed(() => page.props.auth?.user);
 
+const loginUrl = computed(() => {
+    if (!authUser.value) {
+        return route('login');
+    }
+    if (authUser.value.role === 'owner') {
+        return route('owner.dashboard');
+    }
+    if (authUser.value.role === 'admin') {
+        return route('admin.dashboard');
+    }
+    return route('employee.dashboard');
+});
+
 const scrolled = ref(false);
 const mobileMenuOpen = ref(false);
 const activeFaq = ref(null);
@@ -108,59 +121,42 @@ const faqs = [
     <div class="font-sans antialiased bg-white text-secondary-900 selection:bg-primary-500 selection:text-white">
         <!-- Navbar -->
         <nav
-            :class="scrolled ? 'bg-white/95 backdrop-blur-md shadow-sm' : 'bg-transparent'"
+            :class="scrolled ? 'bg-white/90 backdrop-blur-md shadow-xs border-b border-slate-200/80' : 'bg-white/60 backdrop-blur-xs border-b border-slate-200/40'"
             class="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
         >
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-20">
                     <!-- Logo -->
-                    <Link href="/" class="flex items-center gap-2.5">
-                        <img src="/images/logo/logo.png" alt="HRIS Logo" class="w-10 h-10 object-contain rounded-xl shadow-xs" />
-                        <span :class="scrolled ? 'text-secondary-900' : 'text-white'" class="text-xl font-bold transition-colors">
+                    <Link href="/" class="flex items-center gap-2.5 group">
+                        <img src="/images/logo/logo.png" alt="HRIS Logo" class="w-10 h-10 object-contain rounded-xl shadow-xs transition-transform duration-200 group-hover:scale-105" />
+                        <span class="text-xl font-bold text-slate-900 tracking-tight transition-colors">
                             HRIS Web App
                         </span>
                     </Link>
 
                     <!-- Desktop Menu -->
                     <div class="hidden lg:flex items-center gap-8">
-                        <a href="#fitur" :class="scrolled ? 'text-secondary-600 hover:text-primary-600' : 'text-white/90 hover:text-white'" class="font-medium transition-colors">Fitur</a>
-                        <a href="#harga" :class="scrolled ? 'text-secondary-600 hover:text-primary-600' : 'text-white/90 hover:text-white'" class="font-medium transition-colors">Harga</a>
-                        <a href="#tentang" :class="scrolled ? 'text-secondary-600 hover:text-primary-600' : 'text-white/90 hover:text-white'" class="font-medium transition-colors">Tentang</a>
-                        <a href="#kontak" :class="scrolled ? 'text-secondary-600 hover:text-primary-600' : 'text-white/90 hover:text-white'" class="font-medium transition-colors">Kontak</a>
+                        <a href="#fitur" class="text-slate-600 hover:text-emerald-600 font-medium transition-colors text-sm">Fitur</a>
+                        <a href="#harga" class="text-slate-600 hover:text-emerald-600 font-medium transition-colors text-sm">Harga</a>
+                        <a href="#tentang" class="text-slate-600 hover:text-emerald-600 font-medium transition-colors text-sm">Tentang</a>
+                        <a href="#kontak" class="text-slate-600 hover:text-emerald-600 font-medium transition-colors text-sm">Kontak</a>
                     </div>
 
                     <!-- Desktop CTA -->
                     <div class="hidden lg:flex items-center gap-3">
-                        <template v-if="authUser">
-                            <Link
-                                :href="authUser.role === 'owner' ? route('owner.dashboard') : (authUser.role === 'admin' ? route('admin.dashboard') : route('employee.dashboard'))"
-                                class="btn btn-primary flex items-center text-xs py-2 px-4 shadow-sm shadow-primary-500/30"
-                            >
-                                Ke Dashboard
-                            </Link>
-                        </template>
-                        <template v-else>
-                            <Link
-                                :href="route('admin.login')"
-                                class="btn btn-accent flex items-center text-xs py-2 px-4 shadow-sm shadow-accent-500/20"
-                            >
-                                Admin
-                            </Link>
-                            <Link
-                                :href="route('login')"
-                                class="btn btn-primary flex items-center text-xs py-2 px-4 shadow-sm shadow-primary-500/30"
-                            >
-                                Login
-                            </Link>
-                        </template>
+                        <Link
+                            :href="loginUrl"
+                            class="inline-flex items-center justify-center font-semibold text-xs py-2.5 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/30 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0"
+                        >
+                            Login
+                        </Link>
                     </div>
 
                     <!-- Mobile Menu Button -->
                     <button
                         type="button"
                         @click="mobileMenuOpen = !mobileMenuOpen"
-                        class="lg:hidden p-2 focus:outline-none"
-                        :class="scrolled ? 'text-secondary-700' : 'text-white'"
+                        class="lg:hidden p-2 text-slate-700 hover:text-slate-900 focus:outline-none"
                     >
                         <svg v-if="!mobileMenuOpen" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
@@ -174,23 +170,17 @@ const faqs = [
                 <!-- Mobile Menu Dropdown -->
                 <div
                     v-if="mobileMenuOpen"
-                    class="lg:hidden bg-white rounded-2xl shadow-xl p-6 mb-4 transition-all"
+                    class="lg:hidden bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200/80 p-5 mb-4 transition-all"
                 >
                     <div class="flex flex-col gap-3">
-                        <a href="#fitur" @click="mobileMenuOpen = false" class="text-secondary-700 hover:text-primary-600 font-medium py-2">Fitur</a>
-                        <a href="#harga" @click="mobileMenuOpen = false" class="text-secondary-700 hover:text-primary-600 font-medium py-2">Harga</a>
-                        <a href="#tentang" @click="mobileMenuOpen = false" class="text-secondary-700 hover:text-primary-600 font-medium py-2">Tentang</a>
-                        <a href="#kontak" @click="mobileMenuOpen = false" class="text-secondary-700 hover:text-primary-600 font-medium py-2">Kontak</a>
-                        <hr class="border-secondary-200">
+                        <a href="#fitur" @click="mobileMenuOpen = false" class="text-slate-700 hover:text-emerald-600 font-medium py-2">Fitur</a>
+                        <a href="#harga" @click="mobileMenuOpen = false" class="text-slate-700 hover:text-emerald-600 font-medium py-2">Harga</a>
+                        <a href="#tentang" @click="mobileMenuOpen = false" class="text-slate-700 hover:text-emerald-600 font-medium py-2">Tentang</a>
+                        <a href="#kontak" @click="mobileMenuOpen = false" class="text-slate-700 hover:text-emerald-600 font-medium py-2">Kontak</a>
+                        <hr class="border-slate-200">
                         <Link
-                            :href="route('admin.login')"
-                            class="btn btn-accent w-full flex items-center justify-center text-sm py-2.5 shadow-sm shadow-accent-500/20"
-                        >
-                            Admin
-                        </Link>
-                        <Link
-                            :href="route('login')"
-                            class="btn btn-primary w-full flex items-center justify-center shadow-sm shadow-primary-500/30 py-2.5"
+                            :href="loginUrl"
+                            class="w-full flex items-center justify-center font-semibold text-sm py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/30 transition-colors"
                         >
                             Login
                         </Link>
@@ -200,150 +190,294 @@ const faqs = [
         </nav>
 
         <!-- Hero Section -->
-        <section class="bg-hero-gradient min-h-screen flex items-center pt-32 relative overflow-hidden">
-            <!-- Background Decorations -->
+        <section class="bg-gradient-to-b from-white via-slate-50/70 to-white min-h-[90vh] lg:min-h-screen flex items-center pt-28 pb-16 lg:pt-32 lg:pb-20 relative overflow-hidden">
+            <!-- Modern Ambient Glow Decorations (Soft, Clean, No Stars) -->
             <div class="absolute inset-0 overflow-hidden pointer-events-none">
-                <div class="absolute -top-24 -left-24 w-96 h-96 bg-white/5 rounded-full blur-3xl"></div>
-                <div class="absolute -bottom-24 -right-24 w-96 h-96 bg-white/5 rounded-full blur-3xl"></div>
-                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-white/3 rounded-full blur-3xl"></div>
-                <div class="absolute inset-0 opacity-10" style="background-image: url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
+                <div class="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-gradient-to-b from-emerald-100/50 via-teal-50/30 to-transparent rounded-full blur-3xl"></div>
+                <div class="absolute top-1/4 -left-20 w-80 h-80 bg-emerald-100/30 rounded-full blur-3xl"></div>
+                <div class="absolute top-1/3 -right-20 w-96 h-96 bg-teal-100/30 rounded-full blur-3xl"></div>
             </div>
 
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative z-10 w-full">
-                <div class="grid lg:grid-cols-2 gap-12 items-center">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 relative z-10 w-full">
+                <div class="grid lg:grid-cols-2 gap-12 lg:gap-14 items-center">
                     <!-- Left Content -->
-                    <div class="text-white">
-                        <div class="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-6 border border-white/10">
-                            <span class="w-2 h-2 bg-accent-400 rounded-full animate-pulse"></span>
-                            <span class="text-sm font-medium">Software Payroll & HRIS #1 Indonesia</span>
+                    <div>
+                        <!-- Pill Badge -->
+                        <div class="inline-flex items-center gap-2.5 bg-emerald-50/90 border border-emerald-200/80 rounded-full px-4 py-1.5 mb-6 shadow-2xs backdrop-blur-xs">
+                            <span class="relative flex h-2 w-2">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
+                            <span class="text-xs font-semibold text-emerald-800 tracking-wide uppercase">Software Payroll & HRIS #1 Indonesia</span>
                         </div>
 
-                        <h1 class="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-6 tracking-tight">
-                            Kelola Gaji & HR<br>
-                            <span class="text-primary-300">Jadi Lebih Mudah</span>
+                        <!-- Headline -->
+                        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.12] mb-6">
+                            Kelola Gaji & HR<br class="hidden sm:inline" />
+                            <span class="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 bg-clip-text text-transparent">Jadi Lebih Mudah</span>
                         </h1>
 
-                        <p class="text-lg md:text-xl text-primary-100 mb-8 max-w-xl leading-relaxed">
-                            Solusi lengkap penggajian, BPJS, kehadiran GPS, dan manajemen cuti. Digunakan oleh <strong>500+ perusahaan</strong> di Indonesia.
+                        <!-- Subtitle -->
+                        <p class="text-base sm:text-lg text-slate-600 mb-8 max-w-xl leading-relaxed">
+                            Solusi lengkap penggajian otomatis, kalkulasi PPh 21 TER, BPJS, absensi GPS selfie, dan manajemen cuti online. Digunakan oleh <strong class="text-slate-900 font-bold">500+ perusahaan</strong> di Indonesia.
                         </p>
 
-                        <!-- Mobile App Download -->
-                        <div class="mb-8 max-sm:text-center">
+                        <!-- Mobile App Download Badges -->
+                        <div class="flex flex-wrap items-center gap-3.5 mb-8">
+                            <!-- Google Play -->
                             <a
                                 href="https://www.adrprogramming.com/"
                                 target="_blank"
                                 rel="noopener"
-                                class="inline-flex items-center gap-3 bg-secondary-800/80 hover:bg-secondary-900 border border-white/20 text-white text-sm font-medium py-3 px-5 rounded-xl transition-all shadow-lg"
+                                class="inline-flex items-center gap-3 min-w-[144px] bg-slate-900 hover:bg-slate-800 text-white py-2.5 px-4 rounded-xl transition-all duration-200 shadow-md shadow-slate-900/10 hover:shadow-lg hover:-translate-y-0.5 border border-slate-800 group"
                             >
-                                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.198l2.807 1.626a1 1 0 0 1 0 1.73l-2.808 1.626L15.206 12l2.492-2.491zM5.864 2.658L16.8 9.99l-2.302 2.302-8.634-8.634z" fill="#34A853"/>
-                                    <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92z" fill="#4285F4"/>
-                                    <path d="M5.864 2.658L16.8 9.99l-2.302 2.302-8.634-8.634z" fill="#EA4335"/>
-                                    <path d="M14.499 12.707l2.302 2.302-10.937 6.333 8.635-8.635z" fill="#FBBC04"/>
-                                </svg>
-                                <span>
-                                    <span class="block text-white/70 text-xs">Tersedia di</span>
-                                    <span class="block font-semibold">Google Play</span>
-                                </span>
-                                <svg class="w-4 h-4 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                                </svg>
+                                <div class="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92z" fill="#4285F4"/>
+                                        <path d="M14.499 12.707l2.302 2.302-10.937 6.333 8.635-8.635z" fill="#FBBC04"/>
+                                        <path d="M5.864 2.658L16.8 9.99l-2.302 2.302-8.634-8.634z" fill="#EA4335"/>
+                                        <path d="M17.698 10.509l2.807 1.626a1 1 0 0 1 0 1.73l-2.808 1.626L15.206 12l2.492-2.491z" fill="#34A853"/>
+                                    </svg>
+                                </div>
+                                <div class="text-left">
+                                    <div class="text-[10px] text-slate-400 font-medium leading-tight tracking-wider">DOWNLOAD DI</div>
+                                    <div class="text-xs font-bold text-white tracking-wide">Google Play</div>
+                                </div>
+                            </a>
+
+                            <!-- App Store -->
+                            <a
+                                href="https://www.adrprogramming.com/"
+                                target="_blank"
+                                rel="noopener"
+                                class="inline-flex items-center gap-3 min-w-[144px] bg-slate-900 hover:bg-slate-800 text-white py-2.5 px-4 rounded-xl transition-all duration-200 shadow-md shadow-slate-900/10 hover:shadow-lg hover:-translate-y-0.5 border border-slate-800 group"
+                            >
+                                <div class="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-5 h-5 flex-shrink-0 fill-current text-white" viewBox="0 0 24 24">
+                                        <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.63-.78 1.06-1.86.94-2.95-1 .04-2.19.67-2.88 1.48-.56.64-1.05 1.74-.92 2.81 1.11.09 2.24-.58 2.86-1.34z"/>
+                                    </svg>
+                                </div>
+                                <div class="text-left">
+                                    <div class="text-[10px] text-slate-400 font-medium leading-tight tracking-wider">DOWNLOAD DI</div>
+                                    <div class="text-xs font-bold text-white tracking-wide">App Store</div>
+                                </div>
                             </a>
                         </div>
 
-                        <div class="flex flex-wrap items-center gap-6 text-sm text-primary-200">
+                        <!-- Trust Checkmarks -->
+                        <div class="flex flex-wrap items-center gap-6 text-xs sm:text-sm font-medium text-slate-600">
                             <div class="flex items-center gap-2">
-                                <svg class="w-5 h-5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                </svg>
+                                <div class="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 flex-shrink-0">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                </div>
                                 Tanpa kartu kredit
                             </div>
                             <div class="flex items-center gap-2">
-                                <svg class="w-5 h-5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                </svg>
+                                <div class="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 flex-shrink-0">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                </div>
                                 Setup 5 menit
                             </div>
                             <div class="flex items-center gap-2">
-                                <svg class="w-5 h-5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                </svg>
+                                <div class="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 flex-shrink-0">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                </div>
                                 Support Indonesia
                             </div>
                         </div>
                     </div>
 
-                    <!-- Right - Dashboard Preview -->
-                    <div class="relative">
-                        <div class="relative z-10 bg-white rounded-2xl shadow-2xl p-2 transform lg:rotate-1 hover:rotate-0 transition-transform duration-500 border border-white/20">
-                            <!-- Dashboard Illustration Mockup -->
-                            <div class="rounded-xl overflow-hidden bg-slate-50 border border-slate-200">
-                                <div class="bg-slate-100 px-4 py-2.5 flex items-center gap-2 border-b border-slate-200">
-                                    <div class="w-2.5 h-2.5 rounded-full bg-danger-400"></div>
-                                    <div class="w-2.5 h-2.5 rounded-full bg-warning-400"></div>
-                                    <div class="w-2.5 h-2.5 rounded-full bg-success-400"></div>
-                                    <div class="text-[11px] text-slate-400 font-mono ml-2">app.hris-saas.id/owner/dashboard</div>
+                    <!-- Right - Custom Tailored Native Dashboard Showcase -->
+                    <div class="relative lg:pl-2">
+                        <!-- Soft Ambient Glow behind card -->
+                        <div class="absolute -inset-3 bg-gradient-to-tr from-emerald-500/20 via-teal-400/20 to-sky-400/20 rounded-3xl blur-2xl opacity-70"></div>
+
+                        <!-- Top Floating Pill -->
+                        <div class="hidden sm:inline-flex absolute -top-3.5 right-4 z-20 bg-white/95 backdrop-blur-md rounded-full px-3 py-1 border border-emerald-200/80 shadow-md items-center gap-2 text-[11px] font-semibold text-emerald-800">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            PPh 21 TER Otomatis (PMK Terbaru)
+                        </div>
+
+                        <!-- Main Showcase Card Frame -->
+                        <div class="relative bg-white rounded-2xl shadow-2xl shadow-slate-900/10 border border-slate-200/90 overflow-hidden ring-1 ring-slate-900/5 group transition-all duration-300 hover:shadow-slate-900/20">
+                            <!-- Minimalist Slim Window Header -->
+                            <div class="bg-slate-50/90 backdrop-blur-xs px-4 py-2.5 flex items-center justify-between border-b border-slate-200/70">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-2.5 h-2.5 rounded-full bg-rose-400"></div>
+                                    <div class="w-2.5 h-2.5 rounded-full bg-amber-400"></div>
+                                    <div class="w-2.5 h-2.5 rounded-full bg-emerald-400"></div>
                                 </div>
-                                <div class="p-4 space-y-4">
-                                    <div class="grid grid-cols-3 gap-3">
-                                        <div class="bg-white p-3 rounded-lg border border-slate-200 shadow-xs">
-                                            <div class="text-[11px] text-slate-500">Total Karyawan</div>
-                                            <div class="text-xl font-bold text-slate-800">142 Org</div>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/80">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                        Live
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Dashboard Body Content -->
+                            <div class="p-4 sm:p-5 bg-slate-50/50 space-y-3.5">
+                                <!-- Approval Alert Notification Banner -->
+                                <div class="bg-amber-50/80 border border-amber-200/80 rounded-xl p-3 flex items-center justify-between shadow-2xs">
+                                    <div class="flex items-center gap-2.5 min-w-0">
+                                        <div class="w-7 h-7 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
                                         </div>
-                                        <div class="bg-white p-3 rounded-lg border border-slate-200 shadow-xs">
-                                            <div class="text-[11px] text-slate-500">Hadir Hari Ini</div>
-                                            <div class="text-xl font-bold text-primary-600">138 (97%)</div>
-                                        </div>
-                                        <div class="bg-white p-3 rounded-lg border border-slate-200 shadow-xs">
-                                            <div class="text-[11px] text-slate-500">Total Payroll</div>
-                                            <div class="text-xl font-bold text-slate-800">Rp 480Jt</div>
+                                        <div class="min-w-0">
+                                            <div class="text-xs font-bold text-amber-950 leading-tight">3 Pengajuan Menunggu Persetujuan</div>
+                                            <div class="text-[10px] text-amber-700 font-medium truncate mt-0.5">Cuti (1) • Lembur (1) • Klaim Biaya (1)</div>
                                         </div>
                                     </div>
-                                    <div class="bg-white p-3 rounded-lg border border-slate-200 shadow-xs">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <span class="text-xs font-semibold text-slate-700">Grafik Kehadiran Mingguan</span>
-                                            <span class="badge badge-success">Live</span>
+                                    <span class="text-[10px] font-bold text-amber-900 bg-amber-100 px-2.5 py-1 rounded-md shrink-0">Tinjau →</span>
+                                </div>
+
+                                <!-- 3 Metric Cards Grid -->
+                                <div class="grid grid-cols-3 gap-2.5 sm:gap-3">
+                                    <!-- Total Karyawan -->
+                                    <div class="bg-white p-3 sm:p-3.5 rounded-xl border border-slate-200/80 shadow-2xs">
+                                        <div class="flex items-center justify-between mb-1">
+                                            <span class="text-[11px] font-medium text-slate-500">Total Karyawan</span>
+                                            <div class="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                            </div>
                                         </div>
-                                        <div class="h-24 bg-gradient-to-r from-primary-50 via-emerald-50 to-primary-100 rounded flex items-end justify-between px-4 pb-2 pt-6">
-                                            <div class="w-6 bg-primary-400 rounded-t h-12"></div>
-                                            <div class="w-6 bg-primary-500 rounded-t h-16"></div>
-                                            <div class="w-6 bg-primary-600 rounded-t h-20"></div>
-                                            <div class="w-6 bg-primary-500 rounded-t h-18"></div>
-                                            <div class="w-6 bg-primary-600 rounded-t h-20"></div>
+                                        <div class="text-lg sm:text-xl font-black text-slate-900 tracking-tight">26 <span class="text-xs font-normal text-slate-500">Org</span></div>
+                                        <div class="text-[10px] font-semibold text-emerald-600 mt-0.5">↑ +1 bulan ini</div>
+                                    </div>
+
+                                    <!-- Hadir Hari Ini -->
+                                    <div class="bg-white p-3 sm:p-3.5 rounded-xl border border-slate-200/80 shadow-2xs">
+                                        <div class="flex items-center justify-between mb-1">
+                                            <span class="text-[11px] font-medium text-slate-500">Kehadiran Hari Ini</span>
+                                            <div class="w-6 h-6 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            </div>
+                                        </div>
+                                        <div class="text-lg sm:text-xl font-black text-teal-600 tracking-tight">96.2%</div>
+                                        <div class="text-[10px] font-medium text-slate-500 mt-0.5">25 Hadir • 1 Cuti</div>
+                                    </div>
+
+                                    <!-- Estimasi Payroll -->
+                                    <div class="bg-white p-3 sm:p-3.5 rounded-xl border border-slate-200/80 shadow-2xs">
+                                        <div class="flex items-center justify-between mb-1">
+                                            <span class="text-[11px] font-medium text-slate-500">Estimasi Payroll</span>
+                                            <div class="w-6 h-6 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                                            </div>
+                                        </div>
+                                        <div class="text-lg sm:text-xl font-black text-slate-900 tracking-tight">Rp 240,2Jt</div>
+                                        <div class="text-[10px] font-semibold text-emerald-600 mt-0.5">✓ PPh 21 & BPJS Siap</div>
+                                    </div>
+                                </div>
+
+                                <!-- Attendance Chart + Live Feeds Split Row -->
+                                <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
+                                    <!-- Left (3 cols): Weekly Attendance Chart -->
+                                    <div class="sm:col-span-3 bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <div>
+                                                <div class="text-xs font-bold text-slate-800">Trend Kehadiran GPS</div>
+                                                <div class="text-[10px] text-slate-400">Akurasi selfie & radius kantor</div>
+                                            </div>
+                                            <span class="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">7 Hari</span>
+                                        </div>
+                                        <div class="h-24 bg-gradient-to-b from-slate-50 to-slate-100/50 rounded-lg p-2.5 flex items-end justify-between gap-2.5 border border-slate-100">
+                                            <div class="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+                                                <span class="text-[9px] font-semibold text-slate-500">96%</span>
+                                                <div class="w-full max-w-[28px] bg-emerald-400/80 rounded-t-sm h-[72%]"></div>
+                                                <span class="text-[9px] font-medium text-slate-400">Sen</span>
+                                            </div>
+                                            <div class="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+                                                <span class="text-[9px] font-semibold text-slate-500">98%</span>
+                                                <div class="w-full max-w-[28px] bg-emerald-500 rounded-t-sm h-[88%]"></div>
+                                                <span class="text-[9px] font-medium text-slate-400">Sel</span>
+                                            </div>
+                                            <div class="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+                                                <span class="text-[9px] font-semibold text-slate-500">97%</span>
+                                                <div class="w-full max-w-[28px] bg-emerald-500 rounded-t-sm h-[82%]"></div>
+                                                <span class="text-[9px] font-medium text-slate-400">Rab</span>
+                                            </div>
+                                            <div class="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+                                                <span class="text-[9px] font-semibold text-slate-500">95%</span>
+                                                <div class="w-full max-w-[28px] bg-emerald-400/80 rounded-t-sm h-[68%]"></div>
+                                                <span class="text-[9px] font-medium text-slate-400">Kam</span>
+                                            </div>
+                                            <div class="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+                                                <span class="text-[9px] font-bold text-emerald-700">100%</span>
+                                                <div class="w-full max-w-[28px] bg-gradient-to-t from-emerald-600 to-teal-500 rounded-t-sm h-[96%] shadow-xs"></div>
+                                                <span class="text-[9px] font-bold text-emerald-700">Jum</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Right (2 cols): Live Clock-In Activity -->
+                                    <div class="sm:col-span-2 bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+                                        <div class="flex items-center justify-between mb-1.5">
+                                            <span class="text-xs font-bold text-slate-800">Absensi Terkini</span>
+                                            <span class="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">Real-Time</span>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <div class="flex items-center gap-2 p-1.5 rounded-lg bg-slate-50/70 border border-slate-100">
+                                                <div class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-[10px] shrink-0">
+                                                    AF
+                                                </div>
+                                                <div class="min-w-0 flex-1">
+                                                    <div class="text-[11px] font-semibold text-slate-800 truncate">Abghi Fareihan</div>
+                                                    <div class="text-[9px] text-emerald-600 font-medium">Clock In 08:58 • Selfie ✓</div>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-2 p-1.5 rounded-lg bg-slate-50/70 border border-slate-100">
+                                                <div class="w-6 h-6 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-[10px] shrink-0">
+                                                    BS
+                                                </div>
+                                                <div class="min-w-0 flex-1">
+                                                    <div class="text-[11px] font-semibold text-slate-800 truncate">Budi Santoso</div>
+                                                    <div class="text-[9px] text-teal-600 font-medium">Clock In 08:55 • Kantor ✓</div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="absolute -top-4 -right-4 w-24 h-24 bg-accent-500/20 rounded-full blur-2xl"></div>
-                        <div class="absolute -bottom-8 -left-8 w-32 h-32 bg-primary-400/20 rounded-full blur-3xl"></div>
+
+                        <!-- Floating Live Toast Badge -->
+                        <div class="hidden sm:flex absolute -bottom-5 -left-5 z-20 bg-white/95 backdrop-blur-md rounded-xl p-3 border border-slate-200/80 shadow-xl items-center gap-3 ring-1 ring-slate-900/5 animate-float">
+                            <div class="w-9 h-9 rounded-lg bg-emerald-500 text-white flex items-center justify-center shadow-xs flex-shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            </div>
+                            <div>
+                                <div class="text-xs font-bold text-slate-900">Payroll Otomatis Siap</div>
+                                <div class="text-[11px] text-slate-500">26 slip gaji PDF terkirim via WhatsApp & Mobile App</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
 
         <!-- Stats Section -->
-        <section class="py-12 bg-white border-b border-secondary-100">
+        <section class="py-12 bg-white border-y border-slate-200/70">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
                     <div class="text-center">
-                        <div class="text-3xl md:text-4xl font-bold text-primary-600 mb-1">500+</div>
-                        <div class="text-secondary-600 text-sm">Perusahaan Aktif*</div>
+                        <div class="text-3xl md:text-4xl font-extrabold text-slate-900 mb-1 tracking-tight">500+</div>
+                        <div class="text-slate-500 text-xs sm:text-sm font-medium uppercase tracking-wider">Perusahaan Aktif*</div>
                     </div>
                     <div class="text-center">
-                        <div class="text-3xl md:text-4xl font-bold text-primary-600 mb-1">50.000+</div>
-                        <div class="text-secondary-600 text-sm">Karyawan Dikelola*</div>
+                        <div class="text-3xl md:text-4xl font-extrabold text-slate-900 mb-1 tracking-tight">50.000+</div>
+                        <div class="text-slate-500 text-xs sm:text-sm font-medium uppercase tracking-wider">Karyawan Dikelola*</div>
                     </div>
                     <div class="text-center">
-                        <div class="text-3xl md:text-4xl font-bold text-primary-600 mb-1">99.9%</div>
-                        <div class="text-secondary-600 text-sm">Uptime Server*</div>
+                        <div class="text-3xl md:text-4xl font-extrabold text-emerald-600 mb-1 tracking-tight">99.9%</div>
+                        <div class="text-slate-500 text-xs sm:text-sm font-medium uppercase tracking-wider">Uptime Server*</div>
                     </div>
                     <div class="text-center">
-                        <div class="text-3xl md:text-4xl font-bold text-primary-600 mb-1">4.8/5</div>
-                        <div class="text-secondary-600 text-sm">Rating Pengguna*</div>
+                        <div class="text-3xl md:text-4xl font-extrabold text-slate-900 mb-1 tracking-tight">4.8/5</div>
+                        <div class="text-slate-500 text-xs sm:text-sm font-medium uppercase tracking-wider">Rating Pengguna*</div>
                     </div>
                 </div>
-                <p class="text-center text-xs text-secondary-400 mt-6">*Data ilustrasi untuk keperluan demo</p>
+                <p class="text-center text-xs text-slate-400 mt-6">*Data ilustrasi untuk keperluan demo</p>
             </div>
         </section>
 
@@ -464,31 +598,44 @@ const faqs = [
                     </div>
 
                     <!-- Feature 7: Mobile App -->
-                    <div class="bg-gradient-to-br from-success-50 to-emerald-50 rounded-2xl p-6 border-2 border-success-200 hover:border-success-300 hover:shadow-lg transition-all group relative overflow-hidden">
+                    <div class="bg-gradient-to-br from-emerald-50/80 via-teal-50/50 to-white rounded-2xl p-6 border-2 border-emerald-200 hover:border-emerald-300 hover:shadow-lg transition-all group relative overflow-hidden">
                         <div class="absolute top-2 right-2">
-                            <span class="bg-success-500 text-white text-[10px] font-bold px-2 py-1 rounded-full">LIVE DI PLAY STORE</span>
+                            <span class="bg-emerald-600 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">LIVE DI STORES</span>
                         </div>
-                        <div class="w-14 h-14 bg-success-100 rounded-2xl flex items-center justify-center mb-5 group-hover:bg-success-500 transition-colors">
-                            <svg class="w-7 h-7 text-success-600 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="w-14 h-14 bg-emerald-100 rounded-2xl flex items-center justify-center mb-5 group-hover:bg-emerald-600 transition-colors">
+                            <svg class="w-7 h-7 text-emerald-600 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                             </svg>
                         </div>
-                        <h3 class="text-lg font-semibold text-secondary-900 mb-2">Mobile App</h3>
-                        <p class="text-secondary-600 text-sm mb-4">Aplikasi karyawan untuk Android. Absensi GPS, foto selfie, cuti, payslip dari HP.</p>
-                        <a
-                            href="https://www.adrprogramming.com/"
-                            target="_blank"
-                            rel="noopener"
-                            class="inline-flex items-center gap-2 bg-secondary-900 hover:bg-black text-white text-xs font-semibold py-2 px-4 rounded-lg transition-colors"
-                        >
-                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92z" fill="#4285F4"/>
-                                <path d="M14.499 12.707l2.302 2.302-10.937 6.333 8.635-8.635z" fill="#FBBC04"/>
-                                <path d="M5.864 2.658L16.8 9.99l-2.302 2.302-8.634-8.634z" fill="#EA4335"/>
-                                <path d="M17.698 10.509l2.807 1.626a1 1 0 0 1 0 1.73l-2.808 1.626L15.206 12l2.492-2.491z" fill="#34A853"/>
-                            </svg>
-                            Google Play
-                        </a>
+                        <h3 class="text-lg font-semibold text-slate-900 mb-2">Mobile App</h3>
+                        <p class="text-slate-600 text-sm mb-4">Aplikasi karyawan untuk Android & iOS. Absensi GPS, foto selfie, cuti, dan payslip langsung dari smartphone.</p>
+                        <div class="flex flex-wrap gap-2">
+                            <a
+                                href="https://www.adrprogramming.com/"
+                                target="_blank"
+                                rel="noopener"
+                                class="inline-flex items-center gap-2 bg-slate-900 hover:bg-black text-white text-xs font-semibold py-2 px-3.5 rounded-lg transition-colors"
+                            >
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92z" fill="#4285F4"/>
+                                    <path d="M14.499 12.707l2.302 2.302-10.937 6.333 8.635-8.635z" fill="#FBBC04"/>
+                                    <path d="M5.864 2.658L16.8 9.99l-2.302 2.302-8.634-8.634z" fill="#EA4335"/>
+                                    <path d="M17.698 10.509l2.807 1.626a1 1 0 0 1 0 1.73l-2.808 1.626L15.206 12l2.492-2.491z" fill="#34A853"/>
+                                </svg>
+                                Google Play
+                            </a>
+                            <a
+                                href="https://www.adrprogramming.com/"
+                                target="_blank"
+                                rel="noopener"
+                                class="inline-flex items-center gap-2 bg-slate-900 hover:bg-black text-white text-xs font-semibold py-2 px-3.5 rounded-lg transition-colors"
+                            >
+                                <svg class="w-4 h-4 fill-current text-white" viewBox="0 0 24 24">
+                                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.63-.78 1.06-1.86.94-2.95-1 .04-2.19.67-2.88 1.48-.56.64-1.05 1.74-.92 2.81 1.11.09 2.24-.58 2.86-1.34z"/>
+                                </svg>
+                                App Store
+                            </a>
+                        </div>
                     </div>
 
                     <!-- Feature 8: Career & Performance -->
