@@ -136,9 +136,10 @@ const faqs = [
 
                     <!-- Desktop Menu -->
                     <div class="hidden lg:flex items-center gap-8">
+                        <a href="#beranda" class="text-slate-600 hover:text-emerald-600 font-medium transition-colors text-sm">Beranda</a>
                         <a href="#fitur" class="text-slate-600 hover:text-emerald-600 font-medium transition-colors text-sm">Fitur</a>
-                        <a href="#harga" class="text-slate-600 hover:text-emerald-600 font-medium transition-colors text-sm">Harga</a>
                         <a href="#tentang" class="text-slate-600 hover:text-emerald-600 font-medium transition-colors text-sm">Tentang</a>
+                        <a href="#harga" class="text-slate-600 hover:text-emerald-600 font-medium transition-colors text-sm">Harga</a>
                         <a href="#kontak" class="text-slate-600 hover:text-emerald-600 font-medium transition-colors text-sm">Kontak</a>
                     </div>
 
@@ -173,9 +174,10 @@ const faqs = [
                     class="lg:hidden bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200/80 p-5 mb-4 transition-all"
                 >
                     <div class="flex flex-col gap-3">
+                        <a href="#beranda" @click="mobileMenuOpen = false" class="text-slate-700 hover:text-emerald-600 font-medium py-2">Beranda</a>
                         <a href="#fitur" @click="mobileMenuOpen = false" class="text-slate-700 hover:text-emerald-600 font-medium py-2">Fitur</a>
-                        <a href="#harga" @click="mobileMenuOpen = false" class="text-slate-700 hover:text-emerald-600 font-medium py-2">Harga</a>
                         <a href="#tentang" @click="mobileMenuOpen = false" class="text-slate-700 hover:text-emerald-600 font-medium py-2">Tentang</a>
+                        <a href="#harga" @click="mobileMenuOpen = false" class="text-slate-700 hover:text-emerald-600 font-medium py-2">Harga</a>
                         <a href="#kontak" @click="mobileMenuOpen = false" class="text-slate-700 hover:text-emerald-600 font-medium py-2">Kontak</a>
                         <hr class="border-slate-200">
                         <Link
@@ -190,7 +192,7 @@ const faqs = [
         </nav>
 
         <!-- Hero Section -->
-        <section class="bg-gradient-to-b from-white via-slate-50/70 to-white min-h-[90vh] lg:min-h-screen flex items-center pt-28 pb-16 lg:pt-32 lg:pb-20 relative overflow-hidden">
+        <section id="beranda" class="bg-gradient-to-b from-white via-slate-50/70 to-white min-h-[90vh] lg:min-h-screen flex items-center pt-28 pb-16 lg:pt-32 lg:pb-20 relative overflow-hidden">
             <!-- Modern Ambient Glow Decorations (Soft, Clean, No Stars) -->
             <div class="absolute inset-0 overflow-hidden pointer-events-none">
                 <div class="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-gradient-to-b from-emerald-100/50 via-teal-50/30 to-transparent rounded-full blur-3xl"></div>
