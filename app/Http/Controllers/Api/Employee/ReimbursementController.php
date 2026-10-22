@@ -109,7 +109,10 @@ class ReimbursementController extends Controller
             'payout_method' => null, // Belum ditentukan, ditentukan oleh Owner saat approval
         ]);
 
-
+        $reimbursement->load('employee');
+        if ($employee->company && $employee->company->owner) {
+            $employee->company->owner->notify(new \App\Notifications\NewEmployeeReimbursementPendingRequest($reimbursement));
+        }
 
         return response()->json([
             'status' => true,

@@ -266,6 +266,14 @@ onMounted(() => {
                     <span>Pinjaman</span>
                     <span class="px-1.5 py-0.2 bg-amber-500 text-white rounded-full text-[10px]">{{ pendingApprovals.loans }}</span>
                 </Link>
+                <Link
+                    v-if="pendingApprovals.swaps > 0"
+                    :href="route('owner.management.schedules.swap-personal.index')"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-amber-100/50 text-amber-900 border border-amber-300 rounded-lg text-xs font-semibold transition-colors shadow-2xs"
+                >
+                    <span>Tukar Shift</span>
+                    <span class="px-1.5 py-0.2 bg-amber-500 text-white rounded-full text-[10px]">{{ pendingApprovals.swaps }}</span>
+                </Link>
             </div>
         </div>
 

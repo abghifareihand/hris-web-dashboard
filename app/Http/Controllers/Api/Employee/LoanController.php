@@ -193,6 +193,11 @@ class LoanController extends Controller
             'status' => 'pending', // Pending owner approval
         ]);
 
+        $loan->load('employee');
+        if ($employee->company && $employee->company->owner) {
+            $employee->company->owner->notify(new \App\Notifications\NewEmployeeLoanPendingRequest($loan));
+        }
+
         return response()->json([
             'status' => true,
             'message' => 'Pengajuan pinjaman berhasil dikirim. Menunggu persetujuan.',

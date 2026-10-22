@@ -14,6 +14,8 @@ use App\Models\Reimbursement;
 use App\Models\Loan;
 use App\Models\Announcement;
 use App\Models\PendingEmployee;
+use App\Models\SwapPersonal;
+use App\Models\SwapTeam;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Inertia\Inertia;
@@ -304,6 +306,7 @@ class DashboardController extends Controller
             'overtimes' => Overtime::where('company_id', $company->id)->where('status', 'pending')->count(),
             'reimbursements' => Reimbursement::where('company_id', $company->id)->where('status', 'pending')->count(),
             'loans' => Loan::where('company_id', $company->id)->where('status', 'pending')->count(),
+            'swaps' => SwapPersonal::where('company_id', $company->id)->where('status', 'pending')->count() + SwapTeam::where('company_id', $company->id)->where('status', 'pending')->count(),
         ];
         $totalPendingApprovals = array_sum($pendingApprovals);
 

@@ -113,6 +113,184 @@ const userDropdownRef = ref(null);
 const isNotificationDropdownOpen = ref(false);
 const notificationDropdownRef = ref(null);
 
+// Incoming Approval Alert Notification (Distinct from CRUD Toast)
+const showApprovalAlert = ref(false);
+const currentApprovalAlert = ref(null);
+const approvalProgress = ref(100);
+let approvalTimer = null;
+let approvalProgressInterval = null;
+let approvalRemainingTime = 8000;
+let approvalStartTime = 0;
+let isInitialNotifCheckDone = false;
+
+let notificationAudio = null;
+
+const initAudio = () => {
+    if (!notificationAudio && typeof window !== 'undefined') {
+        notificationAudio = document.getElementById('approvalNotificationSound') || new Audio('/sounds/notification.wav');
+        notificationAudio.volume = 0.9;
+    }
+};
+
+const playSynthChime = () => {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') {
+            ctx.resume();
+        }
+
+        const now = ctx.currentTime;
+
+        // Tone 1: E5 (659.25 Hz)
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(659.25, now);
+        gain1.gain.setValueAtTime(0.45, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.3);
+
+        // Tone 2: B5 (987.77 Hz)
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(987.77, now + 0.12);
+        gain2.gain.setValueAtTime(0.5, now + 0.12);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(now + 0.12);
+        osc2.stop(now + 0.55);
+    } catch {
+        // Safe fallback
+    }
+};
+
+const playAlertSound = () => {
+    try {
+        initAudio();
+        if (notificationAudio) {
+            notificationAudio.currentTime = 0;
+            const playPromise = notificationAudio.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(() => {
+                    playSynthChime();
+                });
+            }
+        } else {
+            playSynthChime();
+        }
+    } catch {
+        playSynthChime();
+    }
+};
+
+const unlockAudio = () => {
+    initAudio();
+    document.removeEventListener('click', unlockAudio);
+    document.removeEventListener('keydown', unlockAudio);
+};
+
+const getSeenNotifIds = () => {
+    try {
+        return new Set(JSON.parse(sessionStorage.getItem('hris_seen_approval_ids') || '[]'));
+    } catch {
+        return new Set();
+    }
+};
+
+const markNotifAsSeen = (id) => {
+    try {
+        const seen = getSeenNotifIds();
+        seen.add(id);
+        sessionStorage.setItem('hris_seen_approval_ids', JSON.stringify([...seen]));
+    } catch {}
+};
+
+const startApprovalProgress = (duration) => {
+    approvalProgress.value = 100;
+    if (approvalProgressInterval) clearInterval(approvalProgressInterval);
+    const intervalTime = 50;
+    const step = (intervalTime / duration) * 100;
+    approvalProgressInterval = setInterval(() => {
+        approvalProgress.value = Math.max(0, approvalProgress.value - step);
+        if (approvalProgress.value <= 0) {
+            clearInterval(approvalProgressInterval);
+        }
+    }, intervalTime);
+};
+
+const triggerApprovalAlert = (notif) => {
+    if (!notif) return;
+    markNotifAsSeen(notif.id);
+    currentApprovalAlert.value = notif;
+    showApprovalAlert.value = true;
+    approvalRemainingTime = 8000;
+    approvalStartTime = Date.now();
+
+    playAlertSound();
+
+    if (approvalTimer) clearTimeout(approvalTimer);
+    approvalTimer = setTimeout(() => {
+        showApprovalAlert.value = false;
+    }, approvalRemainingTime);
+
+    startApprovalProgress(approvalRemainingTime);
+};
+
+const dismissApprovalAlert = () => {
+    showApprovalAlert.value = false;
+    if (approvalTimer) clearTimeout(approvalTimer);
+    if (approvalProgressInterval) clearInterval(approvalProgressInterval);
+};
+
+const pauseApprovalAlert = () => {
+    if (approvalTimer) {
+        clearTimeout(approvalTimer);
+        approvalRemainingTime = Math.max(500, approvalRemainingTime - (Date.now() - approvalStartTime));
+    }
+    if (approvalProgressInterval) clearInterval(approvalProgressInterval);
+};
+
+const resumeApprovalAlert = () => {
+    if (!showApprovalAlert.value || approvalRemainingTime <= 0) return;
+    approvalStartTime = Date.now();
+    approvalTimer = setTimeout(() => {
+        showApprovalAlert.value = false;
+    }, approvalRemainingTime);
+    startApprovalProgress(approvalRemainingTime);
+};
+
+const checkPendingApprovalsNotification = () => {
+    if (authUser.value?.role !== 'owner') return;
+    const notifs = recentNotifications.value || [];
+    const seen = getSeenNotifIds();
+
+    const candidate = notifs.find(n => {
+        if (!n || n.read_at) return false;
+        if (seen.has(n.id)) return false;
+        return true;
+    });
+
+    if (candidate) {
+        triggerApprovalAlert(candidate);
+    }
+    isInitialNotifCheckDone = true;
+};
+
+watch(
+    () => page.props.auth?.recentNotifications,
+    () => {
+        checkPendingApprovalsNotification();
+    },
+    { deep: true }
+);
+
 const markAllNotificationsRead = () => {
     router.post(route('owner.notifications.mark-all-read'), {}, {
         preserveScroll: true,
@@ -135,13 +313,25 @@ const handleGlobalKeydown = (event) => {
     }
 };
 
-
-
 const pollNotifications = () => {
     if (document.hidden || isPolling || authUser.value?.role !== 'owner') return;
     isPolling = true;
+
+    const onlyKeys = ['auth'];
+    const isDashboard = page.component === 'Owner/Dashboard/Index' || (typeof route === 'function' && route().current && route().current('owner.dashboard'));
+    if (isDashboard) {
+        onlyKeys.push(
+            'pendingApprovals',
+            'totalPendingApprovals',
+            'pendingLeavesCount',
+            'todayPresentCount',
+            'attendanceRate',
+            'recentClockIns'
+        );
+    }
+
     router.reload({
-        only: ['auth'],
+        only: onlyKeys,
         preserveScroll: true,
         preserveState: true,
         onFinish: () => {
@@ -160,16 +350,23 @@ onMounted(() => {
     document.addEventListener('click', handleGlobalClick);
     document.addEventListener('keydown', handleGlobalKeydown);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('click', unlockAudio, { once: true });
+    document.addEventListener('keydown', unlockAudio, { once: true });
 
     if (authUser.value?.role === 'owner') {
         // Polling cepat setiap 8 detik (antara 5-10 detik)
         pollInterval = setInterval(pollNotifications, 8000);
+        setTimeout(() => {
+            checkPendingApprovalsNotification();
+        }, 1200);
     }
 });
 
 onUnmounted(() => {
     if (toastTimer) clearTimeout(toastTimer);
     if (progressInterval) clearInterval(progressInterval);
+    if (approvalTimer) clearTimeout(approvalTimer);
+    if (approvalProgressInterval) clearInterval(approvalProgressInterval);
     if (pollInterval) clearInterval(pollInterval);
     document.removeEventListener('click', handleGlobalClick);
     document.removeEventListener('keydown', handleGlobalKeydown);
@@ -279,6 +476,119 @@ const logout = () => {
                 </div>
             </div>
         </transition>
+
+        <!-- Floating Approval Alert (Bottom-Right, distinct from CRUD toast) -->
+        <transition
+            enter-active-class="transform ease-out duration-300 transition"
+            enter-from-class="translate-y-8 translate-x-4 opacity-0 scale-95"
+            enter-to-class="translate-y-0 translate-x-0 opacity-100 scale-100"
+            leave-active-class="transform ease-in duration-200 transition"
+            leave-from-class="translate-y-0 translate-x-0 opacity-100 scale-100"
+            leave-to-class="translate-y-8 translate-x-4 opacity-0 scale-95"
+        >
+            <div
+                v-if="showApprovalAlert && currentApprovalAlert"
+                @mouseenter="pauseApprovalAlert"
+                @mouseleave="resumeApprovalAlert"
+                class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[9998] max-w-md w-[calc(100%-2rem)] sm:w-[410px] bg-white shadow-2xl shadow-slate-900/12 rounded-2xl border border-slate-200/90 overflow-hidden pointer-events-auto"
+                role="alert"
+            >
+                <div class="p-4 sm:p-5">
+                    <!-- Top Bar: Badge & Time & Close -->
+                    <div class="flex items-center justify-between gap-2 mb-3.5">
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200/70">
+                            <span class="relative flex h-2 w-2">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
+                            </span>
+                            <span class="tracking-wide">Perlu Persetujuan</span>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] font-medium text-slate-400">
+                                {{ currentApprovalAlert.time_ago || 'Baru saja' }}
+                            </span>
+                            <button
+                                type="button"
+                                @click="dismissApprovalAlert"
+                                class="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+                                title="Tutup Notifikasi"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Main Info (Icon + Text) -->
+                    <div class="flex items-start gap-3.5">
+                        <!-- Unified Icon Container (Clean Solid Blue) -->
+                        <div class="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-sm shadow-blue-600/20 bg-blue-600 text-white">
+                            <!-- Type Specific SVG Icons -->
+                            <svg v-if="currentApprovalAlert.type === 'leave'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <svg v-else-if="currentApprovalAlert.type === 'loan'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            <svg v-else-if="currentApprovalAlert.type === 'overtime'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <svg v-else-if="currentApprovalAlert.type === 'reimbursement'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+                            </svg>
+                            <svg v-else-if="currentApprovalAlert.type === 'employee'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                            </svg>
+                            <svg v-else-if="currentApprovalAlert.type === 'schedule'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                            </svg>
+                            <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                            </svg>
+                        </div>
+
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-sm font-bold text-slate-900 leading-tight">
+                                {{ currentApprovalAlert.title }}
+                            </h4>
+                            <p class="text-xs text-slate-600 mt-1 line-clamp-2 leading-relaxed">
+                                {{ currentApprovalAlert.message }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Action Button (Solid Blue, Clean & Minimalist) -->
+                    <div class="mt-4">
+                        <a
+                            :href="currentApprovalAlert.link"
+                            @click="dismissApprovalAlert"
+                            class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-xl shadow-sm hover:shadow transition-all group cursor-pointer"
+                        >
+                            <span>Tinjau Pengajuan</span>
+                            <svg class="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Progress Bar Indicator (Solid Blue) -->
+                <div class="h-1 w-full bg-slate-100">
+                    <div
+                        class="h-full bg-blue-600 transition-all duration-75"
+                        :style="{ width: `${approvalProgress}%` }"
+                    />
+                </div>
+            </div>
+        </transition>
+
+        <!-- Notification Audio Element (Supports custom MP3 or WAV) -->
+        <audio id="approvalNotificationSound" preload="auto" class="hidden">
+            <source src="/sounds/notification.mp3" type="audio/mpeg">
+            <source src="/sounds/notification.wav" type="audio/wav">
+        </audio>
 
         <!-- Sidebar Overlay (Mobile) -->
         <div
