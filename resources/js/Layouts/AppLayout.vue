@@ -863,6 +863,7 @@ const logout = () => {
                                         :href="route('owner.my-profile.index')"
                                         @click="isUserDropdownOpen = false"
                                         class="dropdown-item"
+                                        :class="{ 'active': route().current('owner.my-profile.*') }"
                                     >
                                         <svg class="w-5 h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -874,11 +875,36 @@ const logout = () => {
                                         :href="route('employee.profile.index')"
                                         @click="isUserDropdownOpen = false"
                                         class="dropdown-item"
+                                        :class="{ 'active': route().current('employee.profile.index') }"
                                     >
                                         <svg class="w-5 h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                         </svg>
                                         <span>Profil Saya</span>
+                                    </Link>
+                                    <Link
+                                        v-if="authUser?.role === 'employee'"
+                                        :href="route('employee.profile.edit')"
+                                        @click="isUserDropdownOpen = false"
+                                        class="dropdown-item"
+                                        :class="{ 'active': route().current('employee.profile.edit') }"
+                                    >
+                                        <svg class="w-5 h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                        <span>Edit Profil</span>
+                                    </Link>
+                                    <Link
+                                        v-if="authUser?.role === 'employee'"
+                                        :href="route('employee.profile.password')"
+                                        @click="isUserDropdownOpen = false"
+                                        class="dropdown-item"
+                                        :class="{ 'active': route().current('employee.profile.password*') }"
+                                    >
+                                        <svg class="w-5 h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                                        </svg>
+                                        <span>Ganti Kata Sandi</span>
                                     </Link>
                                 </div>
 

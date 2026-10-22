@@ -106,23 +106,92 @@ const scrollToActive = () => {
     });
 };
 
+const triggerRef = ref(null);
+const popoverRef = ref(null);
+const popoverStyle = ref({});
+
+const updatePosition = () => {
+    if (!isOpen.value) return;
+    const el = triggerRef.value || timepickerRef.value;
+    if (!el) return;
+
+    const rect = el.getBoundingClientRect();
+    const popoverWidth = Math.max(260, Math.min(300, rect.width));
+    const popoverHeight = 330;
+
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    const shouldOpenUpward = spaceBelow < popoverHeight && spaceAbove > spaceBelow;
+    openUpward.value = shouldOpenUpward;
+
+    let top = 0;
+    if (shouldOpenUpward) {
+        top = rect.top - popoverHeight - 6;
+        if (top < 8) top = 8;
+    } else {
+        top = rect.bottom + 6;
+        if (top + popoverHeight > window.innerHeight - 8) {
+            top = Math.max(8, window.innerHeight - popoverHeight - 8);
+        }
+    }
+
+    let left = rect.left;
+    if (left + popoverWidth > window.innerWidth - 12) {
+        left = Math.max(12, window.innerWidth - popoverWidth - 12);
+    }
+    if (left < 12) {
+        left = 12;
+    }
+
+    popoverStyle.value = {
+        position: 'fixed',
+        top: `${Math.round(top)}px`,
+        left: `${Math.round(left)}px`,
+        zIndex: 99999,
+        width: `${Math.round(popoverWidth)}px`,
+    };
+};
+
+const handleScroll = (e) => {
+    if (popoverRef.value && popoverRef.value.contains(e.target)) {
+        return;
+    }
+    const el = triggerRef.value || timepickerRef.value;
+    if (el) {
+        const rect = el.getBoundingClientRect();
+        if (rect.bottom < 0 || rect.top > window.innerHeight) {
+            close();
+            return;
+        }
+    }
+    updatePosition();
+};
+
+const handleResize = () => {
+    updatePosition();
+};
+
 const toggleOpen = () => {
     if (props.disabled) return;
     if (!isOpen.value) {
         syncFromModel();
-        if (timepickerRef.value) {
-            const rect = timepickerRef.value.getBoundingClientRect();
-            openUpward.value = window.innerHeight - rect.bottom < 320 && rect.top > 320;
-        }
         isOpen.value = true;
-        scrollToActive();
+        nextTick(() => {
+            updatePosition();
+            scrollToActive();
+            window.addEventListener('scroll', handleScroll, true);
+            window.addEventListener('resize', handleResize);
+        });
     } else {
-        isOpen.value = false;
+        close();
     }
 };
 
 const close = () => {
     isOpen.value = false;
+    window.removeEventListener('scroll', handleScroll, true);
+    window.removeEventListener('resize', handleResize);
 };
 
 const selectHour = (h) => {
@@ -154,7 +223,9 @@ const clearTime = () => {
 };
 
 const handleClickOutside = (e) => {
-    if (timepickerRef.value && !timepickerRef.value.contains(e.target)) {
+    const isInsideTrigger = timepickerRef.value && timepickerRef.value.contains(e.target);
+    const isInsidePopover = popoverRef.value && popoverRef.value.contains(e.target);
+    if (!isInsideTrigger && !isInsidePopover) {
         close();
     }
 };
@@ -173,13 +244,15 @@ onMounted(() => {
 onBeforeUnmount(() => {
     document.removeEventListener('click', handleClickOutside);
     document.removeEventListener('keydown', handleKeyDown);
+    window.removeEventListener('scroll', handleScroll, true);
+    window.removeEventListener('resize', handleResize);
 });
 </script>
 
 <template>
     <div
         ref="timepickerRef"
-        :class="['w-full relative text-left', isOpen ? 'z-30' : '']"
+        class="w-full relative text-left"
     >
         <!-- Label -->
         <label
@@ -192,6 +265,7 @@ onBeforeUnmount(() => {
 
         <!-- Trigger Input Box -->
         <div
+            ref="triggerRef"
             @click="toggleOpen"
             :class="[
                 'w-full flex items-center justify-between gap-2 bg-white px-3.5 h-10 min-h-[40px] text-[13px] rounded-xl border transition-all select-none group',
@@ -269,20 +343,23 @@ onBeforeUnmount(() => {
             {{ error }}
         </p>
 
-        <!-- Dropdown Popover (Dual Column List: Jam 00-23 & Menit 00-59) -->
-        <Transition
-            enter-active-class="transition duration-150 ease-out"
-            enter-from-class="transform opacity-0 scale-95 -translate-y-1"
-            enter-to-class="transform opacity-100 scale-100 translate-y-0"
-            leave-active-class="transition duration-100 ease-in"
-            leave-from-class="transform opacity-100 scale-100 translate-y-0"
-            leave-to-class="transform opacity-0 scale-95 -translate-y-1"
-        >
-            <div
-                v-if="isOpen"
-                class="absolute left-0 z-50 w-full sm:w-[280px] bg-white rounded-2xl border border-slate-200 shadow-2xl p-3.5 space-y-3 select-none"
-                :class="openUpward ? 'bottom-full mb-1.5' : 'top-full mt-1.5'"
+        <!-- Dropdown Popover (Teleported to body for zero clipping/overflow issues) -->
+        <Teleport to="body">
+            <Transition
+                enter-active-class="transition duration-150 ease-out"
+                enter-from-class="transform opacity-0 scale-95"
+                enter-to-class="transform opacity-100 scale-100"
+                leave-active-class="transition duration-100 ease-in"
+                leave-from-class="transform opacity-100 scale-100"
+                leave-to-class="transform opacity-0 scale-95"
             >
+                <div
+                    v-if="isOpen"
+                    ref="popoverRef"
+                    :style="popoverStyle"
+                    class="bg-white rounded-2xl border border-slate-200 shadow-2xl p-3.5 space-y-3 select-none"
+                    @click.stop
+                >
                 <!-- Header: Display Current Selection -->
                 <div class="flex items-center justify-between pb-2 border-b border-slate-100">
                     <div class="flex items-center gap-2">
@@ -371,5 +448,6 @@ onBeforeUnmount(() => {
                 </div>
             </div>
         </Transition>
-    </div>
+    </Teleport>
+</div>
 </template>

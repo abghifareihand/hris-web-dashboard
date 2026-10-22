@@ -13,7 +13,7 @@ defineProps({
         default: false,
     },
     rows: {
-        type: Number,
+        type: [Number, String],
         default: 3,
     },
     placeholder: {

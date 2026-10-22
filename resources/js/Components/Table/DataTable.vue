@@ -38,7 +38,9 @@ defineProps({
                 </tr>
             </thead>
             <tbody>
-                <slot />
+                <slot name="body">
+                    <slot />
+                </slot>
             </tbody>
         </table>
     </div>

@@ -299,6 +299,72 @@ const clearDate = () => {
 };
 
 const openUpward = ref(false);
+const triggerRef = ref(null);
+const popoverRef = ref(null);
+const popoverStyle = ref({});
+
+const updatePosition = () => {
+    if (!isOpen.value) return;
+    const el = triggerRef.value || datepickerRef.value;
+    if (!el) return;
+
+    const rect = el.getBoundingClientRect();
+    const popoverWidth = 300;
+    const popoverHeight = 350;
+
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    // Check if we should open upward
+    const shouldOpenUpward = spaceBelow < popoverHeight && spaceAbove > spaceBelow;
+    openUpward.value = shouldOpenUpward;
+
+    let top = 0;
+    if (shouldOpenUpward) {
+        top = rect.top - popoverHeight - 6;
+        if (top < 8) top = 8;
+    } else {
+        top = rect.bottom + 6;
+        if (top + popoverHeight > window.innerHeight - 8) {
+            top = Math.max(8, window.innerHeight - popoverHeight - 8);
+        }
+    }
+
+    let left = rect.left;
+    if (left + popoverWidth > window.innerWidth - 12) {
+        left = Math.max(12, window.innerWidth - popoverWidth - 12);
+    }
+    if (left < 12) {
+        left = 12;
+    }
+
+    popoverStyle.value = {
+        position: 'fixed',
+        top: `${Math.round(top)}px`,
+        left: `${Math.round(left)}px`,
+        zIndex: 99999,
+        width: `${popoverWidth}px`,
+    };
+};
+
+const handleScroll = (e) => {
+    if (popoverRef.value && popoverRef.value.contains(e.target)) {
+        return;
+    }
+    const el = triggerRef.value || datepickerRef.value;
+    if (el) {
+        const rect = el.getBoundingClientRect();
+        if (rect.bottom < 0 || rect.top > window.innerHeight) {
+            close();
+            return;
+        }
+    }
+    updatePosition();
+};
+
+const handleResize = () => {
+    updatePosition();
+};
 
 const toggleOpen = () => {
     if (props.disabled) return;
@@ -308,16 +374,14 @@ const toggleOpen = () => {
             viewYear.value = d.getFullYear();
             viewMonth.value = d.getMonth();
         }
-        if (datepickerRef.value) {
-            const rect = datepickerRef.value.getBoundingClientRect();
-            // If space below is less than 360px and there is space above, open upward
-            openUpward.value = window.innerHeight - rect.bottom < 360 && rect.top > 360;
-        }
-    }
-    isOpen.value = !isOpen.value;
-    if (!isOpen.value) {
-        isMonthDropdownOpen.value = false;
-        isYearDropdownOpen.value = false;
+        isOpen.value = true;
+        nextTick(() => {
+            updatePosition();
+            window.addEventListener("scroll", handleScroll, true);
+            window.addEventListener("resize", handleResize);
+        });
+    } else {
+        close();
     }
 };
 
@@ -325,10 +389,15 @@ const close = () => {
     isOpen.value = false;
     isMonthDropdownOpen.value = false;
     isYearDropdownOpen.value = false;
+    window.removeEventListener("scroll", handleScroll, true);
+    window.removeEventListener("resize", handleResize);
 };
 
 const handleClickOutside = (e) => {
-    if (datepickerRef.value && !datepickerRef.value.contains(e.target)) {
+    const isInsideTrigger = datepickerRef.value && datepickerRef.value.contains(e.target);
+    const isInsidePopover = popoverRef.value && popoverRef.value.contains(e.target);
+
+    if (!isInsideTrigger && !isInsidePopover) {
         close();
     } else {
         if (monthSelectorRef.value && !monthSelectorRef.value.contains(e.target)) {
@@ -359,13 +428,15 @@ onMounted(() => {
 onBeforeUnmount(() => {
     document.removeEventListener("click", handleClickOutside);
     document.removeEventListener("keydown", handleKeyDown);
+    window.removeEventListener("scroll", handleScroll, true);
+    window.removeEventListener("resize", handleResize);
 });
 </script>
 
 <template>
     <div
         ref="datepickerRef"
-        :class="['w-full relative text-left', isOpen ? 'z-30' : '']"
+        class="w-full relative text-left"
     >
         <!-- Label -->
         <label
@@ -378,6 +449,7 @@ onBeforeUnmount(() => {
 
         <!-- Trigger Button -->
         <div
+            ref="triggerRef"
             @click="toggleOpen"
             :class="[
                 'w-full flex items-center justify-between gap-2 bg-white px-3 h-10 min-h-[40px] text-[13px] rounded-lg border transition-all select-none',
@@ -430,20 +502,23 @@ onBeforeUnmount(() => {
             {{ error }}
         </p>
 
-        <!-- Calendar Dropdown Popover -->
-        <Transition
-            enter-active-class="transition duration-150 ease-out"
-            enter-from-class="transform opacity-0 scale-95 -translate-y-1"
-            enter-to-class="transform opacity-100 scale-100 translate-y-0"
-            leave-active-class="transition duration-100 ease-in"
-            leave-from-class="transform opacity-100 scale-100 translate-y-0"
-            leave-to-class="transform opacity-0 scale-95 -translate-y-1"
-        >
-            <div
-                v-if="isOpen"
-                class="absolute left-0 z-50 w-[300px] bg-white rounded-2xl border border-slate-200 shadow-xl p-3.5 space-y-3"
-                :class="openUpward ? 'bottom-full mb-1.5' : 'top-full mt-1.5'"
+        <!-- Calendar Dropdown Popover (Teleported to body for zero clipping/overflow issues) -->
+        <Teleport to="body">
+            <Transition
+                enter-active-class="transition duration-150 ease-out"
+                enter-from-class="transform opacity-0 scale-95"
+                enter-to-class="transform opacity-100 scale-100"
+                leave-active-class="transition duration-100 ease-in"
+                leave-from-class="transform opacity-100 scale-100"
+                leave-to-class="transform opacity-0 scale-95"
             >
+                <div
+                    v-if="isOpen"
+                    ref="popoverRef"
+                    :style="popoverStyle"
+                    class="bg-white rounded-2xl border border-slate-200 shadow-2xl p-3.5 space-y-3 select-none"
+                    @click.stop
+                >
                 <!-- Navigation Header -->
                 <div class="flex items-center justify-between gap-1 pb-1.5 border-b border-slate-100">
                     <button
@@ -626,7 +701,8 @@ onBeforeUnmount(() => {
                 </div>
             </div>
         </Transition>
-    </div>
+    </Teleport>
+</div>
 </template>
 
 <style scoped>

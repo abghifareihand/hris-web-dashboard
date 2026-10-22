@@ -18,6 +18,8 @@ class Announcement extends Model
         'is_active' => 'boolean',
     ];
 
+    protected $appends = ['image_url'];
+
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);

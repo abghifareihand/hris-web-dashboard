@@ -137,7 +137,7 @@ class DashboardController extends Controller
             ->get()
             ->map(fn($r) => [
                 'type' => 'Reimbursement',
-                'title' => $r->title,
+                'title' => $r->reason ?: 'Klaim Biaya',
                 'detail' => 'Rp ' . number_format($r->amount, 0, ',', '.'),
                 'status' => $r->status,
                 'created_at' => $r->created_at,

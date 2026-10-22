@@ -1176,6 +1176,17 @@ input[type="radio"]:focus {
     color: var(--color-primary-600);
 }
 
+.dropdown-item.active {
+    background-color: #ecfdf5 !important;
+    color: #047857 !important;
+    font-weight: 600 !important;
+    border-right: 3px solid #059669 !important;
+}
+
+.dropdown-item.active svg {
+    color: #059669 !important;
+}
+
 .dropdown-item-danger:hover {
     background: var(--color-danger-50);
     color: var(--color-danger-600);

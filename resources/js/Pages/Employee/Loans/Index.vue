@@ -1,20 +1,96 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, reactive, watch, computed } from 'vue';
 import { Head, useForm, router } from '@inertiajs/vue3';
-import EmployeeLayout from '@/Layouts/EmployeeLayout.vue';
+import AppLayout from '@/Layouts/AppLayout.vue';
+import DataTable from '@/Components/Table/DataTable.vue';
+import TableEmpty from '@/Components/Table/TableEmpty.vue';
 import TablePagination from '@/Components/Table/TablePagination.vue';
+import Badge from '@/Components/UI/Badge.vue';
+import Button from '@/Components/UI/Button.vue';
+import Select from '@/Components/UI/Select.vue';
+import Input from '@/Components/UI/Input.vue';
+import Textarea from '@/Components/UI/Textarea.vue';
+import DatePicker from '@/Components/UI/DatePicker.vue';
 import Modal from '@/Components/UI/Modal.vue';
+import { useDebounce } from '@/Composables/useDebounce';
 
 const props = defineProps({
     loans: Object,
     totalActiveLoan: Number,
+    totalRemainingBalance: Number,
+    pendingCount: Number,
+    loanPolicy: Object,
     filters: Object,
 });
 
-const isModalOpen = ref(false);
-const isDetailModalOpen = ref(false);
-const selectedLoan = ref(null);
-const statusFilter = ref(props.filters.status || '');
+// Filter State (1:1 Standar Owner)
+const filters = reactive({
+    status: props.filters?.status || '',
+    search: props.filters?.search || '',
+});
+
+watch(
+    () => props.filters,
+    (newFilters) => {
+        filters.status = newFilters?.status || '';
+        filters.search = newFilters?.search || '';
+    },
+    { deep: true }
+);
+
+const applyFilters = () => {
+    router.get(
+        route('employee.loans.index'),
+        {
+            status: filters.status || undefined,
+            search: filters.search || undefined,
+        },
+        { preserveState: true, preserveScroll: true, replace: true }
+    );
+};
+
+const { debouncedFn: debouncedSearch } = useDebounce(() => {
+    applyFilters();
+}, 350);
+
+const onSearchInput = (val) => {
+    filters.search = val;
+    debouncedSearch();
+};
+
+const onFilterChange = () => {
+    applyFilters();
+};
+
+const resetFilters = () => {
+    filters.status = '';
+    filters.search = '';
+    applyFilters();
+};
+
+const hasActiveFilters = () => {
+    return Boolean(filters.status || filters.search);
+};
+
+const statusOptions = [
+    { value: '', label: 'Semua Status' },
+    { value: 'pending', label: 'Menunggu Persetujuan' },
+    { value: 'approved', label: 'Disetujui' },
+    { value: 'paid', label: 'Lunas' },
+    { value: 'rejected', label: 'Ditolak' },
+];
+
+// Tenor Options for Form
+const tenorOptions = computed(() => {
+    const list = props.loanPolicy?.tenorOptions || [1, 2, 3, 6, 12];
+    return list.map((t) => ({
+        value: t,
+        label: `${t} Bulan`,
+    }));
+});
+
+// Create Modal & Form
+const isCreateModalOpen = ref(false);
 
 const form = useForm({
     date: '',
@@ -23,16 +99,50 @@ const form = useForm({
     description: '',
 });
 
-const openModal = () => {
+// Installment Simulation Calculation
+const installmentSimulation = computed(() => {
+    const amt = Number(form.amount) || 0;
+    const t = Number(form.tenor) || 1;
+    if (amt <= 0 || t <= 0) return null;
+
+    const monthly = Math.round(amt / t);
+    const basicSalary = props.loanPolicy?.basicSalary || 0;
+    const maxMonthly = props.loanPolicy?.maxMonthlyInstallment || 0;
+    const ratio = basicSalary > 0 ? ((monthly / basicSalary) * 100).toFixed(1) : null;
+    const isExceeding = maxMonthly > 0 && monthly > maxMonthly;
+
+    return {
+        monthly,
+        ratio,
+        isExceeding,
+        maxMonthly,
+    };
+});
+
+const openCreateModal = () => {
     form.reset();
-    form.tenor = 1;
     form.clearErrors();
-    isModalOpen.value = true;
+    form.date = new Date().toISOString().split('T')[0];
+    form.tenor = (props.loanPolicy?.tenorOptions && props.loanPolicy.tenorOptions[0]) || 1;
+    isCreateModalOpen.value = true;
 };
 
-const closeModal = () => {
-    isModalOpen.value = false;
+const closeCreateModal = () => {
+    isCreateModalOpen.value = false;
 };
+
+const submitLoan = () => {
+    form.post(route('employee.loans.store'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            closeCreateModal();
+        },
+    });
+};
+
+// Detail / Installment Modal
+const isDetailModalOpen = ref(false);
+const selectedLoan = ref(null);
 
 const openDetailModal = (loan) => {
     selectedLoan.value = loan;
@@ -44,23 +154,25 @@ const closeDetailModal = () => {
     selectedLoan.value = null;
 };
 
-const submitLoan = () => {
-    form.post(route('employee.loans.store'), {
+// Cancel Loan
+const cancelForm = useForm({});
+const isCancelling = ref(false);
+
+const cancelLoan = (id) => {
+    if (!confirm('Apakah Anda yakin ingin membatalkan permohonan pinjaman / kasbon ini?')) return;
+    isCancelling.value = true;
+    cancelForm.post(route('employee.loans.cancel', id), {
         preserveScroll: true,
-        onSuccess: () => {
-            closeModal();
+        onFinish: () => {
+            isCancelling.value = false;
+            if (isDetailModalOpen.value) {
+                closeDetailModal();
+            }
         },
     });
 };
 
-const applyFilter = () => {
-    router.get(
-        route('employee.loans.index'),
-        { status: statusFilter.value },
-        { preserveState: true, replace: true }
-    );
-};
-
+// Helpers
 const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     return new Date(dateStr).toLocaleDateString('id-ID', {
@@ -78,165 +190,273 @@ const formatRupiah = (val) => {
     }).format(val || 0);
 };
 
-const getStatusBadge = (status) => {
+const getBadgeVariant = (status) => {
     switch (status) {
+        case 'paid':
+            return 'info';
         case 'approved':
-            return { label: 'Disetujui', class: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' };
+            return 'success';
         case 'rejected':
-            return { label: 'Ditolak', class: 'bg-rose-50 text-rose-700 ring-rose-600/20' };
-        case 'completed':
-            return { label: 'Lunas', class: 'bg-sky-50 text-sky-700 ring-sky-600/20' };
+            return 'danger';
+        case 'pending':
         default:
-            return { label: 'Menunggu Persetujuan', class: 'bg-amber-50 text-amber-700 ring-amber-600/20' };
+            return 'warning';
     }
 };
+
+const getStatusLabel = (status) => {
+    switch (status) {
+        case 'paid':
+            return 'Lunas';
+        case 'approved':
+            return 'Disetujui';
+        case 'rejected':
+            return 'Ditolak';
+        case 'pending':
+        default:
+            return 'Menunggu Persetujuan';
+    }
+};
+
+const tableHeaders = [
+    { label: 'Tanggal', class: 'w-36' },
+    { label: 'Nominal Pinjaman', class: 'w-44 font-bold' },
+    { label: 'Tenor Cicilan', class: 'w-32 text-center' },
+    { label: 'Potongan / Bulan', class: 'w-40' },
+    { label: 'Keperluan Kasbon', class: 'w-60' },
+    { label: 'Status', class: 'w-36 text-center' },
+    { label: 'Aksi', class: 'w-28 text-right' },
+];
 </script>
 
 <template>
-    <Head title="Pinjaman & Kasbon Karyawan" />
+    <Head title="Pinjaman Karyawan & Kasbon" />
 
-    <EmployeeLayout>
+    <AppLayout>
         <div class="space-y-6">
             <!-- Header Section -->
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Pinjaman Karyawan (Kasbon)</h1>
-                    <p class="text-sm text-slate-500 mt-1">Fasilitas pembiayaan internal perusahaan dan pemotongan angsuran gaji bulanan.</p>
-                </div>
-                <button
-                    type="button"
-                    @click="openModal"
-                    class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-sky-500/20 active:scale-[0.99]"
-                >
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Ajukan Kasbon Baru
-                </button>
-            </div>
-
-            <!-- Stats Card -->
-            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4 max-w-sm">
-                <div class="w-12 h-12 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
-                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                    <p class="text-slate-500 text-sm mt-1">
+                        Fasilitas pembiayaan internal perusahaan dengan pemotongan angsuran gaji bulanan secara otomatis.
+                    </p>
                 </div>
                 <div>
-                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Kasbon Disetujui</p>
-                    <p class="text-2xl font-bold text-slate-900 mt-0.5">{{ formatRupiah(totalActiveLoan) }}</p>
+                    <Button
+                        variant="primary"
+                        @click="openCreateModal"
+                        class="shadow-sm"
+                    >
+                        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Ajukan Kasbon Baru
+                    </Button>
                 </div>
             </div>
 
-            <!-- Main Table Section -->
-            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-                <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div>
-                        <h2 class="text-base font-semibold text-slate-900">Riwayat Pengajuan Pinjaman</h2>
-                        <p class="text-xs text-slate-500 mt-0.5">Daftar permohonan pinjaman kasbon dan skema tenor angsuran</p>
+            <!-- Stats Overview Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
                     </div>
                     <div>
-                        <select
-                            v-model="statusFilter"
-                            @change="applyFilter"
-                            class="text-xs rounded-xl border-slate-200 text-slate-700 py-1.5 focus:border-sky-500 focus:ring-sky-500/20"
-                        >
-                            <option value="">Semua Status</option>
-                            <option value="pending">Menunggu Persetujuan</option>
-                            <option value="approved">Disetujui</option>
-                            <option value="completed">Lunas</option>
-                            <option value="rejected">Ditolak</option>
-                        </select>
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Kasbon Disetujui</p>
+                        <p class="text-2xl font-bold text-emerald-600 mt-0.5">
+                            {{ formatRupiah(totalActiveLoan) }}
+                        </p>
                     </div>
                 </div>
 
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm text-slate-600">
-                        <thead class="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-200/80">
-                            <tr>
-                                <th class="px-5 py-3.5">Tanggal</th>
-                                <th class="px-5 py-3.5">Nominal Pinjaman</th>
-                                <th class="px-5 py-3.5">Tenor</th>
-                                <th class="px-5 py-3.5">Angsuran / Bulan</th>
-                                <th class="px-5 py-3.5">Tujuan / Keperluan</th>
-                                <th class="px-5 py-3.5">Status</th>
-                                <th class="px-5 py-3.5 text-center">Rincian</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100 font-normal">
-                            <tr v-if="!loans.data || loans.data.length === 0">
-                                <td colspan="7" class="px-5 py-12 text-center">
-                                    <div class="flex flex-col items-center justify-center">
-                                        <div class="w-12 h-12 rounded-full bg-sky-50 flex items-center justify-center text-sky-500 mb-3">
-                                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                        </div>
-                                        <p class="text-sm font-semibold text-slate-900">Belum ada pengajuan pinjaman</p>
-                                        <p class="text-xs text-slate-500 mt-1 max-w-sm">Anda dapat mengajukan pinjaman darurat / kasbon melalui tombol di atas.</p>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr v-for="item in loans.data" :key="item.id" class="hover:bg-slate-50/60 transition-colors">
-                                <td class="px-5 py-4 whitespace-nowrap text-slate-700 font-medium">
-                                    {{ formatDate(item.date) }}
-                                </td>
-                                <td class="px-5 py-4 whitespace-nowrap font-bold text-slate-900">
-                                    {{ formatRupiah(item.amount) }}
-                                </td>
-                                <td class="px-5 py-4 whitespace-nowrap text-slate-700">
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Sisa Saldo Belum Terpotong</p>
+                        <p class="text-2xl font-bold text-slate-900 mt-0.5">
+                            {{ formatRupiah(totalRemainingBalance) }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Menunggu Persetujuan</p>
+                        <p class="text-2xl font-bold text-amber-600 mt-0.5">
+                            {{ pendingCount }} <span class="text-xs font-normal text-slate-400">Pengajuan</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Controls (1:1 Standar Owner Dashboard) -->
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+                <div class="px-6 py-2.5 border-b border-slate-100 rounded-t-2xl flex items-center justify-between min-h-[56px]">
+                    <h2 class="text-base font-bold text-slate-900">
+                        Filter Riwayat Kasbon
+                    </h2>
+
+                    <!-- Reset Filter Button -->
+                    <transition
+                        enter-active-class="transition-opacity duration-150 ease-out"
+                        enter-from-class="opacity-0"
+                        enter-to-class="opacity-100"
+                        leave-active-class="transition-opacity duration-100 ease-in"
+                        leave-from-class="opacity-100"
+                        leave-to-class="opacity-0"
+                    >
+                        <Button
+                            v-if="hasActiveFilters()"
+                            variant="secondary"
+                            size="sm"
+                            type="button"
+                            @click="resetFilters"
+                            class="shrink-0 text-xs font-semibold gap-1.5 !h-8 !min-h-[32px] !px-3 !rounded-lg !bg-white !text-slate-700 !border-slate-300 hover:!bg-slate-50 hover:!text-slate-900 shadow-xs"
+                        >
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            <span>Reset</span>
+                        </Button>
+                    </transition>
+                </div>
+
+                <div class="p-6 space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Status Filter -->
+                        <div>
+                            <Select
+                                label="Status Pengajuan"
+                                v-model="filters.status"
+                                :options="statusOptions"
+                                @change="onFilterChange"
+                            />
+                        </div>
+
+                        <!-- Search Input -->
+                        <div>
+                            <Input
+                                label="Cari Keperluan Kasbon"
+                                :modelValue="filters.search"
+                                @update:modelValue="onSearchInput"
+                                placeholder="Ketik alasan atau keperluan pinjaman..."
+                            >
+                                <template #prefix>
+                                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </template>
+                            </Input>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Standar DataTable Component -->
+            <DataTable :headers="tableHeaders">
+                <template #body>
+                    <template v-if="loans?.data && loans.data.length > 0">
+                        <tr
+                            v-for="item in loans.data"
+                            :key="item.id"
+                            class="hover:bg-slate-50/70 transition-colors"
+                        >
+                            <td class="px-5 py-3.5 whitespace-nowrap text-xs font-semibold text-slate-800">
+                                {{ formatDate(item.date) }}
+                            </td>
+                            <td class="px-5 py-3.5 whitespace-nowrap text-sm font-bold text-slate-900">
+                                {{ formatRupiah(item.amount) }}
+                            </td>
+                            <td class="px-5 py-3.5 whitespace-nowrap text-center">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700">
                                     {{ item.tenor }} Bulan
-                                </td>
-                                <td class="px-5 py-4 whitespace-nowrap font-medium text-slate-700">
-                                    {{ formatRupiah(item.amount / item.tenor) }}
-                                </td>
-                                <td class="px-5 py-4 max-w-xs">
-                                    <p class="line-clamp-2 text-xs leading-relaxed text-slate-600">{{ item.description }}</p>
-                                </td>
-                                <td class="px-5 py-4 whitespace-nowrap">
-                                    <span
-                                        :class="[
-                                            getStatusBadge(item.status).class,
-                                            'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ring-1 ring-inset'
-                                        ]"
-                                    >
-                                        {{ getStatusBadge(item.status).label }}
-                                    </span>
-                                </td>
-                                <td class="px-5 py-4 text-center whitespace-nowrap">
+                                </span>
+                            </td>
+                            <td class="px-5 py-3.5 whitespace-nowrap text-xs font-semibold text-emerald-700">
+                                {{ formatRupiah(item.amount / item.tenor) }} <span class="text-[11px] text-slate-400 font-normal">/ bln</span>
+                            </td>
+                            <td class="px-5 py-3.5 max-w-xs">
+                                <p
+                                    class="text-sm font-medium text-slate-900 hover:text-emerald-600 transition-colors cursor-pointer line-clamp-1"
+                                    @click="openDetailModal(item)"
+                                >
+                                    {{ item.description }}
+                                </p>
+                                <p class="text-xs text-slate-400 mt-0.5">Diajukan: {{ formatDate(item.created_at) }}</p>
+                            </td>
+                            <td class="px-5 py-3.5 whitespace-nowrap text-center">
+                                <Badge :variant="getBadgeVariant(item.status)" size="sm">
+                                    {{ getStatusLabel(item.status) }}
+                                </Badge>
+                            </td>
+                            <td class="px-5 py-3.5 text-right whitespace-nowrap">
+                                <div class="flex items-center justify-end gap-1.5">
                                     <button
-                                        v-if="item.installments && item.installments.length > 0"
                                         type="button"
                                         @click="openDetailModal(item)"
-                                        class="inline-flex items-center gap-1 text-xs text-sky-600 hover:text-sky-700 font-semibold"
+                                        class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                                        title="Lihat Detail & Jadwal Angsuran"
                                     >
-                                        Lihat Angsuran ({{ item.installments.length }})
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
                                     </button>
-                                    <span v-else class="text-xs text-slate-400 italic">Belum dibuat</span>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                                    <Button
+                                        v-if="item.status === 'pending'"
+                                        variant="danger"
+                                        size="xs"
+                                        :disabled="isCancelling"
+                                        @click="cancelLoan(item.id)"
+                                    >
+                                        Batal
+                                    </Button>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                    <TableEmpty
+                        v-else
+                        :colspan="7"
+                        title="Belum Ada Permohonan Pinjaman"
+                        message="Anda belum pernah mengajukan pinjaman kasbon atau tidak ada data yang cocok dengan kriteria filter yang dipilih."
+                    >
+                        <template #action>
+                            <Button variant="primary" size="sm" @click="openCreateModal">
+                                Ajukan Kasbon Baru Sekarang
+                            </Button>
+                        </template>
+                    </TableEmpty>
+                </template>
+            </DataTable>
 
-                <!-- Pagination -->
-                <div v-if="loans.links && loans.links.length > 3" class="p-4 border-t border-slate-100">
-                    <TablePagination :links="loans.links" />
-                </div>
-            </div>
+            <!-- Table Pagination -->
+            <TablePagination :pagination="loans" />
         </div>
 
         <!-- Modal Ajukan Pinjaman / Kasbon -->
-        <Modal :show="isModalOpen" @close="closeModal" maxWidth="md">
+        <Modal :show="isCreateModalOpen" @close="closeCreateModal" maxWidth="md">
             <template #title>
                 <div class="flex items-center gap-2.5">
-                    <div class="w-9 h-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                     </div>
                     <div>
-                        <h3 class="text-base font-bold text-slate-900">Form Pinjaman / Kasbon</h3>
+                        <h3 class="text-base font-bold text-slate-900">Form Pengajuan Kasbon</h3>
                         <p class="text-xs text-slate-500 mt-0.5">Ajukan bantuan dana kasbon dengan skema angsuran</p>
                     </div>
                 </div>
@@ -244,106 +464,95 @@ const getStatusBadge = (status) => {
 
             <form @submit.prevent="submitLoan" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                        Tanggal Pengajuan <span class="text-rose-500">*</span>
-                    </label>
-                    <input
-                        type="date"
+                    <DatePicker
+                        label="Tanggal Pengajuan"
                         v-model="form.date"
-                        class="w-full text-sm rounded-xl border-slate-200 focus:border-sky-500 focus:ring-sky-500/20 transition-colors"
+                        placeholder="Pilih Tanggal Pengajuan"
+                        :error="form.errors.date"
                         required
                     />
-                    <p v-if="form.errors.date" class="text-xs text-rose-500 mt-1">
-                        {{ form.errors.date }}
-                    </p>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                            Nominal (Rp) <span class="text-rose-500">*</span>
-                        </label>
-                        <input
+                        <Input
+                            label="Nominal Pinjaman (Rp)"
                             type="number"
                             min="50000"
                             step="10000"
                             v-model="form.amount"
-                            class="w-full text-sm rounded-xl border-slate-200 focus:border-sky-500 focus:ring-sky-500/20 transition-colors"
                             placeholder="Contoh: 1000000"
+                            :error="form.errors.amount"
                             required
                         />
-                        <p v-if="form.errors.amount" class="text-xs text-rose-500 mt-1">
-                            {{ form.errors.amount }}
-                        </p>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                            Tenor Cicilan <span class="text-rose-500">*</span>
-                        </label>
-                        <select
+                        <Select
+                            label="Tenor Cicilan"
                             v-model="form.tenor"
-                            class="w-full text-sm rounded-xl border-slate-200 focus:border-sky-500 focus:ring-sky-500/20 transition-colors"
+                            :options="tenorOptions"
+                            :error="form.errors.tenor"
                             required
-                        >
-                            <option :value="1">1 Bulan</option>
-                            <option :value="2">2 Bulan</option>
-                            <option :value="3">3 Bulan</option>
-                            <option :value="6">6 Bulan</option>
-                            <option :value="12">12 Bulan</option>
-                        </select>
-                        <p v-if="form.errors.tenor" class="text-xs text-rose-500 mt-1">
-                            {{ form.errors.tenor }}
-                        </p>
+                        />
                     </div>
                 </div>
 
-                <div v-if="form.amount && form.tenor" class="p-3 bg-sky-50/70 border border-sky-100 rounded-xl">
-                    <p class="text-xs text-sky-800">
-                        Perkiraan Potongan Gaji: <span class="font-bold">{{ formatRupiah(form.amount / form.tenor) }}</span> / bulan selama {{ form.tenor }} bulan.
-                    </p>
+                <!-- Simulation Box -->
+                <div v-if="installmentSimulation" class="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1.5 text-xs">
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-500">Estimasi Cicilan per Bulan:</span>
+                        <span class="font-bold text-emerald-700 text-sm">
+                            {{ formatRupiah(installmentSimulation.monthly) }} / bln
+                        </span>
+                    </div>
+                    <div v-if="installmentSimulation.ratio" class="flex justify-between items-center">
+                        <span class="text-slate-500">Rasio terhadap Gaji Pokok:</span>
+                        <span :class="installmentSimulation.isExceeding ? 'text-rose-600 font-bold' : 'text-slate-700 font-semibold'">
+                            {{ installmentSimulation.ratio }}% (Batas Aman: 35%)
+                        </span>
+                    </div>
+
+                    <!-- Warning if exceeding 35% -->
+                    <div v-if="installmentSimulation.isExceeding" class="mt-2 pt-2 border-t border-slate-200 text-[11px] text-rose-600 leading-relaxed">
+                        ⚠️ Cicilan melebihi batas kebijakan 35% gaji pokok (Maks. {{ formatRupiah(installmentSimulation.maxMonthly) }}/bln). Pertimbangkan memperpanjang tenor atau mengurangi nominal pinjaman.
+                    </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                        Alasan / Keperluan Pinjaman <span class="text-rose-500">*</span>
-                    </label>
-                    <textarea
+                    <Textarea
+                        label="Alasan / Keperluan Pinjaman"
                         v-model="form.description"
                         rows="3"
-                        class="w-full text-sm rounded-xl border-slate-200 focus:border-sky-500 focus:ring-sky-500/20 transition-colors placeholder:text-slate-400"
-                        placeholder="Contoh: Biaya berobat keluarga, keperluan mendesak..."
+                        placeholder="Contoh: Biaya berobat keluarga, kebutuhan mendesak..."
+                        :error="form.errors.description"
                         required
-                    ></textarea>
-                    <p v-if="form.errors.description" class="text-xs text-rose-500 mt-1">
-                        {{ form.errors.description }}
-                    </p>
+                    />
                 </div>
 
                 <div class="pt-4 flex items-center justify-end gap-2 border-t border-slate-100">
-                    <button
+                    <Button
                         type="button"
-                        @click="closeModal"
-                        class="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors"
+                        variant="secondary"
+                        @click="closeCreateModal"
                     >
                         Batal
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         type="submit"
-                        :disabled="form.processing"
-                        class="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-all disabled:opacity-50"
+                        variant="primary"
+                        :loading="form.processing"
                     >
-                        <span v-if="form.processing">Mengirim...</span>
-                        <span v-else>Ajukan Pinjaman</span>
-                    </button>
+                        Ajukan Kasbon
+                    </Button>
                 </div>
             </form>
         </Modal>
 
-        <!-- Modal Rincian Angsuran / Installments -->
+        <!-- Modal Detail & Jadwal Angsuran -->
         <Modal :show="isDetailModalOpen" @close="closeDetailModal" maxWidth="lg">
             <template #title>
                 <div class="flex items-center gap-2.5">
-                    <div class="w-9 h-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                         </svg>
@@ -351,53 +560,96 @@ const getStatusBadge = (status) => {
                     <div>
                         <h3 class="text-base font-bold text-slate-900">Jadwal Angsuran Pinjaman</h3>
                         <p class="text-xs text-slate-500 mt-0.5" v-if="selectedLoan">
-                            Total Pinjaman: {{ formatRupiah(selectedLoan.amount) }} ({{ selectedLoan.tenor }} Bulan)
+                            Total: {{ formatRupiah(selectedLoan.amount) }} ({{ selectedLoan.tenor }} Bulan)
                         </p>
                     </div>
                 </div>
             </template>
 
-            <div v-if="selectedLoan && selectedLoan.installments" class="space-y-4">
-                <div class="overflow-x-auto border border-slate-100 rounded-xl">
-                    <table class="w-full text-left text-xs">
-                        <thead class="bg-slate-50 uppercase font-semibold text-slate-500">
-                            <tr>
-                                <th class="px-4 py-2.5">Cicilan Ke</th>
-                                <th class="px-4 py-2.5">Jatuh Tempo</th>
-                                <th class="px-4 py-2.5">Nominal</th>
-                                <th class="px-4 py-2.5">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100">
-                            <tr v-for="ins in selectedLoan.installments" :key="ins.id">
-                                <td class="px-4 py-3 font-medium text-slate-900">#{{ ins.installment_number }}</td>
-                                <td class="px-4 py-3 text-slate-700">{{ formatDate(ins.due_date) }}</td>
-                                <td class="px-4 py-3 font-bold text-slate-900">{{ formatRupiah(ins.amount) }}</td>
-                                <td class="px-4 py-3">
-                                    <span
-                                        :class="[
-                                            ins.is_paid ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700',
-                                            'px-2 py-0.5 rounded text-[11px] font-semibold'
-                                        ]"
-                                    >
-                                        {{ ins.is_paid ? 'Sudah Terpotong' : 'Belum Terpotong' }}
-                                    </span>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+            <div v-if="selectedLoan" class="space-y-4 text-sm">
+                <div class="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-2.5">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs text-slate-500">Nominal Pinjaman:</span>
+                        <span class="text-lg font-bold text-emerald-600">{{ formatRupiah(selectedLoan.amount) }}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs text-slate-500">Tenor Cicilan:</span>
+                        <span class="font-semibold text-slate-800">{{ selectedLoan.tenor }} Bulan</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs text-slate-500">Potongan per Bulan:</span>
+                        <span class="font-semibold text-slate-800">{{ formatRupiah(selectedLoan.amount / selectedLoan.tenor) }}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs text-slate-500">Status Permohonan:</span>
+                        <Badge :variant="getBadgeVariant(selectedLoan.status)">
+                            {{ getStatusLabel(selectedLoan.status) }}
+                        </Badge>
+                    </div>
                 </div>
 
-                <div class="pt-2 flex justify-end">
-                    <button
-                        type="button"
+                <div>
+                    <h4 class="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Keperluan Pinjaman:</h4>
+                    <p class="text-xs text-slate-600 bg-slate-50/50 p-3 rounded-xl border border-slate-100 leading-relaxed whitespace-pre-line">
+                        {{ selectedLoan.description }}
+                    </p>
+                </div>
+
+                <!-- Installments Table -->
+                <div>
+                    <h4 class="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Rincian Angsuran Bulanan:</h4>
+                    <div v-if="selectedLoan.installments && selectedLoan.installments.length > 0" class="border border-slate-200/80 rounded-xl overflow-hidden">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 uppercase font-semibold text-slate-500 border-b border-slate-200/80">
+                                <tr>
+                                    <th class="px-4 py-2.5">Cicilan Ke</th>
+                                    <th class="px-4 py-2.5">Jatuh Tempo</th>
+                                    <th class="px-4 py-2.5">Nominal Potongan</th>
+                                    <th class="px-4 py-2.5 text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <tr v-for="(ins, idx) in selectedLoan.installments" :key="ins.id">
+                                    <td class="px-4 py-3 font-semibold text-slate-900">#{{ idx + 1 }}</td>
+                                    <td class="px-4 py-3 text-slate-700">{{ formatDate(ins.due_date) }}</td>
+                                    <td class="px-4 py-3 font-bold text-slate-900">{{ formatRupiah(ins.amount) }}</td>
+                                    <td class="px-4 py-3 text-center">
+                                        <Badge :variant="ins.status === 'paid' ? 'success' : 'warning'">
+                                            {{ ins.status === 'paid' ? 'Sudah Terpotong' : 'Belum Terpotong' }}
+                                        </Badge>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div v-else class="p-4 bg-slate-50 rounded-xl border border-slate-100 text-center">
+                        <p class="text-xs text-slate-500">
+                            Jadwal angsuran akan dibuat secara otomatis setelah permohonan disetujui oleh Owner / Manajemen.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="pt-3 flex items-center justify-between border-t border-slate-100">
+                    <Button
+                        v-if="selectedLoan.status === 'pending'"
+                        variant="danger"
+                        size="sm"
+                        :disabled="isCancelling"
+                        @click="cancelLoan(selectedLoan.id)"
+                    >
+                        Batalkan Pinjaman
+                    </Button>
+                    <div v-else></div>
+
+                    <Button
+                        variant="secondary"
+                        size="sm"
                         @click="closeDetailModal"
-                        class="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors"
                     >
                         Tutup
-                    </button>
+                    </Button>
                 </div>
             </div>
         </Modal>
-    </EmployeeLayout>
+    </AppLayout>
 </template>

@@ -7,35 +7,81 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Inertia\Inertia;
 use App\Models\Loan;
+use App\Notifications\NewEmployeeLoanPendingRequest;
 
 class LoanController extends Controller
 {
+    /**
+     * Display list of employee loans and installment status.
+     */
     public function index(Request $request)
     {
         $employee = $request->user()->employee;
         if (!$employee) abort(403);
 
-        $query = Loan::with('installments')->where('employee_id', $employee->id);
+        $query = Loan::with(['installments' => function ($q) {
+            $q->orderBy('due_date', 'asc');
+        }])->where('employee_id', $employee->id);
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        $loans = $query->latest('date')->paginate(10)->withQueryString();
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where('reason', 'like', "%{$search}%");
+        }
 
-        $totalActiveLoan = (float) Loan::where('employee_id', $employee->id)
-            ->where('status', 'approved')
-            ->sum('amount');
+        $loans = $query->latest('date')->latest('id')->paginate(10)->withQueryString();
+
+        // Calculate statistics
+        $allLoans = Loan::with('installments')->where('employee_id', $employee->id)->get();
+        $totalActiveLoan = (float) $allLoans->whereIn('status', ['approved', 'paid'])->sum('amount');
+
+        $totalRemainingBalance = 0;
+        foreach ($allLoans->where('status', 'approved') as $activeLoan) {
+            $totalRemainingBalance += $activeLoan->installments->where('status', 'unpaid')->sum('amount');
+        }
+
+        $pendingCount = $allLoans->where('status', 'pending')->count();
+
+        // Policy & limits context for form calculation
+        $company = $employee->company;
+        $loanSetting = $company ? $company->loanSetting : null;
+        $basicSalary = (int) ($employee->basic_salary ?? 0);
+        $maxPercentage = 35;
+        $maxMonthlyInstallment = (int) round($basicSalary * ($maxPercentage / 100));
+
+        $defaultTenors = [1, 2, 3, 4, 5, 6, 9, 12, 18, 24];
+        if ($loanSetting && $loanSetting->max_tenor_months) {
+            $filteredTenors = array_values(array_filter($defaultTenors, fn($t) => $t <= $loanSetting->max_tenor_months));
+            $tenorOptions = !empty($filteredTenors) ? $filteredTenors : [(int) $loanSetting->max_tenor_months];
+        } else {
+            $tenorOptions = $defaultTenors;
+        }
 
         return Inertia::render('Employee/Loans/Index', [
             'loans' => $loans,
             'totalActiveLoan' => $totalActiveLoan,
+            'totalRemainingBalance' => (float) $totalRemainingBalance,
+            'pendingCount' => $pendingCount,
+            'loanPolicy' => [
+                'basicSalary' => $basicSalary,
+                'maxMonthlyInstallment' => $maxMonthlyInstallment,
+                'maxLoanAmount' => $loanSetting?->max_loan_amount ? (float) $loanSetting->max_loan_amount : null,
+                'maxTenorMonths' => $loanSetting?->max_tenor_months ?: 24,
+                'tenorOptions' => $tenorOptions,
+            ],
             'filters' => [
                 'status' => $request->input('status', ''),
+                'search' => $request->input('search', ''),
             ],
         ]);
     }
 
+    /**
+     * Submit a new loan / kasbon request.
+     */
     public function store(Request $request)
     {
         $employee = $request->user()->employee;
@@ -44,20 +90,83 @@ class LoanController extends Controller
         $request->validate([
             'date' => 'required|date',
             'amount' => 'required|numeric|min:50000',
-            'tenor' => 'required|integer|min:1|max:24',
+            'tenor' => 'required|integer|min:1|max:60',
             'description' => 'required|string|max:1000',
+        ], [
+            'date.required' => 'Tanggal pengajuan pinjaman wajib diisi.',
+            'amount.required' => 'Nominal pinjaman wajib diisi.',
+            'amount.min' => 'Nominal pinjaman minimal Rp 50.000.',
+            'tenor.required' => 'Pilih tenor cicilan yang diinginkan.',
+            'description.required' => 'Keperluan pinjaman kasbon wajib diisi.',
         ]);
 
-        Loan::create([
+        $amount = (float) $request->amount;
+        $tenor = (int) $request->tenor;
+        $installmentPerMonth = round($amount / $tenor);
+        $basicSalary = (float) ($employee->basic_salary ?? 0);
+        $maxAllowedInstallment = round($basicSalary * 0.35);
+
+        // Batas maksimal cicilan: 35% dari gaji pokok karyawan (jika basic_salary terdaftar)
+        if ($basicSalary > 0 && $installmentPerMonth > $maxAllowedInstallment) {
+            $ratioPercentage = round(($installmentPerMonth / $basicSalary) * 100, 1);
+            $recommendedMinTenor = ceil($amount / $maxAllowedInstallment);
+            $recommendedMaxAmount = floor($maxAllowedInstallment * $tenor);
+
+            return back()->withErrors([
+                'amount' => "Estimasi cicilan kasbon Rp " . number_format($installmentPerMonth, 0, ',', '.') . "/bln ({$ratioPercentage}% dari gaji pokok) melebihi batas aman kebijakan 35% (Maks. Rp " . number_format($maxAllowedInstallment, 0, ',', '.') . "/bln). Saran: Ubah tenor minimal menjadi {$recommendedMinTenor} bulan atau kurangi nominal pinjaman maksimal Rp " . number_format($recommendedMaxAmount, 0, ',', '.') . "."
+            ]);
+        }
+
+        $company = $employee->company;
+        $loanSetting = $company ? $company->loanSetting : null;
+
+        if ($loanSetting) {
+            if ($loanSetting->max_loan_amount && $amount > $loanSetting->max_loan_amount) {
+                return back()->withErrors([
+                    'amount' => 'Nominal pinjaman melebihi batas maksimal perusahaan (Maksimal: Rp ' . number_format($loanSetting->max_loan_amount, 0, ',', '.') . ').'
+                ]);
+            }
+
+            if ($loanSetting->max_tenor_months && $tenor > $loanSetting->max_tenor_months) {
+                return back()->withErrors([
+                    'tenor' => 'Durasi tenor cicilan melebihi batas maksimal perusahaan (Maksimal: ' . $loanSetting->max_tenor_months . ' bulan).'
+                ]);
+            }
+        }
+
+        $loan = Loan::create([
             'company_id' => $employee->company_id,
             'employee_id' => $employee->id,
             'date' => $request->date,
-            'amount' => $request->amount,
-            'tenor' => $request->tenor,
+            'amount' => $amount,
+            'tenor' => $tenor,
             'description' => $request->description,
             'status' => 'pending',
         ]);
 
-        return back()->with('success', 'Pengajuan pinjaman / kasbon berhasil dikirim.');
+        if ($employee->company && $employee->company->owner) {
+            $employee->company->owner->notify(new NewEmployeeLoanPendingRequest($loan));
+        }
+
+        return back()->with('success', 'Pengajuan pinjaman / kasbon berhasil dikirim. Menunggu persetujuan manajemen.');
+    }
+
+    /**
+     * Cancel a pending loan request.
+     */
+    public function cancel(Request $request, $id)
+    {
+        $employee = $request->user()->employee;
+        if (!$employee) abort(403);
+
+        $loan = Loan::where('employee_id', $employee->id)->findOrFail($id);
+
+        if ($loan->status !== 'pending') {
+            return back()->with('error', 'Hanya pengajuan yang berstatus menunggu yang dapat dibatalkan.');
+        }
+
+        $loan->delete();
+
+        return back()->with('success', 'Pengajuan pinjaman kasbon berhasil dibatalkan.');
     }
 }

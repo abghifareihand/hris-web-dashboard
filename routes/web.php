@@ -41,8 +41,11 @@ use App\Http\Controllers\Web\Employee\OvertimeController as EmployeeOvertimeCont
 use App\Http\Controllers\Web\Employee\ReimbursementController as EmployeeReimbursementController;
 use App\Http\Controllers\Web\Employee\LoanController as EmployeeLoanController;
 use App\Http\Controllers\Web\Employee\PayrollController as EmployeePayrollController;
+use App\Http\Controllers\Web\Employee\ThrController as EmployeeThrController;
 use App\Http\Controllers\Web\Employee\ProfileController as EmployeeProfileController;
 use App\Http\Controllers\Web\Employee\CompanyController as EmployeeCompanyController;
+use App\Http\Controllers\Web\Employee\AnnouncementController as EmployeeAnnouncementController;
+use App\Http\Controllers\Web\Employee\FeedbackController as EmployeeFeedbackController;
 
 /*
 |--------------------------------------------------------------------------
@@ -295,10 +298,12 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:employee')->prefix('employee')->name('employee.')->group(function () {
         Route::get('/dashboard', [EmployeeDashboardController::class, 'index'])->name('dashboard');
 
-        // Attendances
+        // Attendances (Riwayat & Statistik Presensi Pribadi - Tanpa tombol absen web)
         Route::get('/attendances', [EmployeeAttendanceController::class, 'index'])->name('attendances.index');
-        Route::post('/attendances/clock-in', [EmployeeAttendanceController::class, 'clockIn'])->name('attendances.clock-in');
-        Route::post('/attendances/clock-out', [EmployeeAttendanceController::class, 'clockOut'])->name('attendances.clock-out');
+
+        // Announcements (Pengumuman Resmi Perusahaan)
+        Route::get('/announcements', [EmployeeAnnouncementController::class, 'index'])->name('announcements.index');
+        Route::get('/announcements/{id}', [EmployeeAnnouncementController::class, 'show'])->name('announcements.show');
 
         // Schedules
         Route::prefix('schedules')->name('schedules.')->group(function () {
@@ -320,30 +325,44 @@ Route::middleware('auth')->group(function () {
         Route::prefix('overtimes')->name('overtimes.')->group(function () {
             Route::get('/', [EmployeeOvertimeController::class, 'index'])->name('index');
             Route::post('/', [EmployeeOvertimeController::class, 'store'])->name('store');
+            Route::post('/{id}/cancel', [EmployeeOvertimeController::class, 'cancel'])->name('cancel');
         });
 
         // Reimbursements
         Route::prefix('reimbursements')->name('reimbursements.')->group(function () {
             Route::get('/', [EmployeeReimbursementController::class, 'index'])->name('index');
             Route::post('/', [EmployeeReimbursementController::class, 'store'])->name('store');
+            Route::post('/{id}/cancel', [EmployeeReimbursementController::class, 'cancel'])->name('cancel');
         });
 
         // Loans
         Route::prefix('loans')->name('loans.')->group(function () {
             Route::get('/', [EmployeeLoanController::class, 'index'])->name('index');
             Route::post('/', [EmployeeLoanController::class, 'store'])->name('store');
+            Route::post('/{id}/cancel', [EmployeeLoanController::class, 'cancel'])->name('cancel');
         });
 
-        // Payrolls
+        // Feedbacks (Kritik & Saran Karyawan)
+        Route::prefix('feedbacks')->name('feedbacks.')->group(function () {
+            Route::get('/', [EmployeeFeedbackController::class, 'index'])->name('index');
+            Route::post('/', [EmployeeFeedbackController::class, 'store'])->name('store');
+            Route::delete('/{id}', [EmployeeFeedbackController::class, 'destroy'])->name('destroy');
+        });
+
+        // Payrolls & Payslip PDF Download
         Route::get('/payrolls', [EmployeePayrollController::class, 'index'])->name('payrolls.index');
+        Route::get('/payrolls/{id}/download', [EmployeePayrollController::class, 'downloadPdf'])->name('payrolls.download');
+
+        // Tunjangan Hari Raya (THR)
+        Route::get('/thr', [EmployeeThrController::class, 'index'])->name('thr.index');
+        Route::get('/thr/{id}/download', [EmployeeThrController::class, 'downloadPdf'])->name('thr.download');
 
         // Profile & Security
         Route::get('/profile', [EmployeeProfileController::class, 'index'])->name('profile.index');
-        Route::put('/profile', [EmployeeProfileController::class, 'update'])->name('profile.update');
-        Route::put('/profile/password', [EmployeeProfileController::class, 'changePassword'])->name('profile.password');
-
-        // Company
-        Route::get('/company', [EmployeeCompanyController::class, 'index'])->name('company.index');
+        Route::get('/profile/edit', [EmployeeProfileController::class, 'edit'])->name('profile.edit');
+        Route::match(['put', 'post'], '/profile', [EmployeeProfileController::class, 'update'])->name('profile.update');
+        Route::get('/profile/password', [EmployeeProfileController::class, 'password'])->name('profile.password');
+        Route::put('/profile/password', [EmployeeProfileController::class, 'changePassword'])->name('profile.password.update');
     });
 });
 
