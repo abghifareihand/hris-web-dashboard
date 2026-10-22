@@ -16,6 +16,7 @@ use App\Models\Announcement;
 use App\Models\PendingEmployee;
 use App\Models\SwapPersonal;
 use App\Models\SwapTeam;
+use App\Models\Feedback;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Inertia\Inertia;
@@ -319,6 +320,27 @@ class DashboardController extends Controller
             ->take(3)
             ->get();
 
+        // 6. Kritik & Saran Karyawan Terbaru
+        $recentFeedbacks = Feedback::with(['employee.division'])
+            ->where('company_id', $company->id)
+            ->orderBy('created_at', 'desc')
+            ->take(4)
+            ->get()
+            ->map(function ($f) {
+                return [
+                    'id' => $f->id,
+                    'is_anonymous' => (bool) $f->is_anonymous,
+                    'sender_name' => $f->is_anonymous ? 'Anonim' : ($f->employee->name ?? 'Karyawan'),
+                    'sender_division' => $f->is_anonymous ? 'Identitas Dirahasiakan' : ($f->employee->division->name ?? 'Umum'),
+                    'target' => $f->target,
+                    'criticism' => $f->criticism,
+                    'suggestion' => $f->suggestion,
+                    'created_at_human' => $f->created_at ? $f->created_at->locale('id')->diffForHumans() : '-',
+                ];
+            });
+
+        $totalFeedbacksCount = Feedback::where('company_id', $company->id)->count();
+
         return Inertia::render('Owner/Dashboard/Index', [
             'totalEmployees' => $totalEmployees,
             'newEmployeesThisMonth' => $newEmployeesThisMonth,
@@ -336,6 +358,8 @@ class DashboardController extends Controller
             'pendingApprovals' => $pendingApprovals,
             'totalPendingApprovals' => $totalPendingApprovals,
             'activeAnnouncements' => $activeAnnouncements,
+            'recentFeedbacks' => $recentFeedbacks,
+            'totalFeedbacksCount' => $totalFeedbacksCount,
         ]);
     }
 }
