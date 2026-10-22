@@ -91,6 +91,11 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
     Route::post('/announcements/{id}', [\App\Http\Controllers\Api\Owner\AnnouncementController::class, 'update']);
     Route::delete('/announcements/{id}', [\App\Http\Controllers\Api\Owner\AnnouncementController::class, 'destroy']);
 
+    // Feedbacks (Kritik & Saran) for Owner
+    Route::get('/feedbacks', [\App\Http\Controllers\Api\Owner\FeedbackController::class, 'index']);
+    Route::get('/feedbacks/{id}', [\App\Http\Controllers\Api\Owner\FeedbackController::class, 'show']);
+    Route::delete('/feedbacks/{id}', [\App\Http\Controllers\Api\Owner\FeedbackController::class, 'destroy']);
+
     // Holidays for Owner
     Route::get('/holidays', [\App\Http\Controllers\Api\Owner\HolidayController::class, 'index']);
     Route::post('/holidays', [\App\Http\Controllers\Api\Owner\HolidayController::class, 'store']);

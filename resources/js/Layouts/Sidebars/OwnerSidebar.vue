@@ -79,7 +79,7 @@ const initAccordions = () => {
     if (route().current('owner.finance.thr.*')) accordions.value.thr = true;
     if (route().current('owner.reports.attendances.*')) accordions.value.laporanKehadiran = true;
     if (route().current('owner.reports.performances.*')) accordions.value.laporanKinerja = true;
-    if (route().current('owner.announcements.*')) accordions.value.pengumuman = true;
+    if (route().current('owner.announcements.*') || route().current('owner.feedbacks.*')) accordions.value.pengumuman = true;
     if (route().current('owner.management.attendance.settings.*') || route().current('owner.finance.loans.settings.*') || route().current('owner.finance.payrolls.settings.*')) accordions.value.pengaturan = true;
 };
 initAccordions();
@@ -459,7 +459,7 @@ const toggleAccordion = (key) => {
                     type="button"
                     @click="toggleAccordion('pengumuman')"
                     class="sidebar-link-light w-full justify-between"
-                    :class="{ 'active-parent': route().current('owner.announcements.*') }"
+                    :class="{ 'active-parent': route().current('owner.announcements.*') || route().current('owner.feedbacks.*') }"
                 >
                     <span class="flex items-center gap-3">
                         <svg class="sidebar-icon-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -474,6 +474,7 @@ const toggleAccordion = (key) => {
                 <div v-show="accordions.pengumuman" class="mt-1 sidebar-submenu-light">
                     <Link :href="route('owner.announcements.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.announcements.index') }">Data Pengumuman</Link>
                     <Link :href="route('owner.announcements.create')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.announcements.create') }">Tambah Pengumuman</Link>
+                    <Link :href="route('owner.feedbacks.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.feedbacks.*') }">Kritik & Saran</Link>
                 </div>
             </div>
 

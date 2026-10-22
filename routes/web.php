@@ -32,6 +32,7 @@ use App\Http\Controllers\Web\Owner\Finance\ThrSettingController;
 use App\Http\Controllers\Web\Owner\Reports\AttendanceController as OwnerAttendanceReportController;
 use App\Http\Controllers\Web\Owner\Reports\PerformanceController as OwnerPerformanceReportController;
 use App\Http\Controllers\Web\Owner\AnnouncementController as OwnerAnnouncementController;
+use App\Http\Controllers\Web\Owner\FeedbackController as OwnerFeedbackController;
 use App\Http\Controllers\Web\Employee\DashboardController as EmployeeDashboardController;
 use App\Http\Controllers\Web\Employee\AttendanceController as EmployeeAttendanceController;
 use App\Http\Controllers\Web\Employee\ScheduleController as EmployeeScheduleController;
@@ -283,6 +284,9 @@ Route::middleware('auth')->group(function () {
 
         // Announcements
         Route::resource('announcements', OwnerAnnouncementController::class);
+
+        // Feedbacks (Kritik & Saran Karyawan)
+        Route::resource('feedbacks', OwnerFeedbackController::class)->only(['index', 'show', 'destroy']);
     });
 
     // =========================================================================
