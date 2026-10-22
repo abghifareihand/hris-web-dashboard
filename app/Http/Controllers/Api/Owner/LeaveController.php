@@ -31,6 +31,14 @@ class LeaveController extends Controller
             $query->where('name', 'like', "%{$request->search}%");
         }
 
+        if ($request->boolean('all')) {
+            return response()->json([
+                'status' => true,
+                'message' => 'Daftar semua kategori cuti berhasil diambil.',
+                'data' => $query->get(),
+            ]);
+        }
+
         $categories = $query->paginate($this->getPerPage($request));
 
         return $this->paginatedResponse($categories, 'Data kategori cuti berhasil diambil.');
@@ -97,6 +105,25 @@ class LeaveController extends Controller
                 'message' => 'Terjadi kesalahan saat menyimpan data: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    public function showCategory(Request $request, $id)
+    {
+        $company = $request->user()->company;
+        if (!$company) {
+            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+        }
+
+        $category = LeaveCategory::where('company_id', $company->id)->find($id);
+        if (!$category) {
+            return response()->json(['status' => false, 'message' => 'Kategori cuti tidak ditemukan.'], 404);
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Detail kategori cuti berhasil diambil.',
+            'data' => $category,
+        ]);
     }
 
     public function updateCategory(Request $request, $id)

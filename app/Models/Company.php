@@ -104,4 +104,9 @@ class Company extends Model
     {
         return $this->hasMany(Announcement::class);
     }
+
+    public function feedbacks(): HasMany
+    {
+        return $this->hasMany(Feedback::class);
+    }
 }

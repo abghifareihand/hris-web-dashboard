@@ -60,4 +60,9 @@ class Employee extends Model
     {
         return $this->hasMany(Reimbursement::class);
     }
+
+    public function feedbacks()
+    {
+        return $this->hasMany(Feedback::class);
+    }
 }

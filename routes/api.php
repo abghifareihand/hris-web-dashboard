@@ -31,13 +31,13 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
     Route::get('/shifts', [\App\Http\Controllers\Api\Owner\ShiftController::class, 'index']);
     Route::post('/shifts', [\App\Http\Controllers\Api\Owner\ShiftController::class, 'store']);
     Route::get('/shifts/{id}', [\App\Http\Controllers\Api\Owner\ShiftController::class, 'show']);
-    Route::match(['post', 'put'], '/shifts/{id}', [\App\Http\Controllers\Api\Owner\ShiftController::class, 'update']);
+    Route::put('/shifts/{id}', [\App\Http\Controllers\Api\Owner\ShiftController::class, 'update']);
     Route::delete('/shifts/{id}', [\App\Http\Controllers\Api\Owner\ShiftController::class, 'destroy']);
 
     // Schedules for Owner
     Route::get('/schedules', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'getSchedules']);
     Route::post('/schedules/bulk-store', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'bulkStore']);
-    Route::match(['post', 'put'], '/schedules/{id}', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'update']);
+    Route::put('/schedules/{id}', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'update']);
     Route::delete('/schedules/{id}', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'destroy']);
     
     Route::get('/schedule-swaps/personal', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'getPersonalSwaps']);
@@ -67,26 +67,41 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
     Route::get('/branches', [\App\Http\Controllers\Api\Owner\BranchController::class, 'index']);
     Route::post('/branches', [\App\Http\Controllers\Api\Owner\BranchController::class, 'store']);
     Route::get('/branches/{id}', [\App\Http\Controllers\Api\Owner\BranchController::class, 'show']);
-    Route::match(['post', 'put'], '/branches/{id}', [\App\Http\Controllers\Api\Owner\BranchController::class, 'update']);
+    Route::put('/branches/{id}', [\App\Http\Controllers\Api\Owner\BranchController::class, 'update']);
     Route::delete('/branches/{id}', [\App\Http\Controllers\Api\Owner\BranchController::class, 'destroy']);
 
     // Positions for Owner
     Route::get('/positions', [\App\Http\Controllers\Api\Owner\PositionController::class, 'index']);
     Route::post('/positions', [\App\Http\Controllers\Api\Owner\PositionController::class, 'store']);
     Route::get('/positions/{id}', [\App\Http\Controllers\Api\Owner\PositionController::class, 'show']);
-    Route::match(['post', 'put'], '/positions/{id}', [\App\Http\Controllers\Api\Owner\PositionController::class, 'update']);
+    Route::put('/positions/{id}', [\App\Http\Controllers\Api\Owner\PositionController::class, 'update']);
     Route::delete('/positions/{id}', [\App\Http\Controllers\Api\Owner\PositionController::class, 'destroy']);
 
     // Divisions for Owner
     Route::get('/divisions', [\App\Http\Controllers\Api\Owner\DivisionController::class, 'index']);
     Route::post('/divisions', [\App\Http\Controllers\Api\Owner\DivisionController::class, 'store']);
     Route::get('/divisions/{id}', [\App\Http\Controllers\Api\Owner\DivisionController::class, 'show']);
-    Route::match(['post', 'put'], '/divisions/{id}', [\App\Http\Controllers\Api\Owner\DivisionController::class, 'update']);
+    Route::put('/divisions/{id}', [\App\Http\Controllers\Api\Owner\DivisionController::class, 'update']);
     Route::delete('/divisions/{id}', [\App\Http\Controllers\Api\Owner\DivisionController::class, 'destroy']);
+
+    // Announcements for Owner
+    Route::get('/announcements', [\App\Http\Controllers\Api\Owner\AnnouncementController::class, 'index']);
+    Route::post('/announcements', [\App\Http\Controllers\Api\Owner\AnnouncementController::class, 'store']);
+    Route::get('/announcements/{id}', [\App\Http\Controllers\Api\Owner\AnnouncementController::class, 'show']);
+    Route::post('/announcements/{id}', [\App\Http\Controllers\Api\Owner\AnnouncementController::class, 'update']);
+    Route::delete('/announcements/{id}', [\App\Http\Controllers\Api\Owner\AnnouncementController::class, 'destroy']);
+
+    // Holidays for Owner
+    Route::get('/holidays', [\App\Http\Controllers\Api\Owner\HolidayController::class, 'index']);
+    Route::post('/holidays', [\App\Http\Controllers\Api\Owner\HolidayController::class, 'store']);
+    Route::get('/holidays/{id}', [\App\Http\Controllers\Api\Owner\HolidayController::class, 'show']);
+    Route::put('/holidays/{id}', [\App\Http\Controllers\Api\Owner\HolidayController::class, 'update']);
+    Route::delete('/holidays/{id}', [\App\Http\Controllers\Api\Owner\HolidayController::class, 'destroy']);
 
     // Leaves for Owner
     Route::get('/leaves/categories', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'getCategories']);
     Route::post('/leaves/categories', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'storeCategory']);
+    Route::get('/leaves/categories/{id}', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'showCategory']);
     Route::put('/leaves/categories/{id}', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'updateCategory']);
     Route::delete('/leaves/categories/{id}', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'deleteCategory']);
 
@@ -141,6 +156,20 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
     Route::get('/payrolls/{id}/items/{itemId}/download', [\App\Http\Controllers\Api\Owner\PayrollController::class, 'downloadItem'])->name('api.owner.payrolls.download-item');
     Route::post('/payrolls/{id}/pay', [\App\Http\Controllers\Api\Owner\PayrollController::class, 'markAsPaid']);
     Route::delete('/payrolls/{id}', [\App\Http\Controllers\Api\Owner\PayrollController::class, 'destroy']);
+
+    // System Settings for Owner
+    Route::get('/settings', [\App\Http\Controllers\Api\Owner\SettingController::class, 'index']);
+    Route::get('/settings/attendance', [\App\Http\Controllers\Api\Owner\SettingController::class, 'getAttendance']);
+    Route::put('/settings/attendance', [\App\Http\Controllers\Api\Owner\SettingController::class, 'updateAttendance']);
+    Route::get('/settings/loan', [\App\Http\Controllers\Api\Owner\SettingController::class, 'getLoan']);
+    Route::put('/settings/loan', [\App\Http\Controllers\Api\Owner\SettingController::class, 'updateLoan']);
+    Route::get('/settings/payroll', [\App\Http\Controllers\Api\Owner\SettingController::class, 'getPayroll']);
+    Route::put('/settings/payroll', [\App\Http\Controllers\Api\Owner\SettingController::class, 'updatePayroll']);
+
+    // Feedbacks (Kritik & Saran) for Owner
+    Route::get('/feedbacks', [\App\Http\Controllers\Api\Owner\FeedbackController::class, 'index']);
+    Route::get('/feedbacks/{id}', [\App\Http\Controllers\Api\Owner\FeedbackController::class, 'show']);
+    Route::delete('/feedbacks/{id}', [\App\Http\Controllers\Api\Owner\FeedbackController::class, 'destroy']);
 
     // Profile & Security for Owner
     Route::get('/profile', [\App\Http\Controllers\Api\Owner\ProfileController::class, 'show']);
@@ -209,6 +238,12 @@ Route::middleware('auth:sanctum')->prefix('employee')->group(function () {
 
     // Announcements (Pengumuman) for Employee
     Route::get('/announcements', [\App\Http\Controllers\Api\Employee\AnnouncementController::class, 'index']);
+
+    // Feedbacks (Kritik & Saran) for Employee
+    Route::get('/feedbacks', [\App\Http\Controllers\Api\Employee\FeedbackController::class, 'index']);
+    Route::post('/feedbacks', [\App\Http\Controllers\Api\Employee\FeedbackController::class, 'store']);
+    Route::get('/feedbacks/{id}', [\App\Http\Controllers\Api\Employee\FeedbackController::class, 'show']);
+    Route::delete('/feedbacks/{id}', [\App\Http\Controllers\Api\Employee\FeedbackController::class, 'destroy']);
 
     // Profile & Security for Employee
     Route::get('/profile', [\App\Http\Controllers\Api\Employee\ProfileController::class, 'show']);
