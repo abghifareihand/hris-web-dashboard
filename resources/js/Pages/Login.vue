@@ -1,12 +1,23 @@
 <script setup>
-import { ref, nextTick } from 'vue';
-import { Head, useForm, Link } from '@inertiajs/vue3';
+import { ref, computed, nextTick } from 'vue';
+import { Head, useForm, Link, usePage } from '@inertiajs/vue3';
+
+const page = usePage();
 
 const showPassword = ref(false);
 const demoTab = ref('company');
 const passwordInput = ref(null);
 const isShaking = ref(false);
 const dismissedError = ref(false);
+
+const hasLoginError = computed(() => {
+    if (dismissedError.value) return false;
+    return Boolean(form.errors.email || form.errors.password || page.props.errors?.email || page.props.errors?.password);
+});
+
+const loginErrorMessage = computed(() => {
+    return form.errors.email || form.errors.password || page.props.errors?.email || page.props.errors?.password || 'Email atau password yang Anda masukkan salah.';
+});
 
 const form = useForm({
     email: '',
@@ -31,9 +42,9 @@ const submit = () => {
 };
 
 const onUserInput = () => {
+    dismissedError.value = true;
     if (form.hasErrors) {
         form.clearErrors();
-        dismissedError.value = false;
     }
 };
 
@@ -165,7 +176,7 @@ const setCredentials = (email, password) => {
                     <p class="text-secondary-500">Masukkan email dan password untuk melanjutkan</p>
                 </div>
 
-                <!-- Error Alert if any -->
+                <!-- Error Alert if any (Refined & Compact) -->
                 <transition
                     enter-active-class="transition duration-200 ease-out"
                     enter-from-class="opacity-0 -translate-y-2 scale-95"
@@ -175,30 +186,28 @@ const setCredentials = (email, password) => {
                     leave-to-class="opacity-0 -translate-y-2 scale-95"
                 >
                     <div
-                        v-if="(form.errors.email || form.errors.password || $page.props.errors?.email || $page.props.errors?.password) && !dismissedError"
+                        v-if="hasLoginError"
                         :class="[
-                            'mb-5 p-3.5 bg-rose-50/90 border border-rose-200/90 rounded-2xl text-rose-800 text-sm shadow-xs transition-all flex items-start gap-3',
+                            'mb-5 px-3.5 py-2.5 bg-rose-50/90 border border-rose-200/80 rounded-xl text-rose-800 text-xs shadow-xs transition-all flex items-center gap-2.5',
                             isShaking ? 'animate-shake' : ''
                         ]"
+                        role="alert"
                     >
-                        <div class="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
-                            <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
+                        <div class="w-6 h-6 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
                             </svg>
                         </div>
-                        <div class="flex-1 min-w-0 pt-0.5">
-                            <p class="font-bold text-rose-900 text-xs uppercase tracking-wider mb-0.5">Autentikasi Gagal</p>
-                            <p class="text-xs text-rose-700 leading-relaxed font-medium">
-                                {{ form.errors.email || form.errors.password || $page.props.errors?.email || $page.props.errors?.password }}
-                            </p>
-                        </div>
+                        <p class="flex-1 min-w-0 font-medium leading-snug text-rose-700">
+                            {{ loginErrorMessage }}
+                        </p>
                         <button
                             type="button"
                             @click="dismissedError = true"
-                            class="p-1 -mr-1 -mt-0.5 text-rose-400 hover:text-rose-600 hover:bg-rose-100/80 rounded-lg transition-colors cursor-pointer shrink-0"
+                            class="p-1 -mr-1 text-rose-400 hover:text-rose-600 hover:bg-rose-100/80 rounded-lg transition-colors cursor-pointer shrink-0"
                             title="Tutup Pesan"
                         >
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
@@ -223,7 +232,12 @@ const setCredentials = (email, password) => {
                                 @input="onUserInput"
                                 required
                                 autofocus
-                                class="form-input w-full rounded-xl border border-secondary-300 focus:border-primary-500 focus:ring-primary-500 transition-colors"
+                                class="form-input w-full rounded-xl transition-all"
+                                :class="[
+                                    hasLoginError
+                                        ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-200/60 bg-rose-50/15'
+                                        : 'border-secondary-300 focus:border-primary-500 focus:ring-primary-500 bg-white'
+                                ]"
                                 style="padding-left: 3rem;"
                                 placeholder="nama@perusahaan.com"
                             />
@@ -246,7 +260,12 @@ const setCredentials = (email, password) => {
                                 v-model="form.password"
                                 @input="onUserInput"
                                 required
-                                class="form-input w-full rounded-xl border border-secondary-300 focus:border-primary-500 focus:ring-primary-500 transition-colors"
+                                class="form-input w-full rounded-xl transition-all"
+                                :class="[
+                                    hasLoginError
+                                        ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-200/60 bg-rose-50/15'
+                                        : 'border-secondary-300 focus:border-primary-500 focus:ring-primary-500 bg-white'
+                                ]"
                                 style="padding-left: 3rem; padding-right: 3rem;"
                                 placeholder="Masukkan password"
                             />
