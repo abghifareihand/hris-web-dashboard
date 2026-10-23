@@ -1,0 +1,1 @@
+function e(e){return e?e.startsWith(`http://`)||e.startsWith(`https://`)||e.startsWith(`/`)||e.startsWith(`data:`)||e.startsWith(`blob:`)?e:`/storage/${e}`:null}export{e as t};
