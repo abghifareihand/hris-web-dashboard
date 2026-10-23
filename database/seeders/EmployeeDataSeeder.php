@@ -37,7 +37,7 @@ class EmployeeDataSeeder extends Seeder
     {
         $user = User::where('email', 'abghi@goysmedia.com')->first();
         if (!$user) {
-            $this->command->error('User Abghi Fareihan (abghi@goysmedia.com) tidak ditemukan. Pastikan DatabaseSeeder sudah dijalankan.');
+            $this->command->error('User Abghi Fareihan (abghi@goysmedia.com) tidak ditemukan. Pastikan DummyDataSeeder sudah dijalankan.');
             return;
         }
 
