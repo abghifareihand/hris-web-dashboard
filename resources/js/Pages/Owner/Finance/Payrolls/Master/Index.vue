@@ -9,6 +9,7 @@ import DataTable from '@/Components/Table/DataTable.vue'
 import TableEmpty from '@/Components/Table/TableEmpty.vue'
 import TablePagination from '@/Components/Table/TablePagination.vue'
 import { useDebounce } from '@/Composables/useDebounce'
+import { getAvatarUrl } from '@/Utils/avatar'
 
 const props = defineProps({
     employees: Object,
@@ -260,7 +261,7 @@ const getJkmRate = (emp) => {
                             <div class="flex items-center gap-3">
                                 <img
                                     v-if="emp.user?.avatar"
-                                    :src="emp.user.avatar"
+                                    :src="getAvatarUrl(emp.user.avatar)"
                                     :alt="emp.name"
                                     class="w-9 h-9 rounded-full object-cover shrink-0 border border-slate-200"
                                 />

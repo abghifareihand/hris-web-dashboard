@@ -11,6 +11,7 @@ import DataTable from "@/Components/Table/DataTable.vue";
 import TableEmpty from "@/Components/Table/TableEmpty.vue";
 import TablePagination from "@/Components/Table/TablePagination.vue";
 import { useDebounce } from "@/Composables/useDebounce";
+import { getAvatarUrl } from "@/Utils/avatar";
 
 defineOptions({
     layout: AppLayout,
@@ -50,6 +51,11 @@ const filters = reactive({
 const employeeToDelete = ref(null);
 const isDeleteModalOpen = ref(false);
 const deleteForm = useForm({});
+const avatarLoadErrors = reactive({});
+
+const handleAvatarError = (id) => {
+    avatarLoadErrors[id] = true;
+};
 
 const applyFilters = () => {
     router.get(
@@ -315,9 +321,10 @@ const executeDelete = () => {
                     <td class="px-5 py-3.5">
                         <div class="flex items-center gap-3">
                             <img
-                                v-if="employee.user?.avatar"
-                                :src="employee.user.avatar"
+                                v-if="employee.user?.avatar && !avatarLoadErrors[employee.id]"
+                                :src="getAvatarUrl(employee.user.avatar)"
                                 :alt="employee.name"
+                                @error="handleAvatarError(employee.id)"
                                 class="w-9 h-9 rounded-full object-cover shrink-0 border border-slate-200"
                             />
                             <div

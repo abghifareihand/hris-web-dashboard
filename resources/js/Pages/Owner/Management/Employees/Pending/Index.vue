@@ -11,6 +11,7 @@ import DataTable from "@/Components/Table/DataTable.vue";
 import TablePagination from "@/Components/Table/TablePagination.vue";
 import TableEmpty from "@/Components/Table/TableEmpty.vue";
 import { useDebounce } from "@/Composables/useDebounce";
+import { getAvatarUrl } from "@/Utils/avatar";
 
 defineOptions({
     layout: AppLayout,
@@ -50,6 +51,11 @@ const selectedPending = ref(null);
 const isApproveModalOpen = ref(false);
 const isRejectModalOpen = ref(false);
 const actionForm = useForm({});
+const avatarLoadErrors = reactive({});
+
+const handleAvatarError = (id) => {
+    avatarLoadErrors[id] = true;
+};
 
 const applyFilters = () => {
     router.get(
@@ -303,9 +309,10 @@ const formatDate = (dateStr) => {
                     <td class="px-5 py-3.5">
                         <div class="flex items-center gap-3">
                             <img
-                                v-if="pendingEmployee.user?.avatar"
-                                :src="pendingEmployee.user.avatar"
+                                v-if="pendingEmployee.user?.avatar && !avatarLoadErrors[pendingEmployee.id]"
+                                :src="getAvatarUrl(pendingEmployee.user.avatar)"
                                 :alt="pendingEmployee.name"
+                                @error="handleAvatarError(pendingEmployee.id)"
                                 class="w-9 h-9 rounded-full object-cover shrink-0 border border-slate-200"
                             />
                             <div

@@ -62,7 +62,7 @@ class ScheduleController extends Controller
         $month = $request->month;
         $year = $request->year;
 
-        $query = WorkSchedule::with(['employee:id,name,nip', 'shift:id,name,clock_in,clock_out'])
+        $query = WorkSchedule::with(['employee:id,name,email', 'shift:id,name,clock_in,clock_out'])
             ->where('company_id', $company->id)
             ->whereYear('date', $year);
 

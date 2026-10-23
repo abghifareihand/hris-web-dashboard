@@ -7,6 +7,7 @@ import TableEmpty from '@/Components/Table/TableEmpty.vue';
 import TablePagination from '@/Components/Table/TablePagination.vue';
 import DatePickerRange from '@/Components/UI/DatePickerRange.vue';
 import Badge from '@/Components/UI/Badge.vue';
+import { getAvatarUrl } from '@/Utils/avatar';
 
 defineOptions({
     layout: AppLayout,
@@ -79,7 +80,7 @@ const formatDate = (dateStr) => {
             <div class="flex items-center gap-4">
                 <img
                     v-if="employee.user?.avatar"
-                    :src="employee.user.avatar"
+                    :src="getAvatarUrl(employee.user.avatar)"
                     :alt="employee.name"
                     class="w-14 h-14 rounded-2xl object-cover shrink-0 border border-slate-200 shadow-2xs"
                 />

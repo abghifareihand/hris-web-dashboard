@@ -11,6 +11,7 @@ import TableEmpty from "@/Components/Table/TableEmpty.vue";
 import TablePagination from "@/Components/Table/TablePagination.vue";
 import Modal from "@/Components/UI/Modal.vue";
 import { useDebounce } from "@/Composables/useDebounce";
+import { getAvatarUrl } from "@/Utils/avatar";
 
 defineOptions({
     layout: AppLayout,
@@ -569,7 +570,7 @@ const shiftOptions = computed(() => [
                             <div class="flex items-center gap-3">
                                 <img
                                     v-if="sched.employee?.user?.avatar"
-                                    :src="sched.employee.user.avatar"
+                                    :src="getAvatarUrl(sched.employee.user.avatar)"
                                     :alt="sched.employee.name"
                                     class="w-9 h-9 rounded-full object-cover shrink-0 border border-slate-200"
                                 />

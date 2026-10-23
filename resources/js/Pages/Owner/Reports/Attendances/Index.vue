@@ -11,6 +11,7 @@ import DataTable from '@/Components/Table/DataTable.vue';
 import TableEmpty from '@/Components/Table/TableEmpty.vue';
 import TablePagination from '@/Components/Table/TablePagination.vue';
 import { useDebounce } from '@/Composables/useDebounce';
+import { getAvatarUrl } from '@/Utils/avatar';
 
 defineOptions({
     layout: AppLayout,
@@ -361,7 +362,7 @@ const formatDate = (dateStr) => {
                         <div class="flex items-center gap-3">
                             <img
                                 v-if="att.employee?.user?.avatar"
-                                :src="att.employee.user.avatar"
+                                :src="getAvatarUrl(att.employee.user.avatar)"
                                 :alt="att.employee?.name"
                                 class="w-9 h-9 rounded-full object-cover shrink-0 border border-slate-200"
                             />
