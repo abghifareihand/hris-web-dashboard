@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Owner;
 
 use App\Http\Controllers\Controller;
+use App\Models\Company;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -137,5 +138,99 @@ class CompanyController extends Controller
             'status' => true,
             'message' => 'Data perusahaan berhasil diperbarui.',
         ]);
+    }
+
+    /**
+     * Setup company profile for the authenticated owner (Step 2 of registration).
+     */
+    public function setup(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->role !== 'owner') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Hanya owner yang dapat melakukan setup perusahaan.',
+            ], 403);
+        }
+
+        if ($user->company) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Anda sudah memiliki profil perusahaan.',
+                'data' => $user->company,
+            ], 400);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'name_company' => 'required|string|max:255',
+            'email' => 'nullable|string|email|max:255|unique:companies,email',
+            'email_company' => 'nullable|string|email|max:255|unique:companies,email',
+            'phone' => 'nullable|string|max:25',
+            'phone_company' => 'nullable|string|max:25',
+            'business_type' => 'required|string|max:100',
+            'province' => 'required|string|max:100',
+            'city' => 'required|string|max:100',
+            'address' => 'nullable|string|max:500',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,svg,webp|max:2048',
+        ], [
+            'name_company.required' => 'Nama perusahaan wajib diisi.',
+            'business_type.required' => 'Jenis bisnis wajib diisi.',
+            'province.required' => 'Provinsi wajib diisi.',
+            'city.required' => 'Kota/Kabupaten wajib diisi.',
+            'logo.image' => 'File logo harus berupa gambar.',
+            'logo.max' => 'Ukuran logo maksimal 2MB.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validasi gagal.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        // Support both email / email_company & phone / phone_company
+        $companyEmail = $request->input('email_company') ?? $request->input('email');
+        if (!$companyEmail) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Email perusahaan wajib diisi.',
+                'errors' => ['email_company' => ['Email perusahaan wajib diisi.']],
+            ], 422);
+        }
+
+        $companyPhone = $request->input('phone_company') ?? $request->input('phone');
+        if (!$companyPhone) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Nomor telepon perusahaan wajib diisi.',
+                'errors' => ['phone_company' => ['Nomor telepon perusahaan wajib diisi.']],
+            ], 422);
+        }
+
+        // Logo handling
+        $logoPath = null;
+        if ($request->hasFile('logo')) {
+            $logoPath = $request->file('logo')->store('company_logos', 'public');
+        }
+
+        $company = Company::create([
+            'user_id' => $user->id,
+            'name_company' => $request->name_company,
+            'email' => $companyEmail,
+            'phone' => $companyPhone,
+            'address' => $request->address,
+            'province' => $request->province,
+            'city' => $request->city,
+            'business_type' => $request->business_type,
+            'logo' => $logoPath,
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Setup data perusahaan berhasil.',
+            'data' => $company,
+        ], 201);
     }
 }

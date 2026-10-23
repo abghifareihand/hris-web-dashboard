@@ -6,6 +6,9 @@ use Illuminate\Support\Facades\Route;
 
 // API Auth Routes
 Route::prefix('auth')->group(function () {
+    Route::post('/send-otp', [AuthController::class, 'sendOtp']);
+    Route::post('/check-email', [AuthController::class, 'checkEmail']);
+    Route::post('/register-owner-account', [AuthController::class, 'registerOwnerAccount']);
     Route::post('/register/owner', [AuthController::class, 'registerOwner']);
     Route::post('/register/employee', [AuthController::class, 'registerEmployee']);
     Route::post('/login', [AuthController::class, 'login']);
@@ -53,6 +56,7 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
     // Company Profile for Owner
     Route::get('/company', [\App\Http\Controllers\Api\Owner\CompanyController::class, 'show']);
     Route::post('/company', [\App\Http\Controllers\Api\Owner\CompanyController::class, 'update']);
+    Route::post('/company/setup', [\App\Http\Controllers\Api\Owner\CompanyController::class, 'setup']);
 
     // Employees & Company Structure for Owner
     Route::get('/employees', [\App\Http\Controllers\Api\Owner\EmployeeController::class, 'getEmployees']);

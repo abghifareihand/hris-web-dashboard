@@ -7,12 +7,193 @@ use App\Models\Company;
 use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
+    /**
+     * Send dummy OTP (0000) for Registration or Password Reset.
+     * Caches OTP for 5 minutes.
+     */
+    public function sendOtp(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email|max:255',
+            'type' => 'nullable|string|in:register,reset_password',
+        ], [
+            'email.required' => 'Email wajib diisi.',
+            'email.email' => 'Format email tidak valid.',
+            'type.in' => 'Tipe OTP harus register atau reset_password.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validasi gagal.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $type = $request->input('type', 'register');
+        $email = $request->input('email');
+        $userExists = User::where('email', $email)->exists();
+
+        if ($type === 'register' && $userExists) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Email sudah terdaftar. Silakan gunakan email lain atau login.',
+                'errors' => [
+                    'email' => ['Email sudah digunakan.'],
+                ],
+            ], 422);
+        }
+
+        if ($type === 'reset_password' && !$userExists) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Email tidak ditemukan.',
+                'errors' => [
+                    'email' => ['Email belum terdaftar di sistem.'],
+                ],
+            ], 404);
+        }
+
+        // Dummy OTP generation (can be replaced with real random OTP + SMTP later)
+        $otp = '0000';
+        Cache::put("otp_{$type}_{$email}", $otp, now()->addMinutes(5));
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Kode OTP berhasil dikirim ke ' . $email . '. (Gunakan kode dummy: 0000)',
+            'data' => [
+                'email' => $email,
+                'type' => $type,
+                'expires_in_seconds' => 300,
+            ],
+        ]);
+    }
+    /**
+     * Check if email is already registered before proceeding to OTP.
+     */
+    public function checkEmail(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email|max:255',
+        ], [
+            'email.required' => 'Email wajib diisi.',
+            'email.email' => 'Format email tidak valid.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validasi gagal.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $exists = User::where('email', $request->email)->exists();
+        if ($exists) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Email sudah terdaftar. Silakan gunakan email lain atau login.',
+                'errors' => [
+                    'email' => ['Email sudah digunakan.'],
+                ],
+            ], 422);
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Email tersedia untuk pendaftaran.',
+        ]);
+    }
+
+    /**
+     * Register owner account with dummy OTP verification (Step 1 -> OTP).
+     * Returns Sanctum auth token immediately.
+     */
+    public function registerOwnerAccount(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email',
+            'phone' => 'nullable|string|max:25',
+            'password' => 'required|string|min:8|confirmed',
+            'address' => 'nullable|string',
+            'otp' => 'required|string',
+        ], [
+            'name.required' => 'Nama lengkap wajib diisi.',
+            'email.required' => 'Email wajib diisi.',
+            'email.email' => 'Format email tidak valid.',
+            'email.unique' => 'Email sudah terdaftar.',
+            'password.required' => 'Password wajib diisi.',
+            'password.min' => 'Password minimal 8 karakter.',
+            'password.confirmed' => 'Konfirmasi password tidak cocok.',
+            'otp.required' => 'Kode OTP wajib diisi.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validasi gagal.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        // OTP Verification from Cache (or fallback to dummy 0000)
+        $cachedOtp = Cache::get("otp_register_{$request->email}");
+        $isValidOtp = ($request->otp === '0000') || ($cachedOtp && $cachedOtp === $request->otp);
+
+        if (!$isValidOtp) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Kode OTP salah atau telah kadaluarsa. Silakan masukkan 0000 atau kirim ulang kode.',
+                'errors' => [
+                    'otp' => ['Kode OTP tidak valid.'],
+                ],
+            ], 422);
+        }
+
+        try {
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'role' => 'owner',
+                'email_verified_at' => now(),
+            ]);
+
+            // Create Sanctum Token
+            $token = $user->createToken('auth_token')->plainTextToken;
+
+            // Clear used OTP from cache
+            Cache::forget("otp_register_{$request->email}");
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Registrasi akun owner berhasil.',
+                'access_token' => $token,
+                'token_type' => 'Bearer',
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                    'company' => null,
+                ],
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Terjadi kesalahan saat membuat akun: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function registerOwner(Request $request)
     {
         $request->validate([
@@ -184,6 +365,7 @@ class AuthController extends Controller
                 'role' => $user->role,
                 'avatar' => $user->avatar,
                 'avatar_url' => $user->avatar ? asset('storage/' . $user->avatar) : null,
+                'company' => $user->company,
                 'created_at' => $user->created_at,
                 'updated_at' => $user->updated_at,
             ],
