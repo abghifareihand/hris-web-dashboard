@@ -26,14 +26,18 @@ class ScheduleController extends Controller
             ], 403);
         }
 
-        $month = $request->input('month', \Carbon\Carbon::now()->month);
+        $month = $request->input('month');
         $year = $request->input('year', \Carbon\Carbon::now()->year);
 
-        $schedules = WorkSchedule::with('shift')
+        $query = WorkSchedule::with('shift')
             ->where('employee_id', $employee->id)
-            ->whereMonth('date', $month)
-            ->whereYear('date', $year)
-            ->get();
+            ->whereYear('date', $year);
+
+        if ($request->filled('month')) {
+            $query->whereMonth('date', $month);
+        }
+
+        $schedules = $query->orderBy('date', 'asc')->get();
 
         $branches = \App\Models\Branch::where('company_id', $employee->company_id)->pluck('name', 'id');
 
@@ -57,18 +61,27 @@ class ScheduleController extends Controller
             return $schedule;
         });
 
-        $holidays = \App\Models\Holiday::where('company_id', $employee->company_id)
+        $holidayQuery = \App\Models\Holiday::where('company_id', $employee->company_id)
             ->where(function($q) use ($employee) {
                 $q->whereNull('branch_id')->orWhere('branch_id', $employee->branch_id);
             })
             ->where(function($q) use ($employee) {
                 $q->whereNull('division_id')->orWhere('division_id', $employee->division_id);
-            })
-            ->where(function($q) use ($month, $year) {
+            });
+
+        if ($request->filled('month')) {
+            $holidayQuery->where(function($q) use ($month, $year) {
                 $q->whereMonth('start_date', $month)->whereYear('start_date', $year)
                   ->orWhereMonth('end_date', $month)->whereYear('end_date', $year);
-            })
-            ->get(['id', 'name', 'start_date', 'end_date']);
+            });
+        } else {
+            $holidayQuery->where(function($q) use ($year) {
+                $q->whereYear('start_date', $year)
+                  ->orWhereYear('end_date', $year);
+            });
+        }
+
+        $holidays = $holidayQuery->get(['id', 'name', 'start_date', 'end_date']);
 
         return response()->json([
             'status' => true,
