@@ -136,20 +136,20 @@ const faqs = [
 
                     <!-- Desktop Menu -->
                     <div class="hidden lg:flex items-center gap-8">
-                        <a href="#beranda" class="text-slate-600 hover:text-emerald-600 font-medium transition-colors text-sm">Beranda</a>
-                        <a href="#fitur" class="text-slate-600 hover:text-emerald-600 font-medium transition-colors text-sm">Fitur</a>
-                        <a href="#tentang" class="text-slate-600 hover:text-emerald-600 font-medium transition-colors text-sm">Tentang</a>
-                        <a href="#harga" class="text-slate-600 hover:text-emerald-600 font-medium transition-colors text-sm">Harga</a>
-                        <a href="#kontak" class="text-slate-600 hover:text-emerald-600 font-medium transition-colors text-sm">Kontak</a>
+                        <a href="#beranda" class="text-slate-600 hover:text-emerald-600 font-medium transition-colors text-[15px]">Beranda</a>
+                        <a href="#fitur" class="text-slate-600 hover:text-emerald-600 font-medium transition-colors text-[15px]">Fitur</a>
+                        <a href="#tentang" class="text-slate-600 hover:text-emerald-600 font-medium transition-colors text-[15px]">Tentang</a>
+                        <a href="#harga" class="text-slate-600 hover:text-emerald-600 font-medium transition-colors text-[15px]">Harga</a>
+                        <a href="#kontak" class="text-slate-600 hover:text-emerald-600 font-medium transition-colors text-[15px]">Kontak</a>
                     </div>
 
                     <!-- Desktop CTA -->
-                    <div class="hidden lg:flex items-center gap-3">
+                    <div class="hidden lg:flex items-center">
                         <Link
                             :href="loginUrl"
-                            class="inline-flex items-center justify-center font-semibold text-xs py-2.5 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/30 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0"
+                            class="inline-flex items-center justify-center font-semibold text-sm py-2.5 px-7 min-w-[110px] rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/30 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 text-center"
                         >
-                            Login
+                            {{ authUser ? 'Dashboard' : 'Login' }}
                         </Link>
                     </div>
 
@@ -174,17 +174,17 @@ const faqs = [
                     class="lg:hidden bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200/80 p-5 mb-4 transition-all"
                 >
                     <div class="flex flex-col gap-3">
-                        <a href="#beranda" @click="mobileMenuOpen = false" class="text-slate-700 hover:text-emerald-600 font-medium py-2">Beranda</a>
-                        <a href="#fitur" @click="mobileMenuOpen = false" class="text-slate-700 hover:text-emerald-600 font-medium py-2">Fitur</a>
-                        <a href="#tentang" @click="mobileMenuOpen = false" class="text-slate-700 hover:text-emerald-600 font-medium py-2">Tentang</a>
-                        <a href="#harga" @click="mobileMenuOpen = false" class="text-slate-700 hover:text-emerald-600 font-medium py-2">Harga</a>
-                        <a href="#kontak" @click="mobileMenuOpen = false" class="text-slate-700 hover:text-emerald-600 font-medium py-2">Kontak</a>
+                        <a href="#beranda" @click="mobileMenuOpen = false" class="text-slate-700 hover:text-emerald-600 font-medium py-2 text-[15px]">Beranda</a>
+                        <a href="#fitur" @click="mobileMenuOpen = false" class="text-slate-700 hover:text-emerald-600 font-medium py-2 text-[15px]">Fitur</a>
+                        <a href="#tentang" @click="mobileMenuOpen = false" class="text-slate-700 hover:text-emerald-600 font-medium py-2 text-[15px]">Tentang</a>
+                        <a href="#harga" @click="mobileMenuOpen = false" class="text-slate-700 hover:text-emerald-600 font-medium py-2 text-[15px]">Harga</a>
+                        <a href="#kontak" @click="mobileMenuOpen = false" class="text-slate-700 hover:text-emerald-600 font-medium py-2 text-[15px]">Kontak</a>
                         <hr class="border-slate-200">
                         <Link
                             :href="loginUrl"
                             class="w-full flex items-center justify-center font-semibold text-sm py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/30 transition-colors"
                         >
-                            Login
+                            {{ authUser ? 'Dashboard' : 'Login' }}
                         </Link>
                     </div>
                 </div>
