@@ -93,6 +93,19 @@ class OvertimeController extends Controller
             'approved_at' => now()
         ]);
 
+        if ($overtime->employee) {
+            $dateFormatted = \Carbon\Carbon::parse($overtime->date)->locale('id')->translatedFormat('d F Y');
+            \App\Services\NotificationService::sendToEmployee($overtime->employee, [
+                'title' => 'Pengajuan Lembur Disetujui',
+                'message' => 'Pengajuan lembur Anda pada ' . $dateFormatted . ' telah disetujui.',
+                'type' => 'overtime',
+                'route' => 'overtime_list',
+                'entity_id' => $overtime->id,
+                'entity_type' => 'overtime',
+                'icon' => 'clock',
+            ]);
+        }
+
         return response()->json([
             'status' => true,
             'message' => 'Pengajuan lembur berhasil disetujui.'
@@ -141,6 +154,19 @@ class OvertimeController extends Controller
             'approved_by' => $request->user()->id,
             'approved_at' => now()
         ]);
+
+        if ($overtime->employee) {
+            $dateFormatted = \Carbon\Carbon::parse($overtime->date)->locale('id')->translatedFormat('d F Y');
+            \App\Services\NotificationService::sendToEmployee($overtime->employee, [
+                'title' => 'Pengajuan Lembur Ditolak',
+                'message' => 'Pengajuan lembur Anda pada ' . $dateFormatted . ' telah ditolak. Alasan: ' . $request->reject_reason,
+                'type' => 'overtime',
+                'route' => 'overtime_list',
+                'entity_id' => $overtime->id,
+                'entity_type' => 'overtime',
+                'icon' => 'clock',
+            ]);
+        }
 
         return response()->json([
             'status' => true,

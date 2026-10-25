@@ -157,6 +157,26 @@ class AnnouncementController extends Controller
 
         $announcement->load(['branch:id,name', 'division:id,name']);
 
+        // Notify targeted employees
+        $empQuery = \App\Models\Employee::with('user')->where('company_id', $company->id)->where('status', 'active');
+        if ($branchId) {
+            $empQuery->where('branch_id', $branchId);
+        }
+        if ($divisionId) {
+            $empQuery->where('division_id', $divisionId);
+        }
+        $targetEmployees = $empQuery->get();
+
+        \App\Services\NotificationService::sendToEmployees($targetEmployees, [
+            'title' => 'Pengumuman Baru',
+            'message' => 'Pengumuman baru "' . $announcement->title . '" telah diterbitkan oleh perusahaan.',
+            'type' => 'announcement',
+            'route' => 'announcement_list',
+            'entity_id' => $announcement->id,
+            'entity_type' => 'announcement',
+            'icon' => 'megaphone',
+        ]);
+
         return response()->json([
             'status' => true,
             'message' => 'Pengumuman baru berhasil diterbitkan.',

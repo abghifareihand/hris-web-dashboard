@@ -397,6 +397,21 @@ class PayrollController extends Controller
             ]);
         });
 
+        // Notify employees about paid payroll slip
+        foreach ($payroll->items as $pItem) {
+            if ($pItem->employee) {
+                \App\Services\NotificationService::sendToEmployee($pItem->employee, [
+                    'title' => 'Slip Gaji Diterbitkan',
+                    'message' => 'Slip gaji Anda untuk periode ' . ($payroll->period ?? 'bulan ini') . ' telah diterbitkan dan selesai diproses.',
+                    'type' => 'payroll',
+                    'route' => 'payroll_list',
+                    'entity_id' => $pItem->id,
+                    'entity_type' => 'payroll_item',
+                    'icon' => 'banknotes',
+                ]);
+            }
+        }
+
         return response()->json([
             'status' => true,
             'message' => 'Penggajian berhasil ditandai Lunas (PAID).',

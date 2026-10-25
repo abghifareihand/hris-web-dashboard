@@ -37,15 +37,23 @@ class NewEmployeeReimbursementPendingRequest extends Notification
      */
     public function toArray(object $notifiable): array
     {
-        $employeeName = $this->reimbursement->employee->name ?? 'Unknown';
+        $employeeName = $this->reimbursement->employee->name ?? 'Karyawan';
         $amountFormatted = number_format($this->reimbursement->amount, 0, ',', '.');
-        $title = $this->reimbursement->title ?? 'Klaim Biaya';
+        $title = $this->reimbursement->title ?? 'Biaya Operasional';
+        $dateFormatted = \Carbon\Carbon::parse($this->reimbursement->date ?? $this->reimbursement->created_at)->locale('id')->translatedFormat('d F Y');
 
         return [
             'type' => 'reimbursement',
+            'category' => 'reimbursement',
             'icon' => 'receipt',
             'title' => 'Pengajuan Reimbursement Baru',
-            'message' => 'Karyawan bernama "' . $employeeName . '" mengajukan klaim reimbursement "' . $title . '" sebesar Rp ' . $amountFormatted . ' dan menunggu persetujuan Anda.',
+            'message' => $employeeName . ' mengajukan reimbursement "' . $title . '" sebesar Rp ' . $amountFormatted . ' pada ' . $dateFormatted . ', menunggu persetujuan Anda.',
+            'route' => 'reimbursement_list',
+            'entity_id' => $this->reimbursement->id,
+            'entity_type' => 'reimbursement',
+            'params' => [
+                'id' => $this->reimbursement->id,
+            ],
             'link' => route('owner.finance.reimbursements.pending.index'),
         ];
     }

@@ -37,14 +37,22 @@ class NewEmployeeLoanPendingRequest extends Notification
      */
     public function toArray(object $notifiable): array
     {
-        $employeeName = $this->loan->employee->name ?? 'Unknown';
+        $employeeName = $this->loan->employee->name ?? 'Karyawan';
         $amountFormatted = number_format($this->loan->amount, 0, ',', '.');
+        $dateFormatted = \Carbon\Carbon::parse($this->loan->date)->locale('id')->translatedFormat('d F Y');
 
         return [
             'type' => 'loan',
+            'category' => 'loan',
             'icon' => 'wallet',
-            'title' => 'Pengajuan Kasbon Baru',
-            'message' => 'Karyawan bernama "' . $employeeName . '" mengajukan pinjaman kasbon sebesar Rp ' . $amountFormatted . ' dan menunggu persetujuan Anda.',
+            'title' => 'Pengajuan Pinjaman Baru',
+            'message' => $employeeName . ' mengajukan pinjaman sebesar Rp ' . $amountFormatted . ' pada ' . $dateFormatted . ', menunggu persetujuan Anda.',
+            'route' => 'loan_list',
+            'entity_id' => $this->loan->id,
+            'entity_type' => 'loan',
+            'params' => [
+                'id' => $this->loan->id,
+            ],
             'link' => route('owner.finance.loans.pending.index'),
         ];
     }

@@ -111,6 +111,18 @@ class ReimbursementController extends Controller
             'approved_at' => now(),
         ]);
 
+        if ($reimbursement->employee) {
+            \App\Services\NotificationService::sendToEmployee($reimbursement->employee, [
+                'title' => 'Klaim Reimbursement Disetujui',
+                'message' => 'Pengajuan reimbursement "' . ($reimbursement->title ?? 'Biaya Operasional') . '" sebesar Rp ' . number_format($reimbursement->amount, 0, ',', '.') . ' telah disetujui.',
+                'type' => 'reimbursement',
+                'route' => 'reimbursement_list',
+                'entity_id' => $reimbursement->id,
+                'entity_type' => 'reimbursement',
+                'icon' => 'receipt',
+            ]);
+        }
+
         return response()->json([
             'status' => true,
             'message' => $payoutMethod === 'direct'
@@ -163,6 +175,18 @@ class ReimbursementController extends Controller
             'approved_by' => $request->user()->id,
             'approved_at' => now(),
         ]);
+
+        if ($reimbursement->employee) {
+            \App\Services\NotificationService::sendToEmployee($reimbursement->employee, [
+                'title' => 'Klaim Reimbursement Ditolak',
+                'message' => 'Pengajuan reimbursement "' . ($reimbursement->title ?? 'Biaya Operasional') . '" telah ditolak. Alasan: ' . $request->reject_reason,
+                'type' => 'reimbursement',
+                'route' => 'reimbursement_list',
+                'entity_id' => $reimbursement->id,
+                'entity_type' => 'reimbursement',
+                'icon' => 'receipt',
+            ]);
+        }
 
         return response()->json([
             'status' => true,

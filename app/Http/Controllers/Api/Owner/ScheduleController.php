@@ -464,6 +464,21 @@ class ScheduleController extends Controller
             ]);
         });
 
+        if ($swap->employee) {
+            $origDate = \Carbon\Carbon::parse($swap->original_work_date)->locale('id')->translatedFormat('d F Y');
+            $targetDate = \Carbon\Carbon::parse($swap->target_work_date)->locale('id')->translatedFormat('d F Y');
+
+            \App\Services\NotificationService::sendToEmployee($swap->employee, [
+                'title' => 'Tukar Jadwal Pribadi Disetujui',
+                'message' => 'Pengajuan tukar jadwal pribadi dari ' . $origDate . ' ke ' . $targetDate . ' telah disetujui.',
+                'type' => 'schedule',
+                'route' => 'schedule_swap_list',
+                'entity_id' => $swap->id,
+                'entity_type' => 'swap_personal',
+                'icon' => 'calendar',
+            ]);
+        }
+
         return response()->json([
             'status' => true,
             'message' => 'Pertukaran jadwal personal disetujui.'
@@ -489,6 +504,21 @@ class ScheduleController extends Controller
             'status' => 'rejected',
             'approved_by' => $request->user()->id,
         ]);
+
+        if ($swap->employee) {
+            $origDate = \Carbon\Carbon::parse($swap->original_work_date)->locale('id')->translatedFormat('d F Y');
+            $targetDate = \Carbon\Carbon::parse($swap->target_work_date)->locale('id')->translatedFormat('d F Y');
+
+            \App\Services\NotificationService::sendToEmployee($swap->employee, [
+                'title' => 'Tukar Jadwal Pribadi Ditolak',
+                'message' => 'Pengajuan tukar jadwal pribadi dari ' . $origDate . ' ke ' . $targetDate . ' telah ditolak.',
+                'type' => 'schedule',
+                'route' => 'schedule_swap_list',
+                'entity_id' => $swap->id,
+                'entity_type' => 'swap_personal',
+                'icon' => 'calendar',
+            ]);
+        }
 
         return response()->json([
             'status' => true,
@@ -615,7 +645,7 @@ class ScheduleController extends Controller
             return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
         }
 
-        $swap = SwapTeam::where('company_id', $company->id)->find($id);
+        $swap = SwapTeam::with(['requestor', 'targetEmployee'])->where('company_id', $company->id)->find($id);
         if (!$swap) {
             return response()->json(['status' => false, 'message' => 'Data pertukaran jadwal tim tidak ditemukan.'], 404);
         }
@@ -688,6 +718,29 @@ class ScheduleController extends Controller
             }
         });
 
+        if ($swap->requestor) {
+            \App\Services\NotificationService::sendToEmployee($swap->requestor, [
+                'title' => 'Tukar Jadwal Tim Disetujui',
+                'message' => 'Pengajuan tukar jadwal tim dengan ' . ($swap->targetEmployee->name ?? 'rekan kerja') . ' telah disetujui.',
+                'type' => 'schedule',
+                'route' => 'schedule_swap_list',
+                'entity_id' => $swap->id,
+                'entity_type' => 'swap_team',
+                'icon' => 'calendar',
+            ]);
+        }
+        if ($swap->targetEmployee) {
+            \App\Services\NotificationService::sendToEmployee($swap->targetEmployee, [
+                'title' => 'Tukar Jadwal Tim Disetujui',
+                'message' => 'Pengajuan tukar jadwal tim dari ' . ($swap->requestor->name ?? 'rekan kerja') . ' telah disetujui oleh Owner.',
+                'type' => 'schedule',
+                'route' => 'schedule_swap_list',
+                'entity_id' => $swap->id,
+                'entity_type' => 'swap_team',
+                'icon' => 'calendar',
+            ]);
+        }
+
         return response()->json([
             'status' => true,
             'message' => 'Pertukaran jadwal tim disetujui.'
@@ -704,7 +757,7 @@ class ScheduleController extends Controller
             return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
         }
 
-        $swap = SwapTeam::where('company_id', $company->id)->find($id);
+        $swap = SwapTeam::with(['requestor', 'targetEmployee'])->where('company_id', $company->id)->find($id);
         if (!$swap) {
             return response()->json(['status' => false, 'message' => 'Data pertukaran jadwal tim tidak ditemukan.'], 404);
         }
@@ -713,6 +766,18 @@ class ScheduleController extends Controller
             'status' => 'rejected',
             'approved_by' => $request->user()->id,
         ]);
+
+        if ($swap->requestor) {
+            \App\Services\NotificationService::sendToEmployee($swap->requestor, [
+                'title' => 'Tukar Jadwal Tim Ditolak',
+                'message' => 'Pengajuan tukar jadwal tim dengan ' . ($swap->targetEmployee->name ?? 'rekan kerja') . ' ditolak.',
+                'type' => 'schedule',
+                'route' => 'schedule_swap_list',
+                'entity_id' => $swap->id,
+                'entity_type' => 'swap_team',
+                'icon' => 'calendar',
+            ]);
+        }
 
         return response()->json([
             'status' => true,

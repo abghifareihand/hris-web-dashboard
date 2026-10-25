@@ -38,11 +38,21 @@ class NewEmployeeRegisterPendingRequest extends Notification
      */
     public function toArray(object $notifiable): array
     {
+        $employeeName = $this->pendingEmployee->name ?? 'Calon Karyawan';
+        $dateFormatted = \Carbon\Carbon::parse($this->pendingEmployee->created_at)->locale('id')->translatedFormat('d F Y');
+
         return [
             'type' => 'employee',
+            'category' => 'employee',
             'icon' => 'employee',
-            'title' => 'Pendaftaran Karyawan',
-            'message' => 'Karyawan baru bernama "' . $this->pendingEmployee->name . '" telah mendaftar dan menunggu persetujuan Anda.',
+            'title' => 'Pendaftaran Karyawan Baru',
+            'message' => $employeeName . ' mendaftar sebagai karyawan pada ' . $dateFormatted . ', menunggu persetujuan Anda.',
+            'route' => 'pending_employee_list',
+            'entity_id' => $this->pendingEmployee->id,
+            'entity_type' => 'pending_employee',
+            'params' => [
+                'id' => $this->pendingEmployee->id,
+            ],
             'link' => route('owner.management.employees.pending.index')
         ];
     }

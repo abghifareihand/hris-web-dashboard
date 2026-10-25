@@ -530,6 +530,22 @@ class LeaveController extends Controller
 
             DB::commit();
 
+            if ($leaveRequest->employee) {
+                $startDate = \Carbon\Carbon::parse($leaveRequest->start_date)->locale('id')->translatedFormat('d F Y');
+                $endDate = \Carbon\Carbon::parse($leaveRequest->end_date)->locale('id')->translatedFormat('d F Y');
+                $dateText = ($leaveRequest->start_date === $leaveRequest->end_date) ? $startDate : $startDate . ' s/d ' . $endDate;
+
+                \App\Services\NotificationService::sendToEmployee($leaveRequest->employee, [
+                    'title' => 'Pengajuan Cuti Disetujui',
+                    'message' => 'Pengajuan cuti Anda pada ' . $dateText . ' telah disetujui.',
+                    'type' => 'leave',
+                    'route' => 'leave_list',
+                    'entity_id' => $leaveRequest->id,
+                    'entity_type' => 'leave_request',
+                    'icon' => 'calendar',
+                ]);
+            }
+
             return response()->json([
                 'status' => true,
                 'message' => 'Pengajuan cuti berhasil disetujui.'
@@ -578,6 +594,22 @@ class LeaveController extends Controller
             'approved_by' => $request->user()->id,
             'approved_at' => now()
         ]);
+
+        if ($leaveRequest->employee) {
+            $startDate = \Carbon\Carbon::parse($leaveRequest->start_date)->locale('id')->translatedFormat('d F Y');
+            $endDate = \Carbon\Carbon::parse($leaveRequest->end_date)->locale('id')->translatedFormat('d F Y');
+            $dateText = ($leaveRequest->start_date === $leaveRequest->end_date) ? $startDate : $startDate . ' s/d ' . $endDate;
+
+            \App\Services\NotificationService::sendToEmployee($leaveRequest->employee, [
+                'title' => 'Pengajuan Cuti Ditolak',
+                'message' => 'Pengajuan cuti Anda pada ' . $dateText . ' telah ditolak. Alasan: ' . $request->reject_reason,
+                'type' => 'leave',
+                'route' => 'leave_list',
+                'entity_id' => $leaveRequest->id,
+                'entity_type' => 'leave_request',
+                'icon' => 'calendar',
+            ]);
+        }
 
         return response()->json([
             'status' => true,

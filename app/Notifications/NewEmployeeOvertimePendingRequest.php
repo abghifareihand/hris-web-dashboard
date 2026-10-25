@@ -38,11 +38,21 @@ class NewEmployeeOvertimePendingRequest extends Notification
      */
     public function toArray(object $notifiable): array
     {
+        $employeeName = $this->overtime->employee->name ?? 'Karyawan';
+        $dateFormatted = \Carbon\Carbon::parse($this->overtime->date)->locale('id')->translatedFormat('d F Y');
+
         return [
             'type' => 'overtime',
+            'category' => 'overtime',
             'icon' => 'clock',
             'title' => 'Pengajuan Lembur Baru',
-            'message' => 'Karyawan bernama "' . ($this->overtime->employee->name ?? 'Unknown') . '" mengajukan lembur dan menunggu persetujuan Anda.',
+            'message' => $employeeName . ' mengajukan lembur pada ' . $dateFormatted . ', menunggu persetujuan Anda.',
+            'route' => 'overtime_list',
+            'entity_id' => $this->overtime->id,
+            'entity_type' => 'overtime',
+            'params' => [
+                'id' => $this->overtime->id,
+            ],
             'link' => route('owner.management.overtimes.pending.index')
         ];
     }

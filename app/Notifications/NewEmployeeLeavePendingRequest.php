@@ -38,11 +38,25 @@ class NewEmployeeLeavePendingRequest extends Notification
      */
     public function toArray(object $notifiable): array
     {
+        $employeeName = $this->leave->employee->name ?? 'Karyawan';
+        $startDate = \Carbon\Carbon::parse($this->leave->start_date)->locale('id')->translatedFormat('d F Y');
+        $endDate = \Carbon\Carbon::parse($this->leave->end_date)->locale('id')->translatedFormat('d F Y');
+        $dateText = ($this->leave->start_date === $this->leave->end_date)
+            ? $startDate
+            : $startDate . ' s/d ' . $endDate;
+
         return [
             'type' => 'leave',
+            'category' => 'leave',
             'icon' => 'calendar',
             'title' => 'Pengajuan Cuti Baru',
-            'message' => 'Karyawan bernama "' . ($this->leave->employee->name ?? 'Unknown') . '" mengajukan cuti dan menunggu persetujuan Anda.',
+            'message' => $employeeName . ' mengajukan cuti pada ' . $dateText . ', menunggu persetujuan Anda.',
+            'route' => 'leave_list',
+            'entity_id' => $this->leave->id,
+            'entity_type' => 'leave_request',
+            'params' => [
+                'id' => $this->leave->id,
+            ],
             'link' => route('owner.management.leaves.pending.index')
         ];
     }

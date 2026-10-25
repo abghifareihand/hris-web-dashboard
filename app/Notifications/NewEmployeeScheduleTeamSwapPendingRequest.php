@@ -38,11 +38,26 @@ class NewEmployeeScheduleTeamSwapPendingRequest extends Notification
      */
     public function toArray(object $notifiable): array
     {
+        $requestorName = $this->swap->requestor->name ?? 'Karyawan';
+        $targetName = $this->swap->targetEmployee->name ?? 'Rekan Kerja';
+        $origDate = \Carbon\Carbon::parse($this->swap->requestor_work_date)->locale('id')->translatedFormat('d F Y');
+        $targetDate = \Carbon\Carbon::parse($this->swap->target_work_date)->locale('id')->translatedFormat('d F Y');
+        $dateText = ($this->swap->requestor_work_date->format('Y-m-d') === $this->swap->target_work_date->format('Y-m-d'))
+            ? $origDate
+            : $origDate . ' dengan ' . $targetDate;
+
         return [
             'type' => 'schedule',
+            'category' => 'schedule',
             'icon' => 'calendar',
             'title' => 'Pengajuan Tukar Jadwal Tim',
-            'message' => 'Karyawan bernama "' . ($this->swap->requestor->name ?? 'Unknown') . '" mengajukan tukar jadwal tim dengan "' . ($this->swap->targetEmployee->name ?? 'Unknown') . '" dan menunggu persetujuan Anda.',
+            'message' => $requestorName . ' mengajukan tukar jadwal tim dengan ' . $targetName . ' pada ' . $dateText . ', menunggu persetujuan Anda.',
+            'route' => 'schedule_swap_list',
+            'entity_id' => $this->swap->id,
+            'entity_type' => 'swap_team',
+            'params' => [
+                'id' => $this->swap->id,
+            ],
             'link' => route('owner.management.schedules.swap-team.index')
         ];
     }

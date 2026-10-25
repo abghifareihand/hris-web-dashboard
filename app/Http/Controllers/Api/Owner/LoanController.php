@@ -215,6 +215,18 @@ class LoanController extends Controller
             }
         }
 
+        if ($loan->employee) {
+            \App\Services\NotificationService::sendToEmployee($loan->employee, [
+                'title' => 'Pengajuan Pinjaman Disetujui',
+                'message' => 'Pengajuan pinjaman kasbon Anda sebesar Rp ' . number_format($loan->amount, 0, ',', '.') . ' telah disetujui.',
+                'type' => 'loan',
+                'route' => 'loan_list',
+                'entity_id' => $loan->id,
+                'entity_type' => 'loan',
+                'icon' => 'wallet',
+            ]);
+        }
+
         return response()->json([
             'status' => true,
             'message' => 'Pengajuan pinjaman berhasil disetujui.'
@@ -246,6 +258,18 @@ class LoanController extends Controller
         }
 
         $loan->update(['status' => 'rejected']);
+
+        if ($loan->employee) {
+            \App\Services\NotificationService::sendToEmployee($loan->employee, [
+                'title' => 'Pengajuan Pinjaman Ditolak',
+                'message' => 'Pengajuan pinjaman kasbon Anda sebesar Rp ' . number_format($loan->amount, 0, ',', '.') . ' telah ditolak.',
+                'type' => 'loan',
+                'route' => 'loan_list',
+                'entity_id' => $loan->id,
+                'entity_type' => 'loan',
+                'icon' => 'wallet',
+            ]);
+        }
 
         return response()->json([
             'status' => true,

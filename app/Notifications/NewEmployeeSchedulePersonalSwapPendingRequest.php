@@ -38,11 +38,22 @@ class NewEmployeeSchedulePersonalSwapPendingRequest extends Notification
      */
     public function toArray(object $notifiable): array
     {
+        $employeeName = $this->swap->employee->name ?? 'Karyawan';
+        $origDate = \Carbon\Carbon::parse($this->swap->original_work_date)->locale('id')->translatedFormat('d F Y');
+        $targetDate = \Carbon\Carbon::parse($this->swap->target_work_date)->locale('id')->translatedFormat('d F Y');
+
         return [
             'type' => 'schedule',
+            'category' => 'schedule',
             'icon' => 'calendar',
             'title' => 'Pengajuan Tukar Jadwal Pribadi',
-            'message' => 'Karyawan bernama "' . ($this->swap->employee->name ?? 'Unknown') . '" mengajukan tukar jadwal pribadi dan menunggu persetujuan Anda.',
+            'message' => $employeeName . ' mengajukan tukar jadwal pribadi dari ' . $origDate . ' ke ' . $targetDate . ', menunggu persetujuan Anda.',
+            'route' => 'schedule_swap_list',
+            'entity_id' => $this->swap->id,
+            'entity_type' => 'swap_personal',
+            'params' => [
+                'id' => $this->swap->id,
+            ],
             'link' => route('owner.management.schedules.swap-personal.index')
         ];
     }
