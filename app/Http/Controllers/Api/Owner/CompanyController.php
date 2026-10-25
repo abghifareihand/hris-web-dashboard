@@ -89,8 +89,7 @@ class CompanyController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'status' => false,
-                'message' => 'Validasi gagal.',
-                'errors' => $validator->errors(),
+                'message' => $validator->errors()->first(),
             ], 422);
         }
 
@@ -185,8 +184,7 @@ class CompanyController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'status' => false,
-                'message' => 'Validasi gagal.',
-                'errors' => $validator->errors(),
+                'message' => $validator->errors()->first(),
             ], 422);
         }
 
@@ -196,7 +194,6 @@ class CompanyController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => 'Email perusahaan wajib diisi.',
-                'errors' => ['email_company' => ['Email perusahaan wajib diisi.']],
             ], 422);
         }
 
@@ -205,7 +202,6 @@ class CompanyController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => 'Nomor telepon perusahaan wajib diisi.',
-                'errors' => ['phone_company' => ['Nomor telepon perusahaan wajib diisi.']],
             ], 422);
         }
 

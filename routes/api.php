@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Route;
 // API Auth Routes
 Route::prefix('auth')->group(function () {
     Route::post('/send-otp', [AuthController::class, 'sendOtp']);
+    Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
+    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
     Route::post('/check-email', [AuthController::class, 'checkEmail']);
     Route::post('/register-owner-account', [AuthController::class, 'registerOwnerAccount']);
     Route::post('/register/owner', [AuthController::class, 'registerOwner']);

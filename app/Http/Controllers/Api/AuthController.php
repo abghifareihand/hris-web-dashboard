@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\SendOtpMail;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\User;
@@ -10,12 +11,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
     /**
-     * Send dummy OTP (0000) for Registration or Password Reset.
+     * Send OTP for Registration or Password Reset via SMTP Email.
      * Caches OTP for 5 minutes.
      */
     public function sendOtp(Request $request)
@@ -32,8 +36,7 @@ class AuthController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'status' => false,
-                'message' => 'Validasi gagal.',
-                'errors' => $validator->errors(),
+                'message' => $validator->errors()->first(),
             ], 422);
         }
 
@@ -45,29 +48,35 @@ class AuthController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => 'Email sudah terdaftar. Silakan gunakan email lain atau login.',
-                'errors' => [
-                    'email' => ['Email sudah digunakan.'],
-                ],
             ], 422);
         }
 
         if ($type === 'reset_password' && !$userExists) {
             return response()->json([
                 'status' => false,
-                'message' => 'Email tidak ditemukan.',
-                'errors' => [
-                    'email' => ['Email belum terdaftar di sistem.'],
-                ],
+                'message' => 'Email belum terdaftar di sistem.',
             ], 404);
         }
 
-        // Dummy OTP generation (can be replaced with real random OTP + SMTP later)
-        $otp = '0000';
+        // Generate real random 6-digit OTP
+        $otp = (string) random_int(100000, 999999);
         Cache::put("otp_{$type}_{$email}", $otp, now()->addMinutes(5));
+
+        // Send Email via SMTP
+        try {
+            Mail::to($email)->send(new SendOtpMail($otp, $type));
+        } catch (\Exception $e) {
+            Log::error("Gagal mengirim email OTP ke {$email}: " . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Gagal mengirim email OTP. Silakan periksa konfigurasi SMTP email di file .env server.',
+                'error_detail' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
 
         return response()->json([
             'status' => true,
-            'message' => 'Kode OTP berhasil dikirim ke ' . $email . '. (Gunakan kode dummy: 0000)',
+            'message' => 'Kode OTP berhasil dikirim ke ' . $email . '. Silakan periksa kotak masuk atau spam email Anda.',
             'data' => [
                 'email' => $email,
                 'type' => $type,
@@ -90,8 +99,7 @@ class AuthController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'status' => false,
-                'message' => 'Validasi gagal.',
-                'errors' => $validator->errors(),
+                'message' => $validator->errors()->first(),
             ], 422);
         }
 
@@ -100,15 +108,120 @@ class AuthController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => 'Email sudah terdaftar. Silakan gunakan email lain atau login.',
-                'errors' => [
-                    'email' => ['Email sudah digunakan.'],
-                ],
             ], 422);
         }
 
         return response()->json([
             'status' => true,
             'message' => 'Email tersedia untuk pendaftaran.',
+        ]);
+    }
+
+    /**
+     * Verify OTP (Universal for registration, password reset, etc).
+     */
+    public function verifyOtp(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email|max:255',
+            'otp' => 'required|string',
+            'type' => 'nullable|string|in:register,reset_password',
+        ], [
+            'email.required' => 'Email wajib diisi.',
+            'email.email' => 'Format email tidak valid.',
+            'otp.required' => 'Kode OTP wajib diisi.',
+            'type.in' => 'Tipe OTP harus register atau reset_password.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
+
+        $type = $request->input('type', 'reset_password');
+        $email = $request->input('email');
+
+        $cachedOtp = Cache::get("otp_{$type}_{$email}");
+        $isValidOtp = $cachedOtp && ($cachedOtp === $request->otp);
+
+        if (!$isValidOtp) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Kode OTP salah atau telah kadaluarsa. Silakan periksa kembali email Anda atau kirim ulang kode.',
+            ], 422);
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Kode OTP valid.',
+            'data' => [
+                'email' => $email,
+                'type' => $type,
+            ],
+        ]);
+    }
+
+    /**
+     * Reset password using verified OTP.
+     */
+    public function resetPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email|max:255|exists:users,email',
+            'otp' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
+        ], [
+            'email.required' => 'Email wajib diisi.',
+            'email.email' => 'Format email tidak valid.',
+            'email.exists' => 'Email belum terdaftar di sistem.',
+            'otp.required' => 'Kode OTP wajib diisi.',
+            'password.required' => 'Password baru wajib diisi.',
+            'password.min' => 'Password baru minimal 8 karakter.',
+            'password.confirmed' => 'Konfirmasi password tidak cocok.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
+
+        $email = $request->input('email');
+        $cachedOtp = Cache::get("otp_reset_password_{$email}");
+        $isValidOtp = $cachedOtp && ($cachedOtp === $request->otp);
+
+        if (!$isValidOtp) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Kode OTP salah atau telah kadaluarsa. Silakan periksa kembali email Anda atau kirim ulang kode.',
+            ], 422);
+        }
+
+        $user = User::where('email', $email)->first();
+
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Pengguna tidak ditemukan.',
+            ], 404);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->password),
+        ]);
+
+        // Revoke all existing Sanctum tokens for security
+        $user->tokens()->delete();
+
+        // Clear used OTP from cache
+        Cache::forget("otp_reset_password_{$email}");
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Password berhasil diubah. Silakan login kembali dengan password baru Anda.',
         ]);
     }
 
@@ -139,22 +252,18 @@ class AuthController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'status' => false,
-                'message' => 'Validasi gagal.',
-                'errors' => $validator->errors(),
+                'message' => $validator->errors()->first(),
             ], 422);
         }
 
-        // OTP Verification from Cache (or fallback to dummy 0000)
+        // OTP Verification from Cache
         $cachedOtp = Cache::get("otp_register_{$request->email}");
-        $isValidOtp = ($request->otp === '0000') || ($cachedOtp && $cachedOtp === $request->otp);
+        $isValidOtp = $cachedOtp && ($cachedOtp === $request->otp);
 
         if (!$isValidOtp) {
             return response()->json([
                 'status' => false,
-                'message' => 'Kode OTP salah atau telah kadaluarsa. Silakan masukkan 0000 atau kirim ulang kode.',
-                'errors' => [
-                    'otp' => ['Kode OTP tidak valid.'],
-                ],
+                'message' => 'Kode OTP salah atau telah kadaluarsa. Silakan periksa kembali email Anda atau kirim ulang kode.',
             ], 422);
         }
 
@@ -184,6 +293,7 @@ class AuthController extends Controller
                     'email' => $user->email,
                     'role' => $user->role,
                     'company' => null,
+                    'has_company' => false,
                 ],
             ], 201);
         } catch (\Exception $e) {
@@ -258,17 +368,59 @@ class AuthController extends Controller
 
     public function registerEmployee(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'email' => [
+                'required',
+                'string',
+                'email',
+                'max:255',
+                'unique:users,email',
+                Rule::unique('pending_employees', 'email')->where(function ($query) {
+                    return $query->where('status', 'pending');
+                }),
+            ],
             'phone' => 'required|string|max:25',
             'password' => 'required|string|min:8|confirmed',
             'address' => 'nullable|string',
             'company_id' => 'required|exists:companies,id',
-            'branch_id' => 'nullable|exists:branches,id',
-            'division_id' => 'nullable|exists:divisions,id',
-            'position_id' => 'nullable|exists:positions,id',
+            'branch_id' => [
+                'required',
+                Rule::exists('branches', 'id')->where('company_id', $request->company_id),
+            ],
+            'division_id' => [
+                'required',
+                Rule::exists('divisions', 'id')->where('company_id', $request->company_id),
+            ],
+            'position_id' => [
+                'required',
+                Rule::exists('positions', 'id')->where('company_id', $request->company_id),
+            ],
+        ], [
+            'name.required' => 'Nama lengkap wajib diisi.',
+            'email.required' => 'Email wajib diisi.',
+            'email.email' => 'Format email tidak valid.',
+            'email.unique' => 'Email sudah terdaftar atau pendaftaran sebelumnya masih menunggu persetujuan.',
+            'phone.required' => 'Nomor telepon wajib diisi.',
+            'password.required' => 'Password wajib diisi.',
+            'password.min' => 'Password minimal 8 karakter.',
+            'password.confirmed' => 'Konfirmasi password tidak cocok.',
+            'company_id.required' => 'Perusahaan wajib dipilih.',
+            'company_id.exists' => 'Perusahaan yang dipilih tidak ditemukan.',
+            'branch_id.required' => 'Cabang kantor penempatan wajib dipilih.',
+            'branch_id.exists' => 'Cabang yang dipilih tidak valid atau bukan milik perusahaan ini.',
+            'division_id.required' => 'Divisi wajib dipilih.',
+            'division_id.exists' => 'Divisi yang dipilih tidak valid atau bukan milik perusahaan ini.',
+            'position_id.required' => 'Jabatan wajib dipilih.',
+            'position_id.exists' => 'Jabatan yang dipilih tidak valid atau bukan milik perusahaan ini.',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
 
         try {
             DB::beginTransaction();
@@ -365,6 +517,7 @@ class AuthController extends Controller
                 'role' => $user->role,
                 'avatar' => $user->avatar,
                 'avatar_url' => $user->avatar ? asset('storage/' . $user->avatar) : null,
+                'has_company' => $user->has_company,
                 'company' => $user->company,
                 'created_at' => $user->created_at,
                 'updated_at' => $user->updated_at,
@@ -429,4 +582,6 @@ class AuthController extends Controller
         ]);
     }
 }
+
+
 
