@@ -321,12 +321,16 @@ class ScheduleController extends Controller
             ->through(function($schedule) use ($branches) {
                 $allowedBranchesNames = 'Semua Cabang';
                 if (!$schedule->is_day_off && $schedule->shift) {
-                    if ($schedule->attendance_type === 'one' && !empty($schedule->allowed_branches)) {
-                        $branchId = reset($schedule->allowed_branches);
-                        $branch = $branches->firstWhere('id', $branchId);
+                    $allowedBranches = is_array($schedule->allowed_branches)
+                        ? $schedule->allowed_branches
+                        : (json_decode($schedule->allowed_branches ?? '[]', true) ?: []);
+
+                    if ($schedule->attendance_type === 'one' && !empty($allowedBranches)) {
+                        $branchId = array_values($allowedBranches)[0] ?? null;
+                        $branch = $branchId ? $branches->firstWhere('id', $branchId) : null;
                         $allowedBranchesNames = $branch ? $branch->name : '-';
-                    } elseif ($schedule->attendance_type === 'some' && !empty($schedule->allowed_branches)) {
-                        $allowedBranchesNames = $branches->whereIn('id', $schedule->allowed_branches)->pluck('name')->implode(', ');
+                    } elseif ($schedule->attendance_type === 'some' && !empty($allowedBranches)) {
+                        $allowedBranchesNames = $branches->whereIn('id', $allowedBranches)->pluck('name')->implode(', ');
                     }
                 }
 
