@@ -1,0 +1,1 @@
+function e(e,t=350){let n=null;return{debouncedFn:(...r)=>{n&&clearTimeout(n),n=setTimeout(()=>{e(...r),n=null},t)},cancel:()=>{n&&=(clearTimeout(n),null)}}}export{e as t};

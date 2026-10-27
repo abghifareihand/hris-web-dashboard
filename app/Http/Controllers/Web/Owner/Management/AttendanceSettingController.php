@@ -20,6 +20,7 @@ class AttendanceSettingController extends Controller
             ['company_id' => $company->id],
             [
                 'late_tolerance_minutes' => 10,
+                'early_clock_in_minutes' => 60,
                 'camera_mode' => 'both',
                 'status_very_good' => 'Sangat Baik',
                 'status_good' => 'Baik',
@@ -42,6 +43,7 @@ class AttendanceSettingController extends Controller
 
         $request->validate([
             'late_tolerance_minutes' => 'required|integer|min:0|max:120',
+            'early_clock_in_minutes' => 'required|integer|min:0|max:240',
             'camera_mode' => 'required|in:front,back,both',
             'status_very_good' => 'required|string|max:50',
             'status_good' => 'required|string|max:50',
@@ -56,6 +58,7 @@ class AttendanceSettingController extends Controller
         }
 
         $setting->late_tolerance_minutes = $request->late_tolerance_minutes;
+        $setting->early_clock_in_minutes = $request->early_clock_in_minutes;
         $setting->camera_mode = $request->camera_mode;
         $setting->status_very_good = $request->status_very_good;
         $setting->status_good = $request->status_good;
