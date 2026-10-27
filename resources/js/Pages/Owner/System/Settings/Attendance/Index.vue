@@ -17,6 +17,7 @@ const props = defineProps({
 
 const form = useForm({
     late_tolerance_minutes: props.setting.late_tolerance_minutes ?? 10,
+    early_clock_in_minutes: props.setting.early_clock_in_minutes ?? 60,
     camera_mode: props.setting.camera_mode ?? 'both',
     status_very_good: props.setting.status_very_good ?? 'Sangat Baik',
     status_good: props.setting.status_good ?? 'Baik',
@@ -74,9 +75,10 @@ const submit = () => {
                     </p>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <!-- Baris 1: Parameter Waktu (Grid 2 Kolom Berdampingan Simetris) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                     <!-- Toleransi Keterlambatan -->
-                    <div class="lg:col-span-5 space-y-2">
+                    <div class="space-y-2">
                         <label class="block text-sm font-semibold text-slate-700">
                             Toleransi Keterlambatan <span class="text-rose-500">*</span>
                         </label>
@@ -103,56 +105,84 @@ const submit = () => {
                         </div>
                     </div>
 
-                    <!-- Mode Kamera Presensi -->
-                    <div class="lg:col-span-7 space-y-2">
+                    <!-- Batas Awal Absen Masuk -->
+                    <div class="space-y-2">
                         <label class="block text-sm font-semibold text-slate-700">
-                            Mode Kamera Presensi <span class="text-rose-500">*</span>
+                            Batas Awal Absen Masuk <span class="text-rose-500">*</span>
                         </label>
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <div
-                                v-for="opt in cameraOptions"
-                                :key="opt.value"
-                                @click="form.camera_mode = opt.value"
-                                class="relative p-3.5 rounded-xl border text-left cursor-pointer transition-all duration-150 flex flex-col justify-between select-none"
-                                :class="[
-                                    form.camera_mode === opt.value
-                                        ? 'border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-500/20'
-                                        : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50/50'
-                                ]"
-                            >
-                                <div class="space-y-1.5">
-                                    <div class="flex items-center justify-between">
-                                        <div
-                                            class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                                            :class="form.camera_mode === opt.value ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'"
-                                        >
-                                            <svg v-if="opt.value === 'front'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                            </svg>
-                                            <svg v-else-if="opt.value === 'back'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            </svg>
-                                            <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                            </svg>
-                                        </div>
-                                        <span
-                                            class="w-4 h-4 rounded-full border flex items-center justify-center shrink-0"
-                                            :class="form.camera_mode === opt.value ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300'"
-                                        >
-                                            <span v-if="form.camera_mode === opt.value" class="w-1.5 h-1.5 rounded-full bg-white"></span>
-                                        </span>
+                        <Input
+                            v-model="form.early_clock_in_minutes"
+                            type="number"
+                            min="0"
+                            max="240"
+                            suffix="Menit"
+                            placeholder="60"
+                            :error="form.errors.early_clock_in_minutes"
+                            required
+                        />
+                        <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 text-xs text-slate-600 leading-relaxed space-y-1">
+                            <div class="flex items-center gap-1.5 font-semibold text-slate-700">
+                                <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                                Jendela Buka Absen Masuk
+                            </div>
+                            <p>
+                                Karyawan hanya diizinkan mulai melakukan clock-in paling cepat sekian menit sebelum jam shift dimulai.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Baris 2: Mode Kamera Presensi (Full-width dengan 3 Kartu Proporsional) -->
+                <div class="space-y-2.5">
+                    <label class="block text-sm font-semibold text-slate-700">
+                        Mode Kamera Presensi <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div
+                            v-for="opt in cameraOptions"
+                            :key="opt.value"
+                            @click="form.camera_mode = opt.value"
+                            class="relative p-4 rounded-xl border text-left cursor-pointer transition-all duration-150 flex flex-col justify-between select-none"
+                            :class="[
+                                form.camera_mode === opt.value
+                                    ? 'border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-500/20 shadow-xs'
+                                    : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50/50'
+                            ]"
+                        >
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <div
+                                        class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                                        :class="form.camera_mode === opt.value ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'"
+                                    >
+                                        <svg v-if="opt.value === 'front'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                        </svg>
+                                        <svg v-else-if="opt.value === 'back'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                        <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
                                     </div>
-                                    <div class="text-xs font-bold text-slate-800 leading-snug">{{ opt.title }}</div>
-                                    <div class="text-[11px] text-slate-500 leading-normal">{{ opt.desc }}</div>
+                                    <span
+                                        class="w-4 h-4 rounded-full border flex items-center justify-center shrink-0"
+                                        :class="form.camera_mode === opt.value ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300'"
+                                    >
+                                        <span v-if="form.camera_mode === opt.value" class="w-1.5 h-1.5 rounded-full bg-white"></span>
+                                    </span>
                                 </div>
+                                <div class="text-sm font-bold text-slate-800 leading-snug">{{ opt.title }}</div>
+                                <div class="text-xs text-slate-500 leading-normal">{{ opt.desc }}</div>
                             </div>
                         </div>
-                        <span v-if="form.errors.camera_mode" class="text-xs text-rose-500 mt-1 block">
-                            {{ form.errors.camera_mode }}
-                        </span>
                     </div>
+                    <span v-if="form.errors.camera_mode" class="text-xs text-rose-500 mt-1 block">
+                        {{ form.errors.camera_mode }}
+                    </span>
                 </div>
             </div>
 

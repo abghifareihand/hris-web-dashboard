@@ -175,9 +175,9 @@ class PresenceController extends Controller
                 'schedule' => $formattedSchedule,
                 'attendance' => $attendance ? [
                     'id' => $attendance->id,
-                    'clock_in_time' => $attendance->clock_in_time ? Carbon::parse($attendance->clock_in_time)->format('H:i:s') : null,
+                    'clock_in_time' => $attendance->clock_in_time ? Carbon::parse($attendance->clock_in_time)?->format('H:i:s') : null,
                     'clock_in_address' => $attendance->clock_in_address,
-                    'clock_out_time' => $attendance->clock_out_time ? Carbon::parse($attendance->clock_out_time)->format('H:i:s') : null,
+                    'clock_out_time' => $attendance->clock_out_time ? Carbon::parse($attendance->clock_out_time)?->format('H:i:s') : null,
                     'clock_out_address' => $attendance->clock_out_address,
                     'late_minutes' => (int) $attendance->late_minutes,
                     'early_leaving_minutes' => (int) $attendance->early_leaving_minutes,
@@ -413,23 +413,38 @@ class PresenceController extends Controller
             }
 
             $earlyLeavingMinutes = 0;
-            $effectiveStartTime = $attendance->clock_in_time;
+            $effectiveStartTime = Carbon::make($attendance->clock_in_time);
+            $effectiveEndTime = $now->copy();
 
-            if ($schedule && $schedule->shift) {
+            if ($schedule && $schedule->shift && $schedule->shift->clock_in && $schedule->shift->clock_out) {
                 $shiftClockIn = Carbon::parse($today . ' ' . $schedule->shift->clock_in, $tz);
                 $shiftClockOut = Carbon::parse($today . ' ' . $schedule->shift->clock_out, $tz);
-                
+
+                // Handle shift lintas hari (misal shift malam: 22:00 - 06:00)
+                if ($shiftClockOut->lessThan($shiftClockIn)) {
+                    $shiftClockOut->addDay();
+                }
+
+                // Cek Pulang Cepat jika checkout sebelum shift selesai
                 if ($now->lessThan($shiftClockOut)) {
                     $earlyLeavingMinutes = (int) $now->diffInMinutes($shiftClockOut);
                 }
 
-                // Jangan hitung waktu masuk yang kepagian sebagai jam kerja normal
-                if ($attendance->clock_in_time->lt($shiftClockIn)) {
+                // 1. Batasi Jam Masuk Efektif: Masuk kepagian tetap dihitung mulai jam shift
+                if ($effectiveStartTime->lt($shiftClockIn)) {
                     $effectiveStartTime = $shiftClockIn;
+                }
+
+                // 2. Batasi Jam Pulang Efektif (Opsi 1): Kelebihan jam setelah shift tidak dihitung jam kerja reguler
+                if ($now->greaterThan($shiftClockOut)) {
+                    $effectiveEndTime = $shiftClockOut;
                 }
             }
 
-            $totalWorkMinutes = (int) $effectiveStartTime->diffInMinutes($now);
+            // Hitung total jam kerja reguler (maksimal sesuai durasi shift normal)
+            $totalWorkMinutes = $effectiveEndTime->greaterThan($effectiveStartTime)
+                ? (int) $effectiveStartTime->diffInMinutes($effectiveEndTime)
+                : 0;
             $totalViolationMinutes = (int) ($attendance->late_minutes + $earlyLeavingMinutes);
 
             if ($attendance->late_minutes == 0 && $earlyLeavingMinutes == 0) {
