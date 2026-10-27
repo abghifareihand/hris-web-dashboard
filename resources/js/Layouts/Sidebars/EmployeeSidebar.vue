@@ -11,7 +11,7 @@ defineProps({
     companyName: String,
     appName: {
         type: String,
-        default: 'HRIS Company',
+        default: 'ADR HRIS',
     },
 });
 
@@ -32,7 +32,7 @@ defineEmits(['close']);
             <Link :href="route('employee.dashboard')" class="flex items-center gap-3">
                 <img src="/images/logo/logo.png" alt="Logo" class="w-10 h-10 object-contain rounded-xl shrink-0" />
                 <span class="text-lg font-bold bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent truncate">
-                    {{ companyName || appName }}
+                    {{ appName }}
                 </span>
             </Link>
 
@@ -165,29 +165,5 @@ defineEmits(['close']);
             </Link>
 
         </nav>
-
-        <!-- Sidebar Bottom User Section -->
-        <div class="p-3 border-t border-slate-100 bg-white/50 shrink-0">
-            <div class="flex items-center gap-3 p-2 rounded-xl bg-slate-50 border border-slate-100">
-                <div
-                    class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-semibold overflow-hidden shadow-xs shrink-0"
-                    :class="authUser?.avatar ? 'bg-white border border-slate-200' : 'bg-emerald-600 text-white'"
-                >
-                    <img
-                        v-if="authUser?.avatar"
-                        :src="'/storage/' + authUser.avatar"
-                        :alt="authUser.name"
-                        class="w-full h-full object-cover"
-                    />
-                    <span v-else>{{ authUser?.name?.charAt(0).toUpperCase() || 'K' }}</span>
-                </div>
-                <div class="min-w-0 flex-1">
-                    <p class="text-xs font-semibold text-slate-800 truncate">{{ authUser?.name }}</p>
-                    <p class="text-[11px] text-slate-500 capitalize truncate">
-                        {{ authUser?.employee?.position || 'Karyawan' }}
-                    </p>
-                </div>
-            </div>
-        </div>
     </aside>
 </template>

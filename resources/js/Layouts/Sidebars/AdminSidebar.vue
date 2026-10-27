@@ -10,7 +10,7 @@ defineProps({
     authUser: Object,
     appName: {
         type: String,
-        default: 'Frans HRIS',
+        default: 'ADR HRIS',
     },
 });
 

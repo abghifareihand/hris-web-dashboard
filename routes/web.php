@@ -9,7 +9,7 @@ use App\Http\Controllers\Web\Admin\CompanyController as AdminCompanyController;
 use App\Http\Controllers\Web\Admin\PlanController as AdminPlanController;
 use App\Http\Controllers\Web\Admin\TransactionController as AdminTransactionController;
 use App\Http\Controllers\Web\Admin\SettingController as AdminSettingController;
-use App\Http\Controllers\Web\Owner\Management\Company\ProfileController;
+use App\Http\Controllers\Web\Owner\Management\Company\ProfileController as CompanyProfileController;
 use App\Http\Controllers\Web\Owner\Management\Company\BranchController;
 use App\Http\Controllers\Web\Owner\Management\Company\DivisionController;
 use App\Http\Controllers\Web\Owner\Management\Company\PositionController;
@@ -19,7 +19,7 @@ use App\Http\Controllers\Web\Owner\Management\AttendanceSettingController;
 use App\Http\Controllers\Web\Owner\Management\ScheduleController;
 use App\Http\Controllers\Web\Owner\Management\LeaveController;
 use App\Http\Controllers\Web\Owner\Management\OvertimeController;
-use App\Http\Controllers\Web\Owner\MyProfileController;
+use App\Http\Controllers\Web\Owner\ProfileController as OwnerProfileController;
 use App\Http\Controllers\Web\Owner\NotificationController;
 use App\Http\Controllers\Web\Owner\Finance\ReimbursementController;
 use App\Http\Controllers\Web\Owner\Finance\LoanController;
@@ -86,11 +86,13 @@ Route::middleware('auth')->group(function () {
             Route::post('/read-all', [NotificationController::class, 'markAllAsRead'])->name('read-all');
         });
 
-        // My Profile
-        Route::prefix('my-profile')->name('my-profile.')->group(function () {
-            Route::get('/', [MyProfileController::class, 'index'])->name('index');
-            Route::put('/', [MyProfileController::class, 'update'])->name('update');
-            Route::put('/password', [MyProfileController::class, 'password'])->name('password');
+        // Profile
+        Route::prefix('profile')->name('profile.')->group(function () {
+            Route::get('/', [OwnerProfileController::class, 'index'])->name('index');
+            Route::get('/edit', [OwnerProfileController::class, 'edit'])->name('edit');
+            Route::match(['put', 'post'], '/', [OwnerProfileController::class, 'update'])->name('update');
+            Route::get('/password', [OwnerProfileController::class, 'passwordView'])->name('password');
+            Route::put('/password', [OwnerProfileController::class, 'password'])->name('password.update');
         });
 
         // Management (Batch 1: Organization & Employees)
@@ -105,8 +107,8 @@ Route::middleware('auth')->group(function () {
 
             // Company Organization
             Route::prefix('company')->name('company.')->group(function () {
-                Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
-                Route::match(['put', 'post'], '/profile', [ProfileController::class, 'update'])->name('profile.update');
+                Route::get('/profile', [CompanyProfileController::class, 'index'])->name('profile.index');
+                Route::match(['put', 'post'], '/profile', [CompanyProfileController::class, 'update'])->name('profile.update');
                 Route::resource('branches', BranchController::class);
                 Route::resource('divisions', DivisionController::class)->except(['show']);
                 Route::resource('positions', PositionController::class)->except(['show']);

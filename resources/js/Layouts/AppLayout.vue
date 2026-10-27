@@ -10,7 +10,7 @@ const authUser = computed(() => page.props.auth?.user);
 const companyName = computed(() => authUser.value?.company?.name || authUser.value?.company?.name_company || '');
 const unreadNotificationsCount = computed(() => page.props.auth?.unreadNotificationsCount || 0);
 const recentNotifications = computed(() => page.props.auth?.recentNotifications || []);
-const appName = computed(() => page.props.appName || 'HRIS Company');
+const appName = computed(() => page.props.appName || 'ADR HRIS');
 const flash = computed(() => page.props.flash || {});
 
 // Toast Notification State & Auto-Dismiss Logic
@@ -664,12 +664,12 @@ const logout = () => {
                     <!-- Company Name Badge -->
                     <div
                         v-if="companyName"
-                        class="hidden md:flex items-center gap-2 px-3 py-1.5 border border-red-100 bg-red-100 rounded-lg"
+                        class="hidden md:flex items-center gap-2 px-3 py-1.5 border border-emerald-100 bg-emerald-50 rounded-lg"
                     >
-                        <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                         </svg>
-                        <span class="text-sm font-medium text-red-700">{{ companyName }}</span>
+                        <span class="text-sm font-medium text-emerald-700">{{ companyName }}</span>
                     </div>
 
                     <!-- Notifications Dropdown -->
@@ -843,7 +843,7 @@ const logout = () => {
                                     <div class="mt-2 flex items-center gap-2">
                                         <span
                                             v-if="companyName"
-                                            class="inline-flex items-center px-2 py-0.5 bg-red-50 text-red-700 text-xs font-medium rounded"
+                                            class="inline-flex items-center px-2 py-0.5 bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-medium rounded"
                                         >
                                             {{ companyName }}
                                         </span>
@@ -858,18 +858,41 @@ const logout = () => {
 
                                 <!-- Menu Links -->
                                 <div class="py-1">
-                                    <Link
-                                        v-if="authUser?.role === 'owner'"
-                                        :href="route('owner.my-profile.index')"
-                                        @click="isUserDropdownOpen = false"
-                                        class="dropdown-item"
-                                        :class="{ 'active': route().current('owner.my-profile.*') }"
-                                    >
-                                        <svg class="w-5 h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                        </svg>
-                                        <span>Profil Saya</span>
-                                    </Link>
+                                    <template v-if="authUser?.role === 'owner'">
+                                        <Link
+                                            :href="route('owner.profile.index')"
+                                            @click="isUserDropdownOpen = false"
+                                            class="dropdown-item"
+                                            :class="{ 'active': route().current('owner.profile.index') }"
+                                        >
+                                            <svg class="w-5 h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                            </svg>
+                                            <span>Profil Saya</span>
+                                        </Link>
+                                        <Link
+                                            :href="route('owner.profile.edit')"
+                                            @click="isUserDropdownOpen = false"
+                                            class="dropdown-item"
+                                            :class="{ 'active': route().current('owner.profile.edit') }"
+                                        >
+                                            <svg class="w-5 h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg>
+                                            <span>Edit Profil</span>
+                                        </Link>
+                                        <Link
+                                            :href="route('owner.profile.password')"
+                                            @click="isUserDropdownOpen = false"
+                                            class="dropdown-item"
+                                            :class="{ 'active': route().current('owner.profile.password*') }"
+                                        >
+                                            <svg class="w-5 h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                                            </svg>
+                                            <span>Ganti Kata Sandi</span>
+                                        </Link>
+                                    </template>
                                     <Link
                                         v-else-if="authUser?.role === 'employee'"
                                         :href="route('employee.profile.index')"
