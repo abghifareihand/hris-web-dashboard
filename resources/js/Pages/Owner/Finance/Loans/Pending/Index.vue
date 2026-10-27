@@ -255,7 +255,7 @@ const getSalaryRatio = (amount, tenor, basicSalary) => {
         </div>
 
         <!-- Table -->
-        <DataTable :headers="['Karyawan', 'Tanggal Pengajuan', 'Nominal Pinjaman', 'Tenor', 'Cicilan / Bln', 'Rasio Gaji Pokok', '']">
+        <DataTable :headers="['Karyawan', 'Tanggal Pengajuan', 'Nominal Pinjaman', 'Tenor', 'Cicilan / Periode', 'Rasio Gaji Pokok', '']">
             <template v-if="pendingLoans.data && pendingLoans.data.length > 0">
                 <tr v-for="item in pendingLoans.data" :key="item.id" class="hover:bg-slate-50/70 transition">
                     <!-- Karyawan -->
@@ -290,13 +290,14 @@ const getSalaryRatio = (amount, tenor, basicSalary) => {
                     <!-- Tenor -->
                     <td class="px-5 py-3.5 whitespace-nowrap">
                         <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200/80">
-                            {{ item.tenor }} Bulan
+                            {{ item.tenor_label || `${item.tenor} ${item.tenor_unit || 'Bulan'}` }}
                         </span>
                     </td>
 
-                    <!-- Cicilan / Bln -->
+                    <!-- Cicilan / Periode -->
                     <td class="px-5 py-3.5 whitespace-nowrap font-semibold text-slate-800 text-xs">
                         {{ formatCurrency(item.amount / item.tenor) }}
+                        <span class="text-[10px] text-slate-400 font-normal">/{{ (item.tenor_unit || 'bln').toLowerCase() }}</span>
                     </td>
 
                     <!-- Rasio Gaji Pokok -->
@@ -406,14 +407,14 @@ const getSalaryRatio = (amount, tenor, basicSalary) => {
                     </div>
                     <div class="flex justify-between items-center text-sm">
                         <span class="text-slate-500">Durasi Tenor:</span>
-                        <span class="font-semibold text-slate-700">{{ selectedItem.tenor }} Bulan</span>
+                        <span class="font-semibold text-slate-700">{{ selectedItem.tenor_label || `${selectedItem.tenor} ${selectedItem.tenor_unit || 'Bulan'}` }}</span>
                     </div>
                     <div class="flex justify-between items-center text-sm">
-                        <span class="text-slate-500">Cicilan per Bulan:</span>
+                        <span class="text-slate-500">Cicilan per {{ selectedItem.tenor_unit || 'Bulan' }}:</span>
                         <span class="font-bold text-slate-900">{{ formatCurrency(selectedItem.amount / selectedItem.tenor) }}</span>
                     </div>
                     <div class="flex justify-between items-center text-sm" v-if="selectedItem.employee?.basic_salary">
-                        <span class="text-slate-500">Gaji Pokok Karyawan:</span>
+                        <span class="text-slate-500">Gaji {{ selectedItem.employee?.payroll_cycle === 'weekly' ? 'Mingguan' : (selectedItem.employee?.payroll_cycle === 'daily' ? 'Harian' : 'Bulanan') }} Karyawan:</span>
                         <span class="font-medium text-slate-700">{{ formatCurrency(selectedItem.employee?.basic_salary) }}</span>
                     </div>
                     <div class="flex justify-between items-center text-sm" v-if="getSalaryRatio(selectedItem.amount, selectedItem.tenor, selectedItem.employee?.basic_salary) !== null">
@@ -437,7 +438,7 @@ const getSalaryRatio = (amount, tenor, basicSalary) => {
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <p class="text-xs text-amber-800 leading-relaxed">
-                        <span class="font-semibold">Catatan:</span> Setelah disetujui, sistem akan otomatis menjadwalkan cicilan pinjaman per bulan dan memotongnya melalui slip gaji bulanan (payroll).
+                        <span class="font-semibold">Catatan:</span> Setelah disetujui, sistem akan otomatis menjadwalkan cicilan pinjaman ({{ (selectedItem.tenor_unit || 'bulan').toLowerCase() }}an) dan memotongnya melalui payroll sesuai siklus penggajian karyawan.
                     </p>
                 </div>
             </div>

@@ -374,10 +374,10 @@ const getProgressPercent = (installments) => {
                     <!-- Tenor & Cicilan -->
                     <td class="px-5 py-3.5 whitespace-nowrap">
                         <div class="font-semibold text-slate-800 text-xs">
-                            {{ loan.tenor }} Bulan
+                            {{ loan.tenor_label || `${loan.tenor} ${loan.tenor_unit || 'Bulan'}` }}
                         </div>
                         <div class="text-[11px] text-slate-500 font-medium mt-0.5">
-                            {{ formatCurrency(loan.amount / loan.tenor) }}/bulan
+                            {{ formatCurrency(loan.amount / loan.tenor) }}/{{ (loan.tenor_unit || 'bulan').toLowerCase() }}
                         </div>
                     </td>
 

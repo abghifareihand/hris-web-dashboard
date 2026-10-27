@@ -22,7 +22,7 @@ class LoanController extends Controller
             return redirect()->back()->with('error', 'Perusahaan tidak ditemukan.');
         }
 
-        $query = Loan::with(['employee:id,name,nip,basic_salary,branch_id,division_id', 'employee.branch:id,name', 'employee.division:id,name'])
+        $query = Loan::with(['employee:id,name,nip,basic_salary,branch_id,division_id,payroll_cycle', 'employee.branch:id,name', 'employee.division:id,name'])
             ->where('company_id', $company->id)
             ->where('status', 'pending');
 
@@ -70,25 +70,7 @@ class LoanController extends Controller
         $loan->status = 'approved';
         $loan->save();
 
-        if ($loan->installments()->count() === 0) {
-            $installmentAmount = $loan->amount / $loan->tenor;
-            $startDate = Carbon::parse($loan->date)->startOfMonth();
-            $loanSetting = $company->loanSetting()->first();
-            $dueDay = ($loanSetting && $loanSetting->due_date_day) ? $loanSetting->due_date_day : 1;
-
-            for ($i = 1; $i <= $loan->tenor; $i++) {
-                $monthDate = $startDate->copy()->addMonths($i);
-                $actualDay = min($dueDay, $monthDate->daysInMonth);
-                $dueDate = $monthDate->copy()->day($actualDay);
-
-                LoanInstallment::create([
-                    'loan_id' => $loan->id,
-                    'due_date' => $dueDate->format('Y-m-d'),
-                    'amount' => $installmentAmount,
-                    'status' => 'unpaid',
-                ]);
-            }
-        }
+        $loan->generateInstallments();
 
         return redirect()->back()->with('success', 'Pengajuan pinjaman berhasil disetujui.');
     }
@@ -112,7 +94,7 @@ class LoanController extends Controller
         }
 
         $query = Loan::with([
-            'employee:id,name,nip,branch_id,division_id',
+            'employee:id,name,nip,branch_id,division_id,payroll_cycle',
             'employee.branch:id,name',
             'employee.division:id,name',
             'installments'
@@ -176,7 +158,7 @@ class LoanController extends Controller
         $company = Auth::user()->company;
         $employees = Employee::where('company_id', $company->id)
             ->where('is_active', true)
-            ->select('id', 'name', 'nip', 'basic_salary')
+            ->select('id', 'name', 'nip', 'basic_salary', 'payroll_cycle')
             ->orderBy('name')
             ->get();
         
@@ -201,21 +183,28 @@ class LoanController extends Controller
         $company = Auth::user()->company;
         $employee = Employee::where('company_id', $company->id)->findOrFail($request->employee_id);
 
+        $cycle = $employee->payroll_cycle ?? 'monthly';
+        $cycleUnit = match ($cycle) {
+            'daily' => 'hari',
+            'weekly' => 'minggu',
+            default => 'bulan',
+        };
+
         $amount = (float) $request->amount;
         $tenor = (int) $request->tenor;
-        $installmentPerMonth = round($amount / $tenor);
+        $installmentPerCycle = round($amount / $tenor);
         $basicSalary = (float) ($employee->basic_salary ?? 0);
 
         $maxAllowedInstallment = round($basicSalary * 0.35);
-        $ratioPercentage = $basicSalary > 0 ? (float) round(($installmentPerMonth / $basicSalary) * 100, 1) : 0;
+        $ratioPercentage = $basicSalary > 0 ? (float) round(($installmentPerCycle / $basicSalary) * 100, 1) : 0;
 
-        if ($basicSalary > 0 && $installmentPerMonth > $maxAllowedInstallment) {
+        if ($basicSalary > 0 && $installmentPerCycle > $maxAllowedInstallment) {
             $recommendedMinTenor = ceil($amount / $maxAllowedInstallment);
             $recommendedMaxAmount = floor($maxAllowedInstallment * $tenor);
-            $message = "Estimasi cicilan kasbon Rp " . number_format($installmentPerMonth, 0, ',', '.') . "/bln ({$ratioPercentage}% dari gaji pokok) melebihi batas kebijakan 35% dari gaji pokok (Maks. Rp " . number_format($maxAllowedInstallment, 0, ',', '.') . "/bln).";
+            $message = "Estimasi cicilan kasbon Rp " . number_format($installmentPerCycle, 0, ',', '.') . "/{$cycleUnit} ({$ratioPercentage}% dari gaji {$cycleUnit}an) melebihi batas kebijakan 35% dari gaji pokok (Maks. Rp " . number_format($maxAllowedInstallment, 0, ',', '.') . "/{$cycleUnit}).";
 
             return redirect()->back()->withInput()->withErrors([
-                'amount' => "{$message} Solusi: Ubah tenor minimal menjadi {$recommendedMinTenor} bulan atau kurangi nominal pinjaman maksimal Rp " . number_format($recommendedMaxAmount, 0, ',', '.') . "."
+                'amount' => "{$message} Solusi: Ubah tenor minimal menjadi {$recommendedMinTenor} {$cycleUnit} atau kurangi nominal pinjaman maksimal Rp " . number_format($recommendedMaxAmount, 0, ',', '.') . "."
             ]);
         }
 
@@ -226,7 +215,7 @@ class LoanController extends Controller
                     'amount' => 'Nominal pinjaman melebihi batas maksimal perusahaan (Maksimal: Rp ' . number_format($loanSetting->max_loan_amount, 0, ',', '.') . ').'
                 ]);
             }
-            if ($loanSetting->max_tenor_months && $request->tenor > $loanSetting->max_tenor_months) {
+            if ($cycle === 'monthly' && $loanSetting->max_tenor_months && $request->tenor > $loanSetting->max_tenor_months) {
                 return redirect()->back()->withInput()->withErrors([
                     'tenor' => 'Durasi tenor melebihi batas maksimal perusahaan (Maksimal: ' . $loanSetting->max_tenor_months . ' bulan).'
                 ]);
@@ -243,22 +232,7 @@ class LoanController extends Controller
             'status' => 'approved',
         ]);
 
-        $installmentAmount = $loan->amount / $loan->tenor;
-        $startDate = Carbon::parse($loan->date)->startOfMonth();
-        $dueDay = ($loanSetting && $loanSetting->due_date_day) ? $loanSetting->due_date_day : 1;
-
-        for ($i = 1; $i <= $loan->tenor; $i++) {
-            $monthDate = $startDate->copy()->addMonths($i);
-            $actualDay = min($dueDay, $monthDate->daysInMonth);
-            $dueDate = $monthDate->copy()->day($actualDay);
-
-            LoanInstallment::create([
-                'loan_id' => $loan->id,
-                'due_date' => $dueDate->format('Y-m-d'),
-                'amount' => $installmentAmount,
-                'status' => 'unpaid',
-            ]);
-        }
+        $loan->generateInstallments();
 
         return redirect()->route('owner.finance.loans.index')->with('success', 'Pinjaman berhasil dibuat.');
     }
@@ -267,7 +241,7 @@ class LoanController extends Controller
     {
         $company = Auth::user()->company;
         $loan = Loan::with([
-            'employee:id,name,nip,basic_salary,branch_id,division_id,position_id',
+            'employee:id,name,nip,basic_salary,branch_id,division_id,position_id,payroll_cycle',
             'employee.division:id,name',
             'employee.position:id,name',
             'employee.branch:id,name',

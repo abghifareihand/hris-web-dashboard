@@ -365,30 +365,43 @@ class PayrollController extends Controller
                     }
                 }
 
+                $presentDays = $attendances->whereNotIn('attendance_status', ['alpha', 'leave'])->count();
+                $totalDailyAllowance = ($emp->daily_allowance ?? 0) * $presentDays;
+
                 // Kalkulasi Gaji Pokok & Potongan Ketidakhadiran (Alpha) sesuai siklus penggajian
                 $cycle = $emp->payroll_cycle ?: $payrollSetting->default_payroll_cycle ?: 'monthly';
-                $itemBasicSalary = $emp->basic_salary;
+                $itemBasicSalary = (float) $emp->basic_salary;
+                $itemFixedAllowance = (float) ($emp->fixed_allowance ?? 0);
                 $alphaPenaltyAmount = 0;
 
                 if ($cycle === 'daily') {
-                    // Karyawan Harian:
-                    $scheduledDays = $scheduledWorkSchedules->count() > 0 ? $scheduledWorkSchedules->count() : $monthlyWorkingDays;
-                    $itemBasicSalary = $scheduledDays * $emp->basic_salary;
-                    $alphaPenaltyAmount = $alphaDays * $emp->basic_salary;
+                    // Karyawan Harian (Pure No Work No Pay):
+                    // Gaji pokok harian dihitung murni dari jumlah kehadiran kerja (hadir * basic_salary).
+                    // Tunjangan harian juga murni dari jumlah kehadiran kerja (hadir * daily_allowance).
+                    // Jika tidak masuk sama sekali (0 hari) -> Gaji pokok = 0, tunjangan harian = 0.
+                    // Tidak ada potongan denda alpha ganda karena hari tidak hadir sudah otomatis tidak digaji.
+                    $itemBasicSalary = $presentDays * (float) $emp->basic_salary;
+                    $alphaPenaltyAmount = 0;
+
+                    if ($presentDays === 0) {
+                        $itemFixedAllowance = 0;
+                        $latePenaltyAmount = 0;
+                    }
                 } elseif ($cycle === 'weekly') {
-                    // Karyawan Mingguan (standar 6 hari kerja):
-                    $itemBasicSalary = $emp->basic_salary;
-                    if ($alphaDays > 0) {
-                        if ($emp->alpha_penalty_type === 'flat' && $emp->alpha_penalty_nominal > 0) {
-                            $alphaPenaltyAmount = $alphaDays * $emp->alpha_penalty_nominal;
-                        } else {
-                            $dailyRate = $emp->basic_salary > 0 ? ($emp->basic_salary / $weeklyWorkingDays) : 0;
-                            $alphaPenaltyAmount = round($alphaDays * $dailyRate);
-                        }
+                    // Karyawan Mingguan:
+                    // Sesuai aturan: jika karyawan mingguan tidak masuk 1 hari, gaji pokok mingguan TETAP UTUH.
+                    // Gaji pokok tidak dipotong proporsional per hari (hanya denda flat jika perusahaan mengatur flat).
+                    // Tunjangan harian tetap mengikuti hari kehadiran ($totalDailyAllowance).
+                    $itemBasicSalary = (float) $emp->basic_salary;
+
+                    if ($alphaDays > 0 && $emp->alpha_penalty_type === 'flat' && $emp->alpha_penalty_nominal > 0) {
+                        $alphaPenaltyAmount = $alphaDays * $emp->alpha_penalty_nominal;
+                    } else {
+                        $alphaPenaltyAmount = 0;
                     }
                 } else {
                     // Karyawan Bulanan (standar 25 hari kerja):
-                    $itemBasicSalary = $emp->basic_salary;
+                    $itemBasicSalary = (float) $emp->basic_salary;
                     if ($alphaDays > 0) {
                         if ($emp->alpha_penalty_type === 'flat' && $emp->alpha_penalty_nominal > 0) {
                             $alphaPenaltyAmount = $alphaDays * $emp->alpha_penalty_nominal;
@@ -412,7 +425,7 @@ class PayrollController extends Controller
                 $remarks = null;
                 $loanInstallmentId = null;
 
-                if ($emp->joined_at) {
+                if ($cycle === 'monthly' && $emp->joined_at) {
                     $join = Carbon::parse($emp->joined_at);
                     $periodStart = Carbon::parse($request->start_date);
                     $periodEnd = Carbon::parse($request->end_date);
@@ -463,72 +476,73 @@ class PayrollController extends Controller
                 
                 $bpjsKesEmp = 0;
                 $bpjsKesComp = 0;
-                
-                if (($bpjsKes->is_active ?? true) && !empty($emp->bpjs_kesehatan_no)) {
-                    $basisBpjsKes = $emp->basic_salary + ($emp->fixed_allowance ?? 0);
-                    if ($bpjsKes->minimum_wage && $basisBpjsKes < $bpjsKes->minimum_wage) {
-                        $basisBpjsKes = $bpjsKes->minimum_wage;
-                    }
-                    if ($bpjsKes->maximum_wage && $basisBpjsKes > $bpjsKes->maximum_wage) {
-                        $basisBpjsKes = $bpjsKes->maximum_wage;
-                    }
-
-                    $bpjsKesEmp = ($basisBpjsKes * ($bpjsKes->employee_percent ?? 1.00)) / 100;
-                    $bpjsKesComp = ($basisBpjsKes * ($bpjsKes->company_percent ?? 4.00)) / 100;
-                }
-
-                $basisBpjsTk = $emp->basic_salary + ($emp->fixed_allowance ?? 0);
-                $basisJp = min($emp->basic_salary + ($emp->fixed_allowance ?? 0), (float)($bpjsTk->jp_maximum_wage ?? 10042300));
-
                 $jhtEmp = 0;
                 $jhtComp = 0;
                 $jpEmp = 0;
                 $jpComp = 0;
                 $jkkComp = 0;
                 $jkmComp = 0;
-
-                if (!empty($emp->jht_no) || !empty($emp->jp_no) || !empty($emp->jkk_no) || !empty($emp->jkm_no)) {
-                    $jhtEmp = ($bpjsTk->jht_active ?? true) ? (($basisBpjsTk * ($bpjsTk->jht_employee_percent ?? 2.00)) / 100) : 0;
-                    $jhtComp = ($bpjsTk->jht_active ?? true) ? (($basisBpjsTk * ($bpjsTk->jht_company_percent ?? 3.70)) / 100) : 0;
-                    
-                    $jpEmp = ($bpjsTk->jp_active ?? true) ? (($basisJp * ($bpjsTk->jp_employee_percent ?? 1.00)) / 100) : 0;
-                    $jpComp = ($bpjsTk->jp_active ?? true) ? (($basisJp * ($bpjsTk->jp_company_percent ?? 2.00)) / 100) : 0;
-                    
-                    $jkkComp = ($bpjsTk->jkk_active ?? true) ? (($basisBpjsTk * ($bpjsTk->jkk_percent ?? 0.24)) / 100) : 0;
-                    $jkmComp = ($bpjsTk->jkm_active ?? true) ? (($basisBpjsTk * ($bpjsTk->jkm_percent ?? 0.30)) / 100) : 0;
-                }
-
                 $pph21Amount = 0;
-                if ($emp->taxable) {
-                    $ptkpYearly = 54000000;
-                    if ($emp->ptkp_status === 'TK/1' || $emp->ptkp_status === 'K/0') $ptkpYearly = 58500000;
-                    elseif ($emp->ptkp_status === 'TK/2' || $emp->ptkp_status === 'K/1') $ptkpYearly = 63000000;
-                    elseif ($emp->ptkp_status === 'TK/3' || $emp->ptkp_status === 'K/2') $ptkpYearly = 67500000;
-                    elseif ($emp->ptkp_status === 'K/3') $ptkpYearly = 72000000;
-                    elseif ($emp->ptkp_status === 'K/I/0') $ptkpYearly = 112500000;
-                    elseif ($emp->ptkp_status === 'K/I/1') $ptkpYearly = 117000000;
-                    elseif ($emp->ptkp_status === 'K/I/2') $ptkpYearly = 121500000;
-                    elseif ($emp->ptkp_status === 'K/I/3') $ptkpYearly = 126000000;
 
-                    $grossPajak = min($emp->basic_salary, 12000000);
-                    $biayaJabatan = min($grossPajak * 0.05, 500000);
-                    $totalBpjsKaryawan = $bpjsKesEmp + $jhtEmp + $jpEmp;
-                    $totalBpjsPerusahaanDeduction = $bpjsKesComp + $jkkComp + $jkmComp; 
-                    
-                    $netoMonthly = $grossPajak - $biayaJabatan - $totalBpjsKaryawan - $totalBpjsPerusahaanDeduction;
-                    $netoYearly = $netoMonthly * 12;
-                    $pkpYearly = max(0, $netoYearly - $ptkpYearly);
+                // Basis gaji untuk BPJS & Pajak: untuk harian gunakan total penghasilan yang diperoleh
+                $basisSalaryForBpjs = ($cycle === 'daily') ? ($itemBasicSalary + $itemFixedAllowance) : ($emp->basic_salary + $itemFixedAllowance);
 
-                    if ($pkpYearly > 0) {
-                        $pph21Yearly = $pkpYearly * 0.05;
-                        $pph21Amount = round($pph21Yearly / 12);
+                if ($cycle !== 'daily' || $itemBasicSalary > 0) {
+                    if (($bpjsKes->is_active ?? true) && !empty($emp->bpjs_kesehatan_no) && $basisSalaryForBpjs > 0) {
+                        $basisBpjsKes = $basisSalaryForBpjs;
+                        if ($bpjsKes->minimum_wage && $basisBpjsKes < $bpjsKes->minimum_wage) {
+                            $basisBpjsKes = $bpjsKes->minimum_wage;
+                        }
+                        if ($bpjsKes->maximum_wage && $basisBpjsKes > $bpjsKes->maximum_wage) {
+                            $basisBpjsKes = $bpjsKes->maximum_wage;
+                        }
+
+                        $bpjsKesEmp = ($basisBpjsKes * ($bpjsKes->employee_percent ?? 1.00)) / 100;
+                        $bpjsKesComp = ($basisBpjsKes * ($bpjsKes->company_percent ?? 4.00)) / 100;
+                    }
+
+                    $basisBpjsTk = $basisSalaryForBpjs;
+                    $basisJp = min($basisSalaryForBpjs, (float)($bpjsTk->jp_maximum_wage ?? 10042300));
+
+                    if ((!empty($emp->jht_no) || !empty($emp->jp_no) || !empty($emp->jkk_no) || !empty($emp->jkm_no)) && $basisSalaryForBpjs > 0) {
+                        $jhtEmp = ($bpjsTk->jht_active ?? true) ? (($basisBpjsTk * ($bpjsTk->jht_employee_percent ?? 2.00)) / 100) : 0;
+                        $jhtComp = ($bpjsTk->jht_active ?? true) ? (($basisBpjsTk * ($bpjsTk->jht_company_percent ?? 3.70)) / 100) : 0;
+                        
+                        $jpEmp = ($bpjsTk->jp_active ?? true) ? (($basisJp * ($bpjsTk->jp_employee_percent ?? 1.00)) / 100) : 0;
+                        $jpComp = ($bpjsTk->jp_active ?? true) ? (($basisJp * ($bpjsTk->jp_company_percent ?? 2.00)) / 100) : 0;
+                        
+                        $jkkComp = ($bpjsTk->jkk_active ?? true) ? (($basisBpjsTk * ($bpjsTk->jkk_percent ?? 0.24)) / 100) : 0;
+                        $jkmComp = ($bpjsTk->jkm_active ?? true) ? (($basisBpjsTk * ($bpjsTk->jkm_percent ?? 0.30)) / 100) : 0;
+                    }
+
+                    if ($emp->taxable && $basisSalaryForBpjs > 0) {
+                        $ptkpYearly = 54000000;
+                        if ($emp->ptkp_status === 'TK/1' || $emp->ptkp_status === 'K/0') $ptkpYearly = 58500000;
+                        elseif ($emp->ptkp_status === 'TK/2' || $emp->ptkp_status === 'K/1') $ptkpYearly = 63000000;
+                        elseif ($emp->ptkp_status === 'TK/3' || $emp->ptkp_status === 'K/2') $ptkpYearly = 67500000;
+                        elseif ($emp->ptkp_status === 'K/3') $ptkpYearly = 72000000;
+                        elseif ($emp->ptkp_status === 'K/I/0') $ptkpYearly = 112500000;
+                        elseif ($emp->ptkp_status === 'K/I/1') $ptkpYearly = 117000000;
+                        elseif ($emp->ptkp_status === 'K/I/2') $ptkpYearly = 121500000;
+                        elseif ($emp->ptkp_status === 'K/I/3') $ptkpYearly = 126000000;
+
+                        $grossPajak = min($itemBasicSalary, 12000000);
+                        $biayaJabatan = min($grossPajak * 0.05, 500000);
+                        $totalBpjsKaryawan = $bpjsKesEmp + $jhtEmp + $jpEmp;
+                        $totalBpjsPerusahaanDeduction = $bpjsKesComp + $jkkComp + $jkmComp; 
+                        
+                        $netoMonthly = $grossPajak - $biayaJabatan - $totalBpjsKaryawan - $totalBpjsPerusahaanDeduction;
+                        $netoYearly = $netoMonthly * 12;
+                        $pkpYearly = max(0, $netoYearly - $ptkpYearly);
+
+                        if ($pkpYearly > 0) {
+                            $pph21Yearly = $pkpYearly * 0.05;
+                            $pph21Amount = round($pph21Yearly / 12);
+                        }
                     }
                 }
 
-                $presentDays = $attendances->whereNotIn('attendance_status', ['alpha', 'leave'])->count();
-                $totalDailyAllowance = ($emp->daily_allowance ?? 0) * $presentDays;
-
-                $totalEarnings = $itemBasicSalary + ($emp->fixed_allowance ?? 0) + $totalDailyAllowance + ($emp->other_allowance ?? 0) + $overtimeAmount + $bonus + $reimbursementAmount;
+                $totalEarnings = $itemBasicSalary + $itemFixedAllowance + $totalDailyAllowance + ($emp->other_allowance ?? 0) + $overtimeAmount + $bonus + $reimbursementAmount;
                 
                 $totalPenalty = $latePenaltyAmount + $alphaPenaltyAmount;
                 $totalDeductions = $totalPenalty + $otherDeductions + $pph21Amount + $bpjsKesEmp + $jhtEmp + $jpEmp;
@@ -539,7 +553,7 @@ class PayrollController extends Controller
                 $payrollItem = $payroll->items()->create([
                     'employee_id' => $emp->id,
                     'basic_salary' => $itemBasicSalary,
-                    'fixed_allowance' => $emp->fixed_allowance ?? 0,
+                    'fixed_allowance' => $itemFixedAllowance,
                     'daily_allowance' => $totalDailyAllowance,
                     'other_allowance' => $emp->other_allowance ?? 0,
                     'overtime_amount' => $overtimeAmount,
@@ -710,7 +724,8 @@ class PayrollController extends Controller
 
         // Prorata calculation details
         $prorataDetails = null;
-        if ($item->employee?->joined_at) {
+        $cycle = $item->employee?->payroll_cycle ?? $payroll->payroll_cycle ?? 'monthly';
+        if ($cycle === 'monthly' && $item->employee?->joined_at) {
             $join = Carbon::parse($item->employee->joined_at);
             if ($join->gt($startDate) && $join->lte($endDate)) {
                 $activeDays = $join->diffInDays($endDate) + 1;
@@ -759,6 +774,56 @@ class PayrollController extends Controller
         $pdf->setPaper('a4', 'portrait');
 
         return $pdf->stream('Slip-Gaji-'. $payroll->code .'.pdf');
+    }
+
+    public function printSlipsF4($id)
+    {
+        $company = auth()->user()->company;
+        $payroll = Payroll::with([
+            'items.employee.position',
+            'items.employee.division',
+            'items.employee.company',
+            'items.reimbursements',
+            'items.loanInstallment.loan',
+        ])
+        ->where('company_id', $company->id)
+        ->findOrFail($id);
+
+        $bpjsTk = $company->bpjsKetenagakerjaan()->firstOrCreate(['company_id' => $company->id]);
+        $bpjsKes = $company->bpjsKesehatan()->firstOrCreate(['company_id' => $company->id]);
+
+        // Precalculate remaining loans (sisa pinjaman) for each employee
+        $employeeIds = $payroll->items->pluck('employee_id')->filter()->unique();
+        $activeLoans = \App\Models\Loan::where('company_id', $company->id)
+            ->whereIn('employee_id', $employeeIds)
+            ->whereIn('status', ['approved', 'ongoing'])
+            ->with(['installments'])
+            ->get()
+            ->groupBy('employee_id');
+
+        $remainingLoans = [];
+        foreach ($payroll->items as $item) {
+            $empId = $item->employee_id;
+            $loans = $activeLoans->get($empId, collect());
+            $unpaidSum = 0;
+            foreach ($loans as $loan) {
+                foreach ($loan->installments as $inst) {
+                    if ($inst->status === 'unpaid') {
+                        if ($payroll->status === 'process' && $item->loan_installment_id && $inst->id == $item->loan_installment_id) {
+                            continue;
+                        }
+                        $unpaidSum += $inst->amount;
+                    }
+                }
+            }
+            $remainingLoans[$item->id] = $unpaidSum;
+        }
+
+        $pdf = Pdf::loadView('pdf.payroll-slip-f4', compact('payroll', 'company', 'bpjsTk', 'bpjsKes', 'remainingLoans'));
+        // Kertas F4 Folio: 215mm x 330mm = 609.45pt x 935.43pt
+        $pdf->setPaper([0, 0, 609.45, 935.43], 'portrait');
+
+        return $pdf->stream('Slip-Gaji-F4-'. $payroll->code .'.pdf');
     }
 
     public function printSingleSlip($id, $itemId)

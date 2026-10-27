@@ -27,7 +27,7 @@ class LoanController extends Controller
         }
 
         $query = Loan::with([
-            'employee:id,name',
+            'employee:id,name,payroll_cycle',
             'installments' => function ($q) {
                 $q->orderBy('due_date', 'asc');
             }
@@ -72,6 +72,9 @@ class LoanController extends Controller
                 'date' => Carbon::parse($loan->date)->format('Y-m-d'),
                 'amount' => (int) $loan->amount,
                 'tenor' => (int) $loan->tenor,
+                'tenor_unit' => $loan->tenor_unit,
+                'tenor_label' => $loan->tenor_label,
+                'installment_per_period' => $loan->tenor > 0 ? (int) round($loan->amount / $loan->tenor) : 0,
                 'monthly_installment' => $loan->tenor > 0 ? (int) round($loan->amount / $loan->tenor) : 0,
                 'paid_amount' => (int) $paidAmount,
                 'remaining_amount' => (int) $remainingAmount,
@@ -145,23 +148,7 @@ class LoanController extends Controller
             'status' => 'approved',
         ]);
 
-        $installmentAmount = $loan->amount / $loan->tenor;
-        $startDate = Carbon::parse($loan->date)->startOfMonth();
-        $loanSetting = $company->loanSetting()->first();
-        $dueDay = ($loanSetting && $loanSetting->due_date_day) ? $loanSetting->due_date_day : 1;
-
-        for ($i = 1; $i <= $loan->tenor; $i++) {
-            $monthDate = $startDate->copy()->addMonths($i);
-            $actualDay = min($dueDay, $monthDate->daysInMonth);
-            $dueDate = $monthDate->copy()->day($actualDay);
-
-            LoanInstallment::create([
-                'loan_id' => $loan->id,
-                'due_date' => $dueDate->format('Y-m-d'),
-                'amount' => $installmentAmount,
-                'status' => 'unpaid',
-            ]);
-        }
+        $loan->generateInstallments();
 
         return response()->json([
             'status' => true,
@@ -195,25 +182,7 @@ class LoanController extends Controller
 
         $loan->update(['status' => 'approved']);
 
-        if ($loan->installments()->count() === 0) {
-            $installmentAmount = $loan->amount / $loan->tenor;
-            $startDate = Carbon::parse($loan->date)->startOfMonth();
-            $loanSetting = $company->loanSetting()->first();
-            $dueDay = ($loanSetting && $loanSetting->due_date_day) ? $loanSetting->due_date_day : 1;
-
-            for ($i = 1; $i <= $loan->tenor; $i++) {
-                $monthDate = $startDate->copy()->addMonths($i);
-                $actualDay = min($dueDay, $monthDate->daysInMonth);
-                $dueDate = $monthDate->copy()->day($actualDay);
-
-                LoanInstallment::create([
-                    'loan_id' => $loan->id,
-                    'due_date' => $dueDate->format('Y-m-d'),
-                    'amount' => $installmentAmount,
-                    'status' => 'unpaid',
-                ]);
-            }
-        }
+        $loan->generateInstallments();
 
         if ($loan->employee) {
             \App\Services\NotificationService::sendToEmployee($loan->employee, [

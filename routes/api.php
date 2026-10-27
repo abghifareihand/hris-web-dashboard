@@ -296,14 +296,6 @@ Route::middleware('auth:sanctum')->prefix('employee')->group(function () {
     });
 });
 
-// Common API Notification Routes (Accessible by any authenticated user)
-Route::middleware('auth:sanctum')->prefix('notifications')->group(function () {
-    Route::get('/', [\App\Http\Controllers\Api\NotificationController::class, 'index']);
-    Route::get('/unread-count', [\App\Http\Controllers\Api\NotificationController::class, 'unreadCount']);
-    Route::post('/{id}/read', [\App\Http\Controllers\Api\NotificationController::class, 'markAsRead']);
-    Route::post('/mark-all-read', [\App\Http\Controllers\Api\NotificationController::class, 'markAllAsRead']);
-    Route::delete('/{id}', [\App\Http\Controllers\Api\NotificationController::class, 'destroy']);
-});
 
 
 

@@ -27,7 +27,7 @@ const form = useForm({
     employee_id: '',
     date: new Date().toISOString().split('T')[0],
     amount: '',
-    tenor: 6,
+    tenor: 3,
     description: '',
 });
 
@@ -40,6 +40,43 @@ const employeeOptions = computed(() => {
 
 const selectedEmployee = computed(() => {
     return props.employees.find((e) => e.id === Number(form.employee_id));
+});
+
+const cycle = computed(() => {
+    return selectedEmployee.value?.payroll_cycle || 'monthly';
+});
+
+const cycleUnit = computed(() => {
+    switch (cycle.value) {
+        case 'daily': return 'Hari';
+        case 'weekly': return 'Minggu';
+        default: return 'Bulan';
+    }
+});
+
+const cycleUnitLower = computed(() => {
+    return cycleUnit.value.toLowerCase();
+});
+
+const cycleSalaryLabel = computed(() => {
+    switch (cycle.value) {
+        case 'daily': return 'Harian';
+        case 'weekly': return 'Mingguan';
+        default: return 'Bulanan';
+    }
+});
+
+const maxTenor = computed(() => {
+    if (cycle.value === 'monthly' && props.loanSetting?.max_tenor_months) {
+        return props.loanSetting.max_tenor_months;
+    }
+    if (cycle.value === 'weekly') {
+        return 52;
+    }
+    if (cycle.value === 'daily') {
+        return 60;
+    }
+    return 60;
 });
 
 const installmentPerMonth = computed(() => {
@@ -132,7 +169,7 @@ const formatCurrency = (val) => {
                                 class="mt-1.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200/80 flex flex-wrap items-center justify-between gap-2 text-xs"
                             >
                                 <div class="flex items-center gap-1.5 text-slate-600">
-                                    <span class="text-slate-400">Gaji Pokok:</span>
+                                    <span class="text-slate-400">Gaji {{ cycleSalaryLabel }}:</span>
                                     <span class="font-bold text-slate-800">
                                         {{ formatCurrency(selectedEmployee.basic_salary) }}
                                     </span>
@@ -140,7 +177,7 @@ const formatCurrency = (val) => {
                                 <div class="flex items-center gap-1.5 text-slate-600">
                                     <span class="text-slate-400">Batas Cicilan (35%):</span>
                                     <span class="font-bold text-emerald-600">
-                                        {{ formatCurrency(Math.round((selectedEmployee.basic_salary || 0) * 0.35)) }}/bulan
+                                        {{ formatCurrency(Math.round((selectedEmployee.basic_salary || 0) * 0.35)) }}/{{ cycleUnitLower }}
                                     </span>
                                 </div>
                             </div>
@@ -177,13 +214,13 @@ const formatCurrency = (val) => {
                             label="Tenor Cicilan"
                             type="number"
                             v-model="form.tenor"
-                            suffix="Bulan"
-                            placeholder="6"
+                            :suffix="cycleUnit"
+                            placeholder="3"
                             min="1"
-                            :max="loanSetting?.max_tenor_months || 60"
+                            :max="maxTenor"
                             required
                             :error="form.errors.tenor"
-                            :help="loanSetting?.max_tenor_months ? `Maksimal kebijakan perusahaan: ${loanSetting.max_tenor_months} bulan` : ''"
+                            :help="cycle === 'monthly' && loanSetting?.max_tenor_months ? `Maksimal kebijakan perusahaan: ${loanSetting.max_tenor_months} bulan` : ''"
                         />
                     </div>
                 </div>
@@ -199,13 +236,13 @@ const formatCurrency = (val) => {
                             class="font-medium"
                             :class="isExceedingPolicy ? 'text-rose-900/80' : 'text-emerald-900/80'"
                         >
-                            Estimasi Cicilan per Bulan:
+                            Estimasi Cicilan per {{ cycleUnit }}:
                         </span>
                         <span
                             class="text-base font-bold"
                             :class="isExceedingPolicy ? 'text-rose-700' : 'text-emerald-700'"
                         >
-                            {{ formatCurrency(installmentPerMonth) }} / bulan
+                            {{ formatCurrency(installmentPerMonth) }} / {{ cycleUnitLower }}
                         </span>
                     </div>
 
@@ -214,7 +251,7 @@ const formatCurrency = (val) => {
                         class="flex items-center justify-between text-xs pt-2.5 border-t"
                         :class="isExceedingPolicy ? 'border-rose-200/70 text-rose-900/80' : 'border-emerald-200/70 text-emerald-900/80'"
                     >
-                        <span class="font-medium">Beban Potongan Gaji Pokok:</span>
+                        <span class="font-medium">Beban Potongan Gaji {{ cycleSalaryLabel }}:</span>
                         <div
                             class="flex items-center gap-1 font-semibold"
                             :class="isExceedingPolicy ? 'text-rose-700' : 'text-emerald-700'"
@@ -225,7 +262,7 @@ const formatCurrency = (val) => {
                     </div>
 
                     <p v-if="isExceedingPolicy" class="text-xs text-rose-700 font-medium leading-relaxed pt-1">
-                        ⚠️ Peringatan: Cicilan melebihi 35% dari gaji pokok karyawan. Disarankan memperpanjang tenor atau menurunkan nominal pinjaman agar tidak memberatkan keuangan karyawan.
+                        ⚠️ Peringatan: Cicilan melebihi 35% dari gaji {{ cycleSalaryLabel.toLowerCase() }} karyawan. Disarankan memperpanjang tenor atau menurunkan nominal pinjaman agar tidak memberatkan keuangan karyawan.
                     </p>
                 </div>
 
@@ -256,7 +293,7 @@ const formatCurrency = (val) => {
                         />
                     </svg>
                     <p class="text-xs text-amber-800 leading-relaxed">
-                        <span class="font-semibold">Catatan:</span> Pinjaman yang dibuat langsung melalui panel Owner ini akan otomatis berstatus Disetujui (Approved) dan langsung menjadwalkan cicilan bulanan yang terhubung ke payroll.
+                        <span class="font-semibold">Catatan:</span> Pinjaman yang dibuat langsung melalui panel Owner ini akan otomatis berstatus Disetujui (Approved) dan langsung menjadwalkan cicilan {{ cycleSalaryLabel.toLowerCase() }} yang terhubung ke payroll.
                     </p>
                 </div>
             </div>

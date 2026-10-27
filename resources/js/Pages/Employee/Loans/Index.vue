@@ -83,9 +83,10 @@ const statusOptions = [
 // Tenor Options for Form
 const tenorOptions = computed(() => {
     const list = props.loanPolicy?.tenorOptions || [1, 2, 3, 6, 12];
+    const unit = props.loanPolicy?.cycleUnit || 'Bulan';
     return list.map((t) => ({
         value: t,
-        label: `${t} Bulan`,
+        label: `${t} ${unit}`,
     }));
 });
 
@@ -105,17 +106,21 @@ const installmentSimulation = computed(() => {
     const t = Number(form.tenor) || 1;
     if (amt <= 0 || t <= 0) return null;
 
-    const monthly = Math.round(amt / t);
+    const installmentPerCycle = Math.round(amt / t);
     const basicSalary = props.loanPolicy?.basicSalary || 0;
-    const maxMonthly = props.loanPolicy?.maxMonthlyInstallment || 0;
-    const ratio = basicSalary > 0 ? ((monthly / basicSalary) * 100).toFixed(1) : null;
-    const isExceeding = maxMonthly > 0 && monthly > maxMonthly;
+    const maxInstallment = props.loanPolicy?.maxMonthlyInstallment || 0;
+    const ratio = basicSalary > 0 ? ((installmentPerCycle / basicSalary) * 100).toFixed(1) : null;
+    const isExceeding = maxInstallment > 0 && installmentPerCycle > maxInstallment;
+    const unit = props.loanPolicy?.cycleUnit || 'Bulan';
+    const unitLower = unit.toLowerCase();
 
     return {
-        monthly,
+        installmentPerCycle,
         ratio,
         isExceeding,
-        maxMonthly,
+        maxInstallment,
+        unit,
+        unitLower,
     };
 });
 
@@ -222,7 +227,7 @@ const tableHeaders = [
     { label: 'Tanggal', class: 'w-36' },
     { label: 'Nominal Pinjaman', class: 'w-44 font-bold' },
     { label: 'Tenor Cicilan', class: 'w-32 text-center' },
-    { label: 'Potongan / Bulan', class: 'w-40' },
+    { label: 'Potongan / Angsuran', class: 'w-40' },
     { label: 'Keperluan Kasbon', class: 'w-60' },
     { label: 'Status', class: 'w-36 text-center' },
     { label: 'Aksi', class: 'w-28 text-right' },
@@ -381,11 +386,11 @@ const tableHeaders = [
                             </td>
                             <td class="px-5 py-3.5 whitespace-nowrap text-center">
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700">
-                                    {{ item.tenor }} Bulan
+                                    {{ item.tenor_label || `${item.tenor} ${item.tenor_unit || 'Bulan'}` }}
                                 </span>
                             </td>
                             <td class="px-5 py-3.5 whitespace-nowrap text-xs font-semibold text-emerald-700">
-                                {{ formatRupiah(item.amount / item.tenor) }} <span class="text-[11px] text-slate-400 font-normal">/ bln</span>
+                                {{ formatRupiah(item.amount / item.tenor) }} <span class="text-[11px] text-slate-400 font-normal">/ {{ (item.tenor_unit || 'bln').toLowerCase() }}</span>
                             </td>
                             <td class="px-5 py-3.5 max-w-xs">
                                 <p
@@ -500,13 +505,13 @@ const tableHeaders = [
                 <!-- Simulation Box -->
                 <div v-if="installmentSimulation" class="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1.5 text-xs">
                     <div class="flex justify-between items-center">
-                        <span class="text-slate-500">Estimasi Cicilan per Bulan:</span>
+                        <span class="text-slate-500">Estimasi Cicilan per {{ installmentSimulation.unit }}:</span>
                         <span class="font-bold text-emerald-700 text-sm">
-                            {{ formatRupiah(installmentSimulation.monthly) }} / bln
+                            {{ formatRupiah(installmentSimulation.installmentPerCycle) }} / {{ installmentSimulation.unitLower }}
                         </span>
                     </div>
                     <div v-if="installmentSimulation.ratio" class="flex justify-between items-center">
-                        <span class="text-slate-500">Rasio terhadap Gaji Pokok:</span>
+                        <span class="text-slate-500">Rasio terhadap Gaji {{ props.loanPolicy?.payrollCycle === 'weekly' ? 'Mingguan' : (props.loanPolicy?.payrollCycle === 'daily' ? 'Harian' : 'Bulanan') }}:</span>
                         <span :class="installmentSimulation.isExceeding ? 'text-rose-600 font-bold' : 'text-slate-700 font-semibold'">
                             {{ installmentSimulation.ratio }}% (Batas Aman: 35%)
                         </span>
@@ -514,7 +519,7 @@ const tableHeaders = [
 
                     <!-- Warning if exceeding 35% -->
                     <div v-if="installmentSimulation.isExceeding" class="mt-2 pt-2 border-t border-slate-200 text-[11px] text-rose-600 leading-relaxed">
-                        ⚠️ Cicilan melebihi batas kebijakan 35% gaji pokok (Maks. {{ formatRupiah(installmentSimulation.maxMonthly) }}/bln). Pertimbangkan memperpanjang tenor atau mengurangi nominal pinjaman.
+                        ⚠️ Cicilan melebihi batas kebijakan 35% gaji {{ (props.loanPolicy?.payrollCycle === 'weekly' ? 'mingguan' : (props.loanPolicy?.payrollCycle === 'daily' ? 'harian' : 'bulanan')) }} (Maks. {{ formatRupiah(installmentSimulation.maxInstallment) }}/{{ installmentSimulation.unitLower }}). Pertimbangkan memperpanjang tenor atau mengurangi nominal pinjaman.
                     </div>
                 </div>
 
@@ -560,7 +565,7 @@ const tableHeaders = [
                     <div>
                         <h3 class="text-base font-bold text-slate-900">Jadwal Angsuran Pinjaman</h3>
                         <p class="text-xs text-slate-500 mt-0.5" v-if="selectedLoan">
-                            Total: {{ formatRupiah(selectedLoan.amount) }} ({{ selectedLoan.tenor }} Bulan)
+                            Total: {{ formatRupiah(selectedLoan.amount) }} ({{ selectedLoan.tenor_label || `${selectedLoan.tenor} Bulan` }})
                         </p>
                     </div>
                 </div>
@@ -574,10 +579,10 @@ const tableHeaders = [
                     </div>
                     <div class="flex justify-between items-center">
                         <span class="text-xs text-slate-500">Tenor Cicilan:</span>
-                        <span class="font-semibold text-slate-800">{{ selectedLoan.tenor }} Bulan</span>
+                        <span class="font-semibold text-slate-800">{{ selectedLoan.tenor_label || `${selectedLoan.tenor} Bulan` }}</span>
                     </div>
                     <div class="flex justify-between items-center">
-                        <span class="text-xs text-slate-500">Potongan per Bulan:</span>
+                        <span class="text-xs text-slate-500">Potongan per {{ selectedLoan.tenor_unit || 'Periode' }}:</span>
                         <span class="font-semibold text-slate-800">{{ formatRupiah(selectedLoan.amount / selectedLoan.tenor) }}</span>
                     </div>
                     <div class="flex justify-between items-center">
@@ -597,7 +602,7 @@ const tableHeaders = [
 
                 <!-- Installments Table -->
                 <div>
-                    <h4 class="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Rincian Angsuran Bulanan:</h4>
+                    <h4 class="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Rincian Angsuran:</h4>
                     <div v-if="selectedLoan.installments && selectedLoan.installments.length > 0" class="border border-slate-200/80 rounded-xl overflow-hidden">
                         <table class="w-full text-left text-xs">
                             <thead class="bg-slate-50 uppercase font-semibold text-slate-500 border-b border-slate-200/80">

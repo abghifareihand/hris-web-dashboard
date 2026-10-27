@@ -169,7 +169,7 @@ const monthlyInstallment = computed(() => {
                             {{ formatCurrency(loan.amount) }}
                         </div>
                         <div class="text-xs text-slate-500 mt-0.5">
-                            Tenor {{ loan.tenor }} Bulan
+                            Tenor {{ loan.tenor_label || `${loan.tenor} ${loan.tenor_unit || 'Bulan'}` }}
                         </div>
                     </div>
                     <div class="w-12 h-12 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center shrink-0">
@@ -218,7 +218,7 @@ const monthlyInstallment = computed(() => {
                 <!-- Angsuran / Bulan -->
                 <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
                     <div>
-                        <div class="text-xs font-medium text-slate-500 uppercase tracking-wider">Cicilan per Bulan</div>
+                        <div class="text-xs font-medium text-slate-500 uppercase tracking-wider">Cicilan per {{ loan.tenor_unit || 'Bulan' }}</div>
                         <div class="text-xl font-bold text-primary-700 mt-1 font-mono">
                             {{ formatCurrency(monthlyInstallment) }}
                         </div>
@@ -266,7 +266,7 @@ const monthlyInstallment = computed(() => {
 
                     <div class="pt-3 border-t border-slate-100 grid grid-cols-2 gap-3 text-xs">
                         <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/60">
-                            <span class="text-slate-500 block">Gaji Pokok:</span>
+                            <span class="text-slate-500 block">Gaji {{ loan.employee?.payroll_cycle === 'weekly' ? 'Mingguan' : (loan.employee?.payroll_cycle === 'daily' ? 'Harian' : 'Bulanan') }}:</span>
                             <span class="font-bold text-slate-900 font-mono text-sm mt-0.5 block">
                                 {{ formatCurrency(loan.employee?.basic_salary) }}
                             </span>
@@ -317,7 +317,7 @@ const monthlyInstallment = computed(() => {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <p class="leading-relaxed">
-                            Cicilan akan otomatis terdeteksi & dipotong saat pembuatan <strong>Payroll</strong> sesuai bulan jatuh tempo, atau dapat diselesaikan secara manual lewat tabel di bawah.
+                            Cicilan akan otomatis terdeteksi & dipotong saat pembuatan <strong>Payroll</strong> sesuai periode jatuh tempo, atau dapat diselesaikan secara manual lewat tabel di bawah.
                         </p>
                     </div>
                 </div>
@@ -327,7 +327,7 @@ const monthlyInstallment = computed(() => {
             <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
                 <div class="p-5 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
-                        <h3 class="text-base font-bold text-slate-900 tracking-tight">Jadwal Angsuran Cicilan Bulanan</h3>
+                        <h3 class="text-base font-bold text-slate-900 tracking-tight">Jadwal Angsuran Cicilan</h3>
                         <p class="text-xs text-slate-500 mt-0.5">
                             Rincian tanggal jatuh tempo, nominal cicilan per tenor, dan kontrol status pembayaran manual.
                         </p>
