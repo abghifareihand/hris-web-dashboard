@@ -175,9 +175,9 @@ class PresenceController extends Controller
                 'schedule' => $formattedSchedule,
                 'attendance' => $attendance ? [
                     'id' => $attendance->id,
-                    'clock_in_time' => $attendance->clock_in_time,
+                    'clock_in_time' => $attendance->clock_in_time ? Carbon::parse($attendance->clock_in_time)->format('H:i:s') : null,
                     'clock_in_address' => $attendance->clock_in_address,
-                    'clock_out_time' => $attendance->clock_out_time,
+                    'clock_out_time' => $attendance->clock_out_time ? Carbon::parse($attendance->clock_out_time)->format('H:i:s') : null,
                     'clock_out_address' => $attendance->clock_out_address,
                     'late_minutes' => (int) $attendance->late_minutes,
                     'early_leaving_minutes' => (int) $attendance->early_leaving_minutes,
