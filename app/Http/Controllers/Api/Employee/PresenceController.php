@@ -105,14 +105,29 @@ class PresenceController extends Controller
                 $canClockIn = true;
                 $clockInMessage = 'Silakan lakukan absensi masuk.';
 
-                if ($schedule->shift && $employee->division && $employee->division->is_attendance_schedule) {
-                    $earlyWindow = $setting ? (int) $setting->early_clock_in_minutes : 60;
+                if ($schedule->shift) {
                     $shiftClockIn = Carbon::parse($today . ' ' . $schedule->shift->clock_in, $tz);
+                    $shiftClockOut = Carbon::parse($today . ' ' . $schedule->shift->clock_out, $tz);
+                    if ($shiftClockOut->lt($shiftClockIn)) {
+                        $shiftClockOut->addDay();
+                    }
+
+                    $earlyWindow = $setting ? (int) $setting->early_clock_in_minutes : 60;
                     $earliestAllowed = $shiftClockIn->copy()->subMinutes($earlyWindow);
                     
-                    if ($now->lt($earliestAllowed)) {
-                        $canClockIn = false;
-                        $clockInMessage = 'Absen masuk baru dibuka pukul ' . $earliestAllowed->format('H:i') . ' (' . $earlyWindow . ' menit sebelum shift).';
+                    if ($employee->division && $employee->division->is_attendance_schedule) {
+                        if ($now->lt($earliestAllowed)) {
+                            $canClockIn = false;
+                            $clockInMessage = 'Absen masuk baru dibuka pukul ' . $earliestAllowed->format('H:i') . ' (' . $earlyWindow . ' menit sebelum shift).';
+                        } elseif ($now->gt($shiftClockOut)) {
+                            $canClockIn = false;
+                            $clockInMessage = 'Shift kerja hari ini telah berakhir pada pukul ' . $shiftClockOut->format('H:i') . ' WIB.';
+                        }
+                    } else {
+                        if ($now->gt($shiftClockOut)) {
+                            $canClockIn = false;
+                            $clockInMessage = 'Shift kerja hari ini telah berakhir pada pukul ' . $shiftClockOut->format('H:i') . ' WIB.';
+                        }
                     }
                 }
             }
@@ -359,7 +374,11 @@ class PresenceController extends Controller
             $lateMinutes = 0;
             if ($schedule && $schedule->shift) {
                 $shiftClockIn = Carbon::parse($today . ' ' . $schedule->shift->clock_in, $tz);
-                
+                $shiftClockOut = Carbon::parse($today . ' ' . $schedule->shift->clock_out, $tz);
+                if ($shiftClockOut->lt($shiftClockIn)) {
+                    $shiftClockOut->addDay();
+                }
+
                 // Cek setting perusahaan
                 $earlyWindow = $setting ? (int) $setting->early_clock_in_minutes : 60;
                 $earliestAllowed = $shiftClockIn->copy()->subMinutes($earlyWindow);
@@ -371,6 +390,16 @@ class PresenceController extends Controller
                     ], 400);
                 }
 
+                // Tolak jika shift hari ini sudah berakhir
+                if ($now->gt($shiftClockOut)) {
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'Shift kerja hari ini telah berakhir pada pukul ' . $shiftClockOut->format('H:i') . ' WIB. Anda tidak dapat melakukan absen masuk.'
+                    ], 400);
+                }
+
+                $shiftDurationMinutes = (int) $shiftClockIn->diffInMinutes($shiftClockOut);
+
                 if ($now->greaterThan($shiftClockIn)) {
                     $diffMins = (int) $shiftClockIn->diffInMinutes($now);
                     
@@ -379,7 +408,8 @@ class PresenceController extends Controller
 
                     // Memaafkan 100% jika masih dalam batas toleransi
                     if ($diffMins > $tolerance) {
-                        $lateMinutes = $diffMins;
+                        // Keterlambatan maksimal tidak boleh melebihi durasi shift
+                        $lateMinutes = min($diffMins, $shiftDurationMinutes);
                     } else {
                         $lateMinutes = 0;
                     }
@@ -415,6 +445,7 @@ class PresenceController extends Controller
             $earlyLeavingMinutes = 0;
             $effectiveStartTime = Carbon::make($attendance->clock_in_time);
             $effectiveEndTime = $now->copy();
+            $shiftDurationMinutes = 480;
 
             if ($schedule && $schedule->shift && $schedule->shift->clock_in && $schedule->shift->clock_out) {
                 $shiftClockIn = Carbon::parse($today . ' ' . $schedule->shift->clock_in, $tz);
@@ -424,6 +455,8 @@ class PresenceController extends Controller
                 if ($shiftClockOut->lessThan($shiftClockIn)) {
                     $shiftClockOut->addDay();
                 }
+
+                $shiftDurationMinutes = (int) $shiftClockIn->diffInMinutes($shiftClockOut);
 
                 // Cek Pulang Cepat jika checkout sebelum shift selesai
                 if ($now->lessThan($shiftClockOut)) {
@@ -447,14 +480,19 @@ class PresenceController extends Controller
                 : 0;
             $totalViolationMinutes = (int) ($attendance->late_minutes + $earlyLeavingMinutes);
 
-            if ($attendance->late_minutes == 0 && $earlyLeavingMinutes == 0) {
-                $statusStr = 'very_good';
-            } elseif ($attendance->late_minutes > 0 && $earlyLeavingMinutes == 0) {
-                $statusStr = 'fair';
-            } elseif ($attendance->late_minutes == 0 && $earlyLeavingMinutes > 0) {
-                $statusStr = 'fair';
-            } else {
+            // Evaluasi Predikat Kehadiran:
+            // 1. Jika tidak bekerja sama sekali (0 menit) atau total jam kerja di bawah 50% shift, atau pelanggaran berat > 120 menit: poor
+            // 2. Sangat Baik (very_good): 0 pelanggaran dan jam kerja normal
+            // 3. Baik (good): Pelanggaran ringan (total <= 30 menit) dan jam kerja >= 80% shift
+            // 4. Cukup (fair): Pelanggaran sedang (total <= 120 menit) dan jam kerja >= 50% shift
+            if ($totalWorkMinutes === 0 || $totalWorkMinutes < ($shiftDurationMinutes * 0.5) || $totalViolationMinutes > 120) {
                 $statusStr = 'poor';
+            } elseif ($attendance->late_minutes == 0 && $earlyLeavingMinutes == 0) {
+                $statusStr = 'very_good';
+            } elseif ($totalViolationMinutes <= 30 && $totalWorkMinutes >= ($shiftDurationMinutes * 0.8)) {
+                $statusStr = 'good';
+            } else {
+                $statusStr = 'fair';
             }
 
             $attendance->update([
