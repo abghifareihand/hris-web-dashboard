@@ -4,6 +4,9 @@ import { Head, Link, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Button from '@/Components/UI/Button.vue';
 import Input from '@/Components/UI/Input.vue';
+import Select from '@/Components/UI/Select.vue';
+import Textarea from '@/Components/UI/Textarea.vue';
+import DatePicker from '@/Components/UI/DatePicker.vue';
 
 defineOptions({
     layout: AppLayout,
@@ -23,8 +26,18 @@ const props = defineProps({
 const form = useForm({
     name: props.user?.name || '',
     email: props.user?.email || '',
+    phone: props.user?.phone || '',
+    gender: props.user?.gender || '',
+    birth_date: props.user?.birth_date ? String(props.user.birth_date).substring(0, 10) : '',
+    address: props.user?.address || '',
     avatar: null,
 });
+
+const genderOptions = [
+    { value: '', label: 'Pilih Jenis Kelamin' },
+    { value: 'male', label: 'Laki-laki' },
+    { value: 'female', label: 'Perempuan' },
+];
 
 const avatarPreview = ref(null);
 const fileInput = ref(null);
@@ -152,6 +165,47 @@ const submit = () => {
                                 required
                             />
                         </div>
+
+                        <!-- Nomor HP / WhatsApp -->
+                        <div>
+                            <Input
+                                label="Nomor HP / WhatsApp"
+                                v-model="form.phone"
+                                :error="form.errors.phone"
+                                placeholder="Contoh: 081234567890"
+                            />
+                        </div>
+
+                        <!-- Jenis Kelamin -->
+                        <div>
+                            <Select
+                                label="Jenis Kelamin"
+                                v-model="form.gender"
+                                :options="genderOptions"
+                                :error="form.errors.gender"
+                            />
+                        </div>
+
+                        <!-- Tanggal Lahir -->
+                        <div>
+                            <DatePicker
+                                label="Tanggal Lahir"
+                                v-model="form.birth_date"
+                                placeholder="Pilih Tanggal Lahir"
+                                :error="form.errors.birth_date"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- Alamat Domisili -->
+                    <div>
+                        <Textarea
+                            label="Alamat Tempat Tinggal (Domisili)"
+                            v-model="form.address"
+                            :rows="3"
+                            placeholder="Alamat lengkap tempat tinggal Anda saat ini..."
+                            :error="form.errors.address"
+                        />
                     </div>
 
                     <!-- Informasi Perusahaan Link Info -->

@@ -17,16 +17,12 @@ return new class extends Migration
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->string('name');
             $table->string('email')->unique();
-            $table->string('phone');
-            $table->enum('gender', ['male', 'female'])->nullable();
             $table->string('nik')->nullable();
             $table->string('nip')->nullable();
             $table->foreignId('branch_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('division_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('position_id')->nullable()->constrained()->nullOnDelete();
             $table->date('joined_at')->nullable();
-            $table->date('birth_date')->nullable();
-            $table->text('address')->nullable();
 
             // Bank Account
             $table->string('bank_name')->nullable();

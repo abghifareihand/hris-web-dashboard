@@ -103,9 +103,10 @@ class PendingEmployeeController extends Controller
             $user = User::create([
                 'name' => $pending->name,
                 'email' => $pending->email,
+                'phone' => $pending->phone,
+                'address' => $pending->address,
                 'password' => $pending->password,
                 'role' => 'employee',
-                'company_id' => $company->id,
             ]);
 
             $newEmployee = Employee::create([
@@ -116,8 +117,6 @@ class PendingEmployeeController extends Controller
                 'position_id' => $pending->position_id,
                 'name' => $pending->name,
                 'email' => $pending->email,
-                'phone' => $pending->phone,
-                'address' => $pending->address,
                 'is_active' => true,
             ]);
 

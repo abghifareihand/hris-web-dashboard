@@ -40,6 +40,10 @@ class ProfileController extends Controller
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
+                    'phone' => $user->phone,
+                    'gender' => $user->gender,
+                    'birth_date' => $user->birth_date ? ($user->birth_date instanceof \DateTimeInterface ? $user->birth_date->format('Y-m-d') : substr((string)$user->birth_date, 0, 10)) : null,
+                    'address' => $user->address,
                     'avatar' => $user->avatar,
                     'avatar_url' => $avatarUrl,
                     'role' => $user->role,
@@ -49,10 +53,6 @@ class ProfileController extends Controller
                     'name' => $employee->name,
                     'nik' => $employee->nik,
                     'nip' => $employee->nip,
-                    'phone' => $employee->phone,
-                    'gender' => $employee->gender,
-                    'birth_date' => $employee->birth_date ? Carbon::parse($employee->birth_date)->format('Y-m-d') : null,
-                    'address' => $employee->address,
                     'joined_at' => $employee->joined_at ? Carbon::parse($employee->joined_at)->format('Y-m-d') : null,
                     'payroll_cycle' => $employee->payroll_cycle,
                     'is_active' => (bool) $employee->is_active,
@@ -114,18 +114,24 @@ class ProfileController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
+            'name' => 'nullable|string|max:255',
+            'nik' => 'nullable|string|max:20',
             'phone' => 'nullable|string|max:20',
             'gender' => 'nullable|in:male,female',
             'birth_date' => 'nullable|date',
             'address' => 'nullable|string|max:500',
-            'avatar' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,svg,webp|max:2048',
+            'delete_avatar' => 'nullable|boolean',
         ], [
-            'name.required' => 'Nama lengkap wajib diisi.',
+            'name.string' => 'Nama harus berupa teks.',
+            'nik.string' => 'NIK harus berupa teks.',
+            'nik.max' => 'NIK maksimal 20 digit.',
             'phone.max' => 'Nomor telepon maksimal 20 digit.',
             'gender.in' => 'Jenis kelamin harus male atau female.',
+            'birth_date.date' => 'Format tanggal lahir tidak valid.',
+            'address.max' => 'Alamat maksimal 500 karakter.',
             'avatar.image' => 'Berkas foto profil harus berupa gambar.',
-            'avatar.mimes' => 'Format foto profil harus berupa JPEG, PNG, atau JPG.',
+            'avatar.mimes' => 'Format foto profil harus berupa JPEG, PNG, JPG, SVG, atau WEBP.',
             'avatar.max' => 'Ukuran foto profil maksimal 2MB.',
         ]);
 
@@ -133,30 +139,53 @@ class ProfileController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => $validator->errors()->first(),
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         DB::transaction(function () use ($request, $user, $employee) {
-            $user->name = $request->name;
+            $employeeData = [];
+
+            if ($request->has('name')) {
+                $user->name = $request->name;
+                $employeeData['name'] = $request->name;
+            }
+            if ($request->has('nik')) {
+                $employeeData['nik'] = $request->nik;
+            }
+
+            if (!empty($employeeData)) {
+                $employee->update($employeeData);
+            }
+
+            if ($request->has('phone')) {
+                $user->phone = $request->phone;
+            }
+            if ($request->has('gender')) {
+                $user->gender = $request->gender;
+            }
+            if ($request->has('birth_date')) {
+                $user->birth_date = $request->birth_date;
+            }
+            if ($request->has('address')) {
+                $user->address = $request->address;
+            }
 
             if ($request->hasFile('avatar')) {
                 // Delete old avatar if exists
                 if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
                     Storage::disk('public')->delete($user->avatar);
                 }
-                $avatarPath = $request->file('avatar')->store('avatars', 'public');
+                $avatarPath = $request->file('avatar')->store('user-avatars', 'public');
                 $user->avatar = $avatarPath;
+            } elseif ($request->boolean('delete_avatar')) {
+                if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+                    Storage::disk('public')->delete($user->avatar);
+                }
+                $user->avatar = null;
             }
 
             $user->save();
-
-            $employee->update([
-                'name' => $request->name,
-                'phone' => $request->input('phone', $employee->phone),
-                'gender' => $request->input('gender', $employee->gender),
-                'birth_date' => $request->input('birth_date', $employee->birth_date),
-                'address' => $request->input('address', $employee->address),
-            ]);
         });
 
         return response()->json([

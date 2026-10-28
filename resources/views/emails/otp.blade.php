@@ -119,6 +119,8 @@
                             <p class="text-main" style="margin: 0 0 20px 0; font-size: 14px; line-height: 1.6; color: #475569; font-family: inherit;">
                                 @if ($type === 'reset_password')
                                     Kami menerima permintaan untuk mereset kata sandi akun <strong>{{ config('app.name', 'HRIS SaaS') }}</strong> Anda. Silakan gunakan kode verifikasi berikut:
+                                @elseif ($type === 'change_email')
+                                    Kami menerima permintaan untuk mengubah alamat email akun <strong>{{ config('app.name', 'HRIS SaaS') }}</strong> Anda ke alamat email ini. Silakan gunakan kode verifikasi berikut:
                                 @else
                                     Terima kasih telah mendaftar di <strong>{{ config('app.name', 'HRIS SaaS') }}</strong>. Silakan gunakan kode verifikasi berikut untuk menyelesaikan pendaftaran akun Anda:
                                 @endif

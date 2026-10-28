@@ -26,11 +26,11 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'email' => 'required|email|max:255',
-            'type' => 'nullable|string|in:register,reset_password',
+            'type' => 'nullable|string|in:register,reset_password,change_email',
         ], [
             'email.required' => 'Email wajib diisi.',
             'email.email' => 'Format email tidak valid.',
-            'type.in' => 'Tipe OTP harus register atau reset_password.',
+            'type.in' => 'Tipe OTP harus register, reset_password, atau change_email.',
         ]);
 
         if ($validator->fails()) {
@@ -42,12 +42,19 @@ class AuthController extends Controller
 
         $type = $request->input('type', 'register');
         $email = $request->input('email');
-        $userExists = User::where('email', $email)->exists();
+        $userExists = User::where('email', $email)->exists() || Employee::where('email', $email)->exists();
 
         if ($type === 'register' && $userExists) {
             return response()->json([
                 'status' => false,
                 'message' => 'Email sudah terdaftar. Silakan gunakan email lain atau login.',
+            ], 422);
+        }
+
+        if ($type === 'change_email' && $userExists) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Email sudah terdaftar. Silakan gunakan email lain.',
             ], 422);
         }
 
@@ -125,12 +132,12 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'email' => 'required|email|max:255',
             'otp' => 'required|string',
-            'type' => 'nullable|string|in:register,reset_password',
+            'type' => 'nullable|string|in:register,reset_password,change_email',
         ], [
             'email.required' => 'Email wajib diisi.',
             'email.email' => 'Format email tidak valid.',
             'otp.required' => 'Kode OTP wajib diisi.',
-            'type.in' => 'Tipe OTP harus register atau reset_password.',
+            'type.in' => 'Tipe OTP harus register, reset_password, atau change_email.',
         ]);
 
         if ($validator->fails()) {
@@ -271,6 +278,8 @@ class AuthController extends Controller
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
+                'phone' => $request->phone,
+                'address' => $request->address,
                 'password' => Hash::make($request->password),
                 'role' => 'owner',
                 'email_verified_at' => now(),
@@ -292,7 +301,6 @@ class AuthController extends Controller
                     'name' => $user->name,
                     'email' => $user->email,
                     'role' => $user->role,
-                    'company' => null,
                     'has_company' => false,
                 ],
             ], 201);
@@ -331,6 +339,8 @@ class AuthController extends Controller
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
+                'phone' => $request->phone,
+                'address' => $request->address,
                 'password' => Hash::make($request->password),
                 'role' => 'owner',
             ]);
@@ -514,11 +524,14 @@ class AuthController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'phone' => $user->phone,
+                'gender' => $user->gender,
+                'birth_date' => $user->birth_date ? ($user->birth_date instanceof \DateTimeInterface ? $user->birth_date->format('Y-m-d') : substr((string)$user->birth_date, 0, 10)) : null,
+                'address' => $user->address,
                 'role' => $user->role,
                 'avatar' => $user->avatar,
                 'avatar_url' => $user->avatar ? asset('storage/' . $user->avatar) : null,
                 'has_company' => $user->has_company,
-                'company' => $user->company,
                 'created_at' => $user->created_at,
                 'updated_at' => $user->updated_at,
             ],
@@ -578,6 +591,90 @@ class AuthController extends Controller
             'data' => [
                 'user_id' => $user->id,
                 'fcm_token' => $user->fcm_token,
+            ],
+        ]);
+    }
+
+    /**
+     * Change email with OTP verification for authenticated user.
+     */
+    public function changeEmail(Request $request)
+    {
+        $user = $request->user();
+
+        $newEmail = $request->input('email') ?? $request->input('new_email');
+        $employeeId = $user->employee ? $user->employee->id : null;
+
+        $validator = Validator::make(array_merge($request->all(), ['target_email' => $newEmail]), [
+            'target_email' => [
+                'required',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email')->ignore($user->id),
+                Rule::unique('employees', 'email')->ignore($employeeId),
+            ],
+            'otp' => 'required|string',
+        ], [
+            'target_email.required' => 'Email baru wajib diisi.',
+            'target_email.email' => 'Format email baru tidak valid.',
+            'target_email.unique' => 'Email ini sudah digunakan oleh akun lain.',
+            'otp.required' => 'Kode OTP wajib diisi.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
+
+        if ($user->email === $newEmail) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Email baru tidak boleh sama dengan email saat ini.',
+            ], 422);
+        }
+
+        $cachedOtp = Cache::get("otp_change_email_{$newEmail}");
+        $isValidOtp = $cachedOtp && ($cachedOtp === (string) $request->otp);
+
+        if (!$isValidOtp) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Kode OTP salah atau telah kadaluarsa. Silakan periksa kembali email Anda atau kirim ulang kode.',
+            ], 422);
+        }
+
+        $user->email = $newEmail;
+        $user->email_verified_at = now();
+        $user->save();
+
+        if ($user->employee) {
+            $user->employee->update([
+                'email' => $newEmail,
+            ]);
+        }
+
+        // Clear OTP from cache
+        Cache::forget("otp_change_email_{$newEmail}");
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Email berhasil diperbarui.',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'gender' => $user->gender,
+                'birth_date' => $user->birth_date ? ($user->birth_date instanceof \DateTimeInterface ? $user->birth_date->format('Y-m-d') : substr((string)$user->birth_date, 0, 10)) : null,
+                'address' => $user->address,
+                'role' => $user->role,
+                'avatar' => $user->avatar,
+                'avatar_url' => $user->avatar ? asset('storage/' . $user->avatar) : null,
+                'has_company' => $user->has_company,
+                'created_at' => $user->created_at,
+                'updated_at' => $user->updated_at,
             ],
         ]);
     }

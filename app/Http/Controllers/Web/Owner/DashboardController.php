@@ -285,10 +285,12 @@ class DashboardController extends Controller
             ->get();
 
         // Ulang tahun hari ini
-        $birthdaysToday = Employee::with('division')
+        $birthdaysToday = Employee::with(['division', 'user'])
             ->where('company_id', $company->id)
-            ->whereMonth('birth_date', $today->month)
-            ->whereDay('birth_date', $today->day)
+            ->whereHas('user', function ($q) use ($today) {
+                $q->whereMonth('birth_date', $today->month)
+                  ->whereDay('birth_date', $today->day);
+            })
             ->get();
 
         // Karyawan cuti hari ini

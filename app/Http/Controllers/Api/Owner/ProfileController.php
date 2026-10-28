@@ -37,6 +37,10 @@ class ProfileController extends Controller
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
+                    'phone' => $user->phone,
+                    'gender' => $user->gender,
+                    'birth_date' => $user->birth_date ? ($user->birth_date instanceof \DateTimeInterface ? $user->birth_date->format('Y-m-d') : substr((string)$user->birth_date, 0, 10)) : null,
+                    'address' => $user->address,
                     'avatar' => $user->avatar,
                     'avatar_url' => $avatarUrl,
                     'role' => $user->role,
@@ -69,15 +73,20 @@ class ProfileController extends Controller
 
         $validator = Validator::make($request->all(), [
             'name' => 'nullable|string|max:255',
-            'email' => 'nullable|string|email|max:255|unique:users,email,' . $user->id,
-            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,svg|max:2048',
+            'phone' => 'nullable|string|max:20',
+            'gender' => 'nullable|in:male,female',
+            'birth_date' => 'nullable|date',
+            'address' => 'nullable|string|max:500',
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,svg,webp|max:2048',
             'delete_avatar' => 'nullable|boolean',
         ], [
             'name.string' => 'Nama harus berupa teks.',
-            'email.email' => 'Format email tidak valid.',
-            'email.unique' => 'Email sudah digunakan oleh pengguna lain.',
+            'phone.max' => 'Nomor telepon maksimal 20 digit.',
+            'gender.in' => 'Jenis kelamin harus male atau female.',
+            'birth_date.date' => 'Format tanggal lahir tidak valid.',
+            'address.max' => 'Alamat maksimal 500 karakter.',
             'avatar.image' => 'Berkas avatar harus berupa gambar.',
-            'avatar.mimes' => 'Format avatar harus JPEG, PNG, JPG, atau SVG.',
+            'avatar.mimes' => 'Format avatar harus JPEG, PNG, JPG, SVG, atau WEBP.',
             'avatar.max' => 'Ukuran avatar maksimal 2MB.',
         ]);
 
@@ -85,15 +94,23 @@ class ProfileController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => $validator->errors()->first(),
-                'errors' => $validator->errors(),
             ], 422);
         }
 
-        if ($request->filled('name')) {
+        if ($request->has('name')) {
             $user->name = $request->name;
         }
-        if ($request->filled('email')) {
-            $user->email = $request->email;
+        if ($request->has('phone')) {
+            $user->phone = $request->phone;
+        }
+        if ($request->has('gender')) {
+            $user->gender = $request->gender;
+        }
+        if ($request->has('birth_date')) {
+            $user->birth_date = $request->birth_date;
+        }
+        if ($request->has('address')) {
+            $user->address = $request->address;
         }
 
         if ($request->hasFile('avatar')) {
@@ -116,7 +133,7 @@ class ProfileController extends Controller
 
         return response()->json([
             'status' => true,
-            'message' => 'Profil owner berhasil diperbarui.',
+            'message' => 'Profil berhasil diperbarui.',
         ]);
     }
 

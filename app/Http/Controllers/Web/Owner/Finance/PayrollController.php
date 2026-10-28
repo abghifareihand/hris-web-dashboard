@@ -819,11 +819,78 @@ class PayrollController extends Controller
             $remainingLoans[$item->id] = $unpaidSum;
         }
 
-        $pdf = Pdf::loadView('pdf.payroll-slip-f4', compact('payroll', 'company', 'bpjsTk', 'bpjsKes', 'remainingLoans'));
+        $pdf = Pdf::loadView('pdf.payroll-slip-f4-v1', compact('payroll', 'company', 'bpjsTk', 'bpjsKes', 'remainingLoans'));
         // Kertas F4 Folio: 215mm x 330mm = 609.45pt x 935.43pt
         $pdf->setPaper([0, 0, 609.45, 935.43], 'portrait');
 
-        return $pdf->stream('Slip-Gaji-F4-'. $payroll->code .'.pdf');
+        return $pdf->stream('Slip-Gaji-F4-v1-'. $payroll->code .'.pdf');
+    }
+
+    public function printSlipsF4Grid8($id)
+    {
+        $company = auth()->user()->company;
+        $payroll = Payroll::with([
+            'items.employee.position',
+            'items.employee.division',
+            'items.employee.company',
+            'items.reimbursements',
+            'items.loanInstallment.loan',
+        ])
+        ->where('company_id', $company->id)
+        ->findOrFail($id);
+
+        $bpjsTk = $company->bpjsKetenagakerjaan()->firstOrCreate(['company_id' => $company->id]);
+        $bpjsKes = $company->bpjsKesehatan()->firstOrCreate(['company_id' => $company->id]);
+
+        // Precalculate remaining loans (sisa pinjaman) for each employee
+        $employeeIds = $payroll->items->pluck('employee_id')->filter()->unique();
+        $activeLoans = \App\Models\Loan::where('company_id', $company->id)
+            ->whereIn('employee_id', $employeeIds)
+            ->whereIn('status', ['approved', 'ongoing'])
+            ->with(['installments'])
+            ->get()
+            ->groupBy('employee_id');
+
+        $remainingLoans = [];
+        foreach ($payroll->items as $item) {
+            $empId = $item->employee_id;
+            $loans = $activeLoans->get($empId, collect());
+            $unpaidSum = 0;
+            foreach ($loans as $loan) {
+                foreach ($loan->installments as $inst) {
+                    if ($inst->status === 'unpaid') {
+                        if ($payroll->status === 'process' && $item->loan_installment_id && $inst->id == $item->loan_installment_id) {
+                            continue;
+                        }
+                        $unpaidSum += $inst->amount;
+                    }
+                }
+            }
+            $remainingLoans[$item->id] = $unpaidSum;
+        }
+
+        // Attendance summaries per employee
+        $attendances = Attendance::whereIn('employee_id', $employeeIds)
+            ->whereBetween('date', [$payroll->start_date, $payroll->end_date])
+            ->get()
+            ->groupBy('employee_id');
+
+        $attendanceSummaries = [];
+        foreach ($payroll->items as $item) {
+            $empAtt = $attendances->get($item->employee_id, collect());
+            $present = $empAtt->whereNotIn('attendance_status', ['alpha', 'absent', 'leave'])->count();
+            $late = $empAtt->where('late_minutes', '>', 0)->count();
+            $attendanceSummaries[$item->employee_id] = [
+                'present' => $present > 0 ? $present : (($item->employee?->payroll_cycle === 'weekly') ? 6 : 25),
+                'late' => $late,
+            ];
+        }
+
+        $pdf = Pdf::loadView('pdf.payroll-slip-f4-v2', compact('payroll', 'company', 'bpjsTk', 'bpjsKes', 'remainingLoans', 'attendanceSummaries'));
+        // Kertas F4 Folio: 215mm x 330mm = 609.45pt x 935.43pt
+        $pdf->setPaper([0, 0, 609.45, 935.43], 'portrait');
+
+        return $pdf->stream('Slip-Gaji-F4-v2-'. $payroll->code .'.pdf');
     }
 
     public function printSingleSlip($id, $itemId)

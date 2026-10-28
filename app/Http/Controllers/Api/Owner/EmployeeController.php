@@ -47,11 +47,11 @@ class EmployeeController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%")
                   ->orWhere('nip', 'like', "%{$search}%")
                   ->orWhere('nik', 'like', "%{$search}%")
                   ->orWhereHas('user', function ($uq) use ($search) {
-                      $uq->where('email', 'like', "%{$search}%");
+                      $uq->where('email', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%");
                   });
             });
         }
@@ -315,6 +315,10 @@ class EmployeeController extends Controller
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
+                'phone' => $request->phone,
+                'gender' => $request->gender,
+                'birth_date' => $request->birth_date,
+                'address' => $request->address,
                 'password' => Hash::make($request->password),
                 'role' => 'employee',
                 'avatar' => $avatarPath,
@@ -328,13 +332,9 @@ class EmployeeController extends Controller
                 'position_id' => $request->position_id,
                 'name' => $request->name,
                 'email' => $request->email,
-                'phone' => $request->phone,
-                'address' => $request->address,
-                'gender' => $request->gender,
                 'nik' => $request->nik,
                 'nip' => $request->nip,
                 'joined_at' => $request->joined_at ?? now(),
-                'birth_date' => $request->birth_date,
                 'is_active' => true,
 
                 // Bank details
@@ -501,6 +501,18 @@ class EmployeeController extends Controller
                 if ($request->has('email')) {
                     $userData['email'] = $request->email;
                 }
+                if ($request->has('phone')) {
+                    $userData['phone'] = $request->phone;
+                }
+                if ($request->has('gender')) {
+                    $userData['gender'] = $request->gender;
+                }
+                if ($request->has('birth_date')) {
+                    $userData['birth_date'] = $request->birth_date;
+                }
+                if ($request->has('address')) {
+                    $userData['address'] = $request->address;
+                }
                 if ($request->filled('password')) {
                     $userData['password'] = Hash::make($request->password);
                 }
@@ -523,9 +535,9 @@ class EmployeeController extends Controller
             // Update Employee
             $empData = [];
             $fillable = [
-                'name', 'email', 'phone', 'gender', 'nik', 'nip',
+                'name', 'email', 'nik', 'nip',
                 'branch_id', 'division_id', 'position_id', 'joined_at',
-                'birth_date', 'address', 'bank_name', 'bank_account_number',
+                'bank_name', 'bank_account_number',
                 'bank_account_name', 'payroll_cycle', 'basic_salary',
                 'fixed_allowance', 'daily_allowance', 'other_allowance',
                 'overtime_rate_per_hour', 'late_penalty_type', 'late_penalty_nominal',

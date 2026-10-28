@@ -33,6 +33,10 @@ class DummyDataSeeder extends Seeder
         $ownerGoys = User::create([
             'name' => 'HRD GOYS',
             'email' => 'hrd@goysmedia.com',
+            'phone' => '081298765432',
+            'gender' => 'male',
+            'birth_date' => '1990-05-15',
+            'address' => 'Jl. TB Simatupang No. 18, Cilandak, Jakarta Selatan',
             'password' => $defaultPassword,
             'role' => 'owner',
         ]);
@@ -54,6 +58,10 @@ class DummyDataSeeder extends Seeder
         $ownerAdr = User::create([
             'name' => 'HRD ADR',
             'email' => 'hrd@adrproject.com',
+            'phone' => '081298765433',
+            'gender' => 'female',
+            'birth_date' => '1992-08-20',
+            'address' => 'Jl. Ir. H. Juanda No. 88, Dago, Bandung',
             'password' => $defaultPassword,
             'role' => 'owner',
         ]);
@@ -226,6 +234,10 @@ class DummyDataSeeder extends Seeder
             $mainUser = User::create([
                 'name' => $mainEmpData['name'],
                 'email' => $mainEmpData['email'],
+                'phone' => $mainEmpData['phone'],
+                'gender' => $mainEmpData['gender'],
+                'birth_date' => '1996-05-15',
+                'address' => $company->city,
                 'password' => $defaultPassword,
                 'role' => 'employee',
             ]);
@@ -235,16 +247,12 @@ class DummyDataSeeder extends Seeder
                 'company_id' => $company->id,
                 'name' => $mainEmpData['name'],
                 'email' => $mainEmpData['email'],
-                'phone' => $mainEmpData['phone'],
-                'gender' => $mainEmpData['gender'],
                 'nik' => '3271' . rand(100000000000, 999999999999),
                 'nip' => $compData['prefix_nip'] . '-001',
                 'branch_id' => $branchIds[0],
                 'division_id' => $divisionIds[0],
                 'position_id' => $positionIds[1],
                 'joined_at' => '2024-01-01',
-                'birth_date' => '1996-05-15',
-                'address' => $company->city,
                 'bank_name' => 'BCA',
                 'bank_account_number' => '8271' . rand(100000, 999999),
                 'bank_account_name' => $mainEmpData['name'],
@@ -254,6 +262,14 @@ class DummyDataSeeder extends Seeder
                 'daily_allowance' => 50000,
                 'other_allowance' => 500000,
                 'overtime_rate_per_hour' => 50000,
+                'npwp' => '09.123.456.7-012.000',
+                'ptkp_status' => 'TK/0',
+                'taxable' => true,
+                'bpjs_kesehatan_no' => '0001234567890',
+                'jht_no' => '21012345678',
+                'jp_no' => '21012345678',
+                'jkk_no' => '21012345678',
+                'jkm_no' => '21012345678',
                 'is_active' => true,
             ]);
 
@@ -278,6 +294,10 @@ class DummyDataSeeder extends Seeder
                 $u = User::create([
                     'name' => $other['name'],
                     'email' => $email,
+                    'phone' => '0812' . rand(10000000, 99999999),
+                    'gender' => $other['gender'],
+                    'birth_date' => '199' . rand(0, 9) . '-' . sprintf('%02d', rand(1, 12)) . '-' . sprintf('%02d', rand(1, 28)),
+                    'address' => $company->city,
                     'password' => $defaultPassword,
                     'role' => 'employee',
                 ]);
@@ -287,21 +307,22 @@ class DummyDataSeeder extends Seeder
                 $divisionId = $divisionIds[$counter % count($divisionIds)];
                 $positionId = $positionIds[$counter % count($positionIds)];
 
+                // 20 Karyawan pertama ada BPJS (termasuk Employee #1), sisanya dikosongkan
+                $hasBpjs = $counter <= 20;
+                $bpjsKesehatanNo = $hasBpjs ? ('000' . rand(1000000000, 9999999999)) : null;
+                $bpjsTkNo = $hasBpjs ? ('210' . rand(10000000, 99999999)) : null;
+
                 $emp = Employee::create([
                     'user_id' => $u->id,
                     'company_id' => $company->id,
                     'name' => $other['name'],
                     'email' => $email,
-                    'phone' => '0812' . rand(10000000, 99999999),
-                    'gender' => $other['gender'],
                     'nik' => '3271' . rand(100000000000, 999999999999),
                     'nip' => $nip,
                     'branch_id' => $branchId,
                     'division_id' => $divisionId,
                     'position_id' => $positionId,
                     'joined_at' => '2024-' . sprintf('%02d', rand(1, 12)) . '-01',
-                    'birth_date' => '199' . rand(0, 9) . '-' . sprintf('%02d', rand(1, 12)) . '-' . sprintf('%02d', rand(1, 28)),
-                    'address' => $company->city,
                     'bank_name' => ($counter % 2 === 0) ? 'BCA' : 'Mandiri',
                     'bank_account_number' => '5210' . rand(100000, 999999),
                     'bank_account_name' => $other['name'],
@@ -311,6 +332,14 @@ class DummyDataSeeder extends Seeder
                     'daily_allowance' => 40000,
                     'other_allowance' => 250000,
                     'overtime_rate_per_hour' => 40000,
+                    'npwp' => $hasBpjs ? ('09.' . rand(100, 999) . '.' . rand(100, 999) . '.' . rand(1, 9) . '-012.000') : null,
+                    'ptkp_status' => ($counter % 3 === 0) ? 'K/1' : (($counter % 2 === 0) ? 'K/0' : 'TK/0'),
+                    'taxable' => true,
+                    'bpjs_kesehatan_no' => $bpjsKesehatanNo,
+                    'jht_no' => $bpjsTkNo,
+                    'jp_no' => $bpjsTkNo,
+                    'jkk_no' => $bpjsTkNo,
+                    'jkm_no' => $bpjsTkNo,
                     'is_active' => true,
                 ]);
 

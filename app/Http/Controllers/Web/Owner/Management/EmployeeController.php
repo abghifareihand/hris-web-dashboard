@@ -28,7 +28,7 @@ class EmployeeController extends Controller
                 'branch:id,name',
                 'division:id,name',
                 'position:id,name',
-                'user:id,name,email,avatar',
+                'user:id,name,email,phone,gender,birth_date,address,avatar',
             ]);
 
         if ($request->filled('search')) {
@@ -142,9 +142,12 @@ class EmployeeController extends Controller
             $user = User::create([
                 'name' => $request->input('name'),
                 'email' => $request->input('email'),
+                'phone' => $request->input('phone'),
+                'gender' => $request->input('gender'),
+                'birth_date' => $request->input('birth_date'),
+                'address' => $request->input('address'),
                 'password' => Hash::make($request->input('password')),
                 'role' => 'employee',
-                'company_id' => $company->id,
             ]);
 
             $newEmployee = Employee::create([
@@ -152,16 +155,12 @@ class EmployeeController extends Controller
                 'company_id' => $company->id,
                 'name' => $request->input('name'),
                 'email' => $request->input('email'),
-                'phone' => $request->input('phone'),
-                'gender' => $request->input('gender'),
                 'nik' => $request->input('nik'),
                 'nip' => $request->input('nip'),
                 'branch_id' => $request->input('branch_id'),
                 'division_id' => $request->input('division_id'),
                 'position_id' => $request->input('position_id'),
                 'joined_at' => $request->input('joined_at'),
-                'birth_date' => $request->input('birth_date'),
-                'address' => $request->input('address'),
                 
                 // Bank Details
                 'bank_name' => $request->input('bank_name'),
@@ -313,6 +312,10 @@ class EmployeeController extends Controller
                 $userData = [
                     'name' => $request->input('name'),
                     'email' => $request->input('email'),
+                    'phone' => $request->input('phone'),
+                    'gender' => $request->input('gender'),
+                    'birth_date' => $request->input('birth_date'),
+                    'address' => $request->input('address'),
                 ];
 
                 if ($request->filled('password')) {
@@ -325,16 +328,12 @@ class EmployeeController extends Controller
             $employee->update([
                 'name' => $request->input('name'),
                 'email' => $request->input('email'),
-                'phone' => $request->input('phone'),
-                'gender' => $request->input('gender'),
                 'nik' => $request->input('nik'),
                 'nip' => $request->input('nip'),
                 'branch_id' => $request->input('branch_id'),
                 'division_id' => $request->input('division_id'),
                 'position_id' => $request->input('position_id'),
                 'joined_at' => $request->input('joined_at'),
-                'birth_date' => $request->input('birth_date'),
-                'address' => $request->input('address'),
                 'is_active' => $request->boolean('is_active', true),
 
                 // Bank Details

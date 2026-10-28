@@ -84,26 +84,50 @@ const formatDate = (dateStr) => {
                 </div>
 
                 <div class="space-y-4">
-                    <div>
-                        <span class="text-xs text-slate-500 block">Nama Lengkap</span>
-                        <span class="text-sm font-semibold text-slate-800">{{ user?.name || '-' }}</span>
-                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <span class="text-xs text-slate-500 block">Nama Lengkap</span>
+                            <span class="text-sm font-semibold text-slate-800">{{ user?.name || '-' }}</span>
+                        </div>
 
-                    <div>
-                        <span class="text-xs text-slate-500 block">Alamat Email</span>
-                        <span class="text-sm font-semibold text-slate-800">{{ user?.email || '-' }}</span>
-                    </div>
+                        <div>
+                            <span class="text-xs text-slate-500 block">Alamat Email</span>
+                            <span class="text-sm font-semibold text-slate-800">{{ user?.email || '-' }}</span>
+                        </div>
 
-                    <div>
-                        <span class="text-xs text-slate-500 block">Hak Akses / Peran</span>
-                        <div class="mt-1">
-                            <Badge variant="primary" size="sm">
-                                Administrator Utama (Owner)
-                            </Badge>
+                        <div>
+                            <span class="text-xs text-slate-500 block">Nomor Telepon / WhatsApp</span>
+                            <span class="text-sm font-semibold text-slate-800">{{ user?.phone || '-' }}</span>
+                        </div>
+
+                        <div>
+                            <span class="text-xs text-slate-500 block">Jenis Kelamin</span>
+                            <span class="text-sm font-semibold text-slate-800">
+                                {{ user?.gender === 'male' ? 'Laki-laki' : (user?.gender === 'female' ? 'Perempuan' : '-') }}
+                            </span>
+                        </div>
+
+                        <div>
+                            <span class="text-xs text-slate-500 block">Tanggal Lahir</span>
+                            <span class="text-sm font-semibold text-slate-800">{{ formatDate(user?.birth_date) }}</span>
+                        </div>
+
+                        <div>
+                            <span class="text-xs text-slate-500 block">Hak Akses / Peran</span>
+                            <div class="mt-1">
+                                <Badge variant="primary" size="sm">
+                                    Administrator Utama (Owner)
+                                </Badge>
+                            </div>
                         </div>
                     </div>
 
                     <div>
+                        <span class="text-xs text-slate-500 block">Alamat Tempat Tinggal (Domisili)</span>
+                        <span class="text-sm font-semibold text-slate-800">{{ user?.address || '-' }}</span>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-100">
                         <span class="text-xs text-slate-500 block">Akun Dibuat</span>
                         <span class="text-sm font-semibold text-slate-800">{{ formatDate(user?.created_at) }}</span>
                     </div>

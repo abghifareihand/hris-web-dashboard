@@ -31,9 +31,11 @@ class SendOtpMail extends Mailable
     {
         $appName = config('app.name', 'HRIS SaaS');
 
-        $subject = $this->type === 'reset_password'
-            ? "Kode Verifikasi Reset Kata Sandi - {$appName}"
-            : "Kode Verifikasi Akun - {$appName}";
+        $subject = match ($this->type) {
+            'reset_password' => "Kode Verifikasi Reset Kata Sandi - {$appName}",
+            'change_email' => "Kode Verifikasi Perubahan Email - {$appName}",
+            default => "Kode Verifikasi Akun - {$appName}",
+        };
 
         return new Envelope(
             subject: $subject,

@@ -320,7 +320,7 @@ const payrollHeaders = [
                                 <span class="font-medium text-rose-700">-{{ formatRupiah(selectedPayroll.late_penalty_amount) }}</span>
                             </div>
                             <div v-if="selectedPayroll.alpha_penalty_amount > 0" class="flex justify-between text-slate-600">
-                                <span>Potongan Tidak Hadir (Alpha)</span>
+                                <span>Potongan Ketidakhadiran (Alpha)</span>
                                 <span class="font-medium text-rose-700">-{{ formatRupiah(selectedPayroll.alpha_penalty_amount) }}</span>
                             </div>
                             <div v-if="selectedPayroll.pph21_amount > 0" class="flex justify-between text-slate-600">

@@ -55,6 +55,7 @@ class ProfileController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
+            'nik' => 'nullable|string|max:20',
             'phone' => 'nullable|string|max:20',
             'gender' => 'nullable|in:male,female',
             'birth_date' => 'nullable|date',
@@ -62,12 +63,17 @@ class ProfileController extends Controller
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,svg,webp|max:2048',
         ], [
             'name.required' => 'Nama lengkap wajib diisi.',
+            'nik.max' => 'NIK maksimal 20 digit.',
             'avatar.image' => 'Berkas foto profil harus berupa gambar.',
             'avatar.max' => 'Ukuran foto profil maksimal 2MB.',
         ]);
 
         DB::transaction(function () use ($request, $user, $employee) {
             $user->name = $request->name;
+            $user->phone = $request->phone;
+            $user->gender = $request->gender;
+            $user->birth_date = $request->birth_date;
+            $user->address = $request->address;
 
             if ($request->hasFile('avatar')) {
                 if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
@@ -79,13 +85,11 @@ class ProfileController extends Controller
 
             $user->save();
 
-            $employee->update([
-                'name' => $request->name,
-                'phone' => $request->phone,
-                'gender' => $request->gender,
-                'birth_date' => $request->birth_date,
-                'address' => $request->address,
-            ]);
+            $employeeUpdate = ['name' => $request->name];
+            if ($request->has('nik')) {
+                $employeeUpdate['nik'] = $request->nik;
+            }
+            $employee->update($employeeUpdate);
         });
 
         return redirect()->route('employee.profile.index')

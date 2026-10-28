@@ -12,6 +12,13 @@ class Employee extends Model
 
     protected $guarded = ['id'];
 
+    protected $appends = [
+        'phone',
+        'gender',
+        'birth_date',
+        'address',
+    ];
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -64,5 +71,25 @@ class Employee extends Model
     public function feedbacks()
     {
         return $this->hasMany(Feedback::class);
+    }
+
+    public function getPhoneAttribute()
+    {
+        return $this->user?->phone;
+    }
+
+    public function getGenderAttribute()
+    {
+        return $this->user?->gender;
+    }
+
+    public function getBirthDateAttribute()
+    {
+        return $this->user?->birth_date;
+    }
+
+    public function getAddressAttribute()
+    {
+        return $this->user?->address;
     }
 }

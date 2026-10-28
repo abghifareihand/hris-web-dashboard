@@ -178,6 +178,9 @@ class PendingEmployeeController extends Controller
             $user = User::create([
                 'name'              => $pending->name,
                 'email'             => $pending->email,
+                'phone'             => $pending->phone,
+                'gender'            => $request->input('gender'),
+                'address'           => $pending->address,
                 'password'          => $pending->password, // Already hashed bcrypt
                 'role'              => 'employee',
                 'email_verified_at' => now(),
@@ -196,11 +199,8 @@ class PendingEmployeeController extends Controller
                 'position_id'  => $positionId,
                 'name'         => $pending->name,
                 'email'        => $pending->email,
-                'phone'        => $pending->phone,
-                'address'      => $pending->address,
                 'nip'          => $request->input('nip'),
                 'nik'          => $request->input('nik'),
-                'gender'       => $request->input('gender'),
                 'joined_at'    => $request->input('joined_at', now()->format('Y-m-d')),
                 'basic_salary' => $request->input('basic_salary', 0),
                 'is_active'    => true,

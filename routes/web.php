@@ -230,6 +230,7 @@ Route::middleware('auth')->group(function () {
                 Route::get('/{id}', [PayrollController::class, 'show'])->name('show');
                 Route::get('/{id}/slips', [PayrollController::class, 'printSlips'])->name('slips');
                 Route::get('/{id}/slips-f4', [PayrollController::class, 'printSlipsF4'])->name('slips-f4');
+                Route::get('/{id}/slips-f4-grid8', [PayrollController::class, 'printSlipsF4Grid8'])->name('slips-f4-grid8');
                 Route::get('/{id}/slips/{itemId}', [PayrollController::class, 'printSingleSlip'])->name('slip-single');
                 Route::get('/{id}/items/{itemId}', [PayrollController::class, 'showItem'])->name('items.show');
                 Route::get('/{id}/export-bank-excel', [PayrollController::class, 'exportBankExcel'])->name('export-bank-excel');

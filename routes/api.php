@@ -19,6 +19,7 @@ Route::prefix('auth')->group(function () {
         Route::get('/profile/owner', [AuthController::class, 'profileOwner']);
         Route::get('/profile/employee', [AuthController::class, 'profileEmployee']);
         Route::get('/me', [AuthController::class, 'me']);
+        Route::post('/change-email', [AuthController::class, 'changeEmail']);
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::post('/fcm-token', [AuthController::class, 'updateFcmToken']);
     });
@@ -198,6 +199,7 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
     Route::get('/profile', [\App\Http\Controllers\Api\Owner\ProfileController::class, 'show']);
     Route::post('/profile', [\App\Http\Controllers\Api\Owner\ProfileController::class, 'update']);
     Route::post('/change-password', [\App\Http\Controllers\Api\Owner\ProfileController::class, 'changePassword']);
+    Route::post('/change-email', [AuthController::class, 'changeEmail']);
 
     // Notifications for Owner
     Route::prefix('notifications')->group(function () {
@@ -281,6 +283,7 @@ Route::middleware('auth:sanctum')->prefix('employee')->group(function () {
     Route::get('/profile', [\App\Http\Controllers\Api\Employee\ProfileController::class, 'show']);
     Route::post('/profile', [\App\Http\Controllers\Api\Employee\ProfileController::class, 'update']);
     Route::post('/change-password', [\App\Http\Controllers\Api\Employee\ProfileController::class, 'changePassword']);
+    Route::post('/change-email', [AuthController::class, 'changeEmail']);
 
     // THR (Tunjangan Hari Raya) for Employee
     Route::get('/thr', [\App\Http\Controllers\Api\Employee\ThrController::class, 'index']);
