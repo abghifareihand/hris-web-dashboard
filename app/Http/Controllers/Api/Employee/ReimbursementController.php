@@ -119,5 +119,46 @@ class ReimbursementController extends Controller
             'message' => 'Pengajuan klaim biaya berhasil dikirim. Menunggu persetujuan.',
         ], 201);
     }
+
+    /**
+     * Cancel a pending reimbursement request by the employee.
+     */
+    public function cancel(Request $request, $id)
+    {
+        $employee = $request->user()->employee;
+        if (!$employee) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Data karyawan tidak ditemukan.'
+            ], 404);
+        }
+
+        $reimbursement = Reimbursement::where('id', $id)
+            ->where('employee_id', $employee->id)
+            ->first();
+
+        if (!$reimbursement) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Pengajuan klaim biaya tidak ditemukan.'
+            ], 404);
+        }
+
+        if ($reimbursement->status !== 'pending') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Hanya pengajuan dengan status menunggu (pending) yang dapat dibatalkan.'
+            ], 422);
+        }
+
+        $reimbursement->update([
+            'status' => 'cancelled'
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Pengajuan klaim biaya berhasil dibatalkan.'
+        ]);
+    }
 }
 

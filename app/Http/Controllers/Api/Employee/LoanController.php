@@ -159,7 +159,6 @@ class LoanController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => $validator->errors()->first(),
-                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -228,6 +227,47 @@ class LoanController extends Controller
             'status' => true,
             'message' => 'Pengajuan pinjaman berhasil dikirim. Menunggu persetujuan.',
         ], 201);
+    }
+
+    /**
+     * Cancel a pending loan request by the employee.
+     */
+    public function cancel(Request $request, $id)
+    {
+        $employee = $request->user()->employee;
+        if (!$employee) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Data karyawan tidak ditemukan.'
+            ], 404);
+        }
+
+        $loan = Loan::where('id', $id)
+            ->where('employee_id', $employee->id)
+            ->first();
+
+        if (!$loan) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Pengajuan pinjaman tidak ditemukan.'
+            ], 404);
+        }
+
+        if ($loan->status !== 'pending') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Hanya pengajuan dengan status menunggu (pending) yang dapat dibatalkan.'
+            ], 422);
+        }
+
+        $loan->update([
+            'status' => 'cancelled'
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Pengajuan pinjaman berhasil dibatalkan.'
+        ]);
     }
 }
 

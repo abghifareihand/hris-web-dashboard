@@ -220,10 +220,12 @@ Route::middleware('auth:sanctum')->prefix('employee')->group(function () {
     Route::get('/schedule-swaps/personal', [\App\Http\Controllers\Api\Employee\ScheduleController::class, 'getPersonalSwaps']);
     Route::get('/schedule-swaps/personal/{id}', [\App\Http\Controllers\Api\Employee\ScheduleController::class, 'getPersonalSwapDetail']);
     Route::post('/schedule-swaps/personal', [\App\Http\Controllers\Api\Employee\ScheduleController::class, 'storePersonalSwap']);
+    Route::post('/schedule-swaps/personal/{id}/cancel', [\App\Http\Controllers\Api\Employee\ScheduleController::class, 'cancelPersonalSwap']);
 
     Route::get('/schedule-swaps/team', [\App\Http\Controllers\Api\Employee\ScheduleController::class, 'getTeamSwaps']);
     Route::get('/schedule-swaps/team/{id}', [\App\Http\Controllers\Api\Employee\ScheduleController::class, 'getTeamSwapDetail']);
     Route::post('/schedule-swaps/team', [\App\Http\Controllers\Api\Employee\ScheduleController::class, 'storeTeamSwap']);
+    Route::post('/schedule-swaps/team/{id}/cancel', [\App\Http\Controllers\Api\Employee\ScheduleController::class, 'cancelTeamSwap']);
 
     // Leaves for Employee
     Route::get('/leaves/balances', [\App\Http\Controllers\Api\Employee\LeaveController::class, 'getBalances']);
@@ -265,10 +267,12 @@ Route::middleware('auth:sanctum')->prefix('employee')->group(function () {
     Route::get('/loans', [\App\Http\Controllers\Api\Employee\LoanController::class, 'index']);
     Route::get('/loans/settings', [\App\Http\Controllers\Api\Employee\LoanController::class, 'settings']);
     Route::post('/loans', [\App\Http\Controllers\Api\Employee\LoanController::class, 'store']);
+    Route::post('/loans/{id}/cancel', [\App\Http\Controllers\Api\Employee\LoanController::class, 'cancel']);
 
     // Reimbursements (Klaim Biaya Operasional) for Employee
     Route::get('/reimbursements', [\App\Http\Controllers\Api\Employee\ReimbursementController::class, 'index']);
     Route::post('/reimbursements', [\App\Http\Controllers\Api\Employee\ReimbursementController::class, 'store']);
+    Route::post('/reimbursements/{id}/cancel', [\App\Http\Controllers\Api\Employee\ReimbursementController::class, 'cancel']);
 
     // Announcements (Pengumuman) for Employee
     Route::get('/announcements', [\App\Http\Controllers\Api\Employee\AnnouncementController::class, 'index']);

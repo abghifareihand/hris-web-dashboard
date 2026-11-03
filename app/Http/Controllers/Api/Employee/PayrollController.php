@@ -32,10 +32,13 @@ class PayrollController extends Controller
             'employee.division',
             'employee.branch',
         ])
-        ->where('employee_id', $employee->id)
-        ->whereHas('payroll', function ($q) {
-            $q->where('status', 'paid');
-        });
+        ->where('employee_id', $employee->id);
+
+        if ($request->filled('status')) {
+            $query->whereHas('payroll', function ($q) use ($request) {
+                $q->where('status', $request->status);
+            });
+        }
 
         if ($request->filled('year')) {
             $query->whereHas('payroll', function ($q) use ($request) {
@@ -135,9 +138,6 @@ class PayrollController extends Controller
         ])
         ->where('id', $id)
         ->where('employee_id', $employee->id)
-        ->whereHas('payroll', function ($q) {
-            $q->where('status', 'paid');
-        })
         ->firstOrFail();
 
         $payroll = $item->payroll;

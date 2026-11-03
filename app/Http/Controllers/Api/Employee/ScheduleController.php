@@ -146,6 +146,7 @@ class ScheduleController extends Controller
         $endDate = $request->input('end_date');
 
         $swaps = SwapPersonal::where('employee_id', $employee->id)
+            ->where('status', '!=', 'cancelled')
             ->when($status, function ($query, $status) {
                 return $query->where('status', $status);
             })
@@ -271,6 +272,7 @@ class ScheduleController extends Controller
 
         $swaps = SwapTeam::with(['targetEmployee:id,name,nip'])
             ->where('requestor_id', $employee->id)
+            ->where('status', '!=', 'cancelled')
             ->when($status, function ($query, $status) {
                 return $query->where('status', $status);
             })
@@ -580,6 +582,88 @@ class ScheduleController extends Controller
                 'requestor_schedule' => $requestorSchedule,
                 'target_schedule' => $targetSchedule
             ]
+        ]);
+    }
+
+    /**
+     * Cancel Personal Swap Request by Employee
+     */
+    public function cancelPersonalSwap(Request $request, $id)
+    {
+        $employee = $request->user()->employee;
+        if (!$employee) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Hanya employee yang bisa mengakses.'
+            ], 403);
+        }
+
+        $swap = SwapPersonal::where('id', $id)
+            ->where('employee_id', $employee->id)
+            ->first();
+
+        if (!$swap) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Data pengajuan tukar jadwal pribadi tidak ditemukan.'
+            ], 404);
+        }
+
+        if ($swap->status !== 'pending') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Hanya pengajuan dengan status menunggu (pending) yang dapat dibatalkan.'
+            ], 422);
+        }
+
+        $swap->update([
+            'status' => 'cancelled'
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Pengajuan tukar jadwal pribadi berhasil dibatalkan.'
+        ]);
+    }
+
+    /**
+     * Cancel Team Swap Request by Requestor Employee
+     */
+    public function cancelTeamSwap(Request $request, $id)
+    {
+        $employee = $request->user()->employee;
+        if (!$employee) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Hanya employee yang bisa mengakses.'
+            ], 403);
+        }
+
+        $swap = SwapTeam::where('id', $id)
+            ->where('requestor_id', $employee->id)
+            ->first();
+
+        if (!$swap) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Data pengajuan tukar jadwal tim tidak ditemukan atau Anda bukan pemohon permohonan ini.'
+            ], 404);
+        }
+
+        if ($swap->status !== 'pending') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Hanya pengajuan dengan status menunggu (pending) yang dapat dibatalkan.'
+            ], 422);
+        }
+
+        $swap->update([
+            'status' => 'cancelled'
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Pengajuan tukar jadwal tim berhasil dibatalkan.'
         ]);
     }
 }

@@ -124,11 +124,12 @@ let approvalStartTime = 0;
 let isInitialNotifCheckDone = false;
 
 let notificationAudio = null;
+let lastSoundPlayedAt = 0;
 
 const initAudio = () => {
     if (!notificationAudio && typeof window !== 'undefined') {
         notificationAudio = document.getElementById('approvalNotificationSound') || new Audio('/sounds/notification.wav');
-        notificationAudio.volume = 0.9;
+        notificationAudio.volume = 0.6;
     }
 };
 
@@ -148,7 +149,7 @@ const playSynthChime = () => {
         const gain1 = ctx.createGain();
         osc1.type = 'sine';
         osc1.frequency.setValueAtTime(659.25, now);
-        gain1.gain.setValueAtTime(0.45, now);
+        gain1.gain.setValueAtTime(0.35, now);
         gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
         osc1.connect(gain1);
         gain1.connect(ctx.destination);
@@ -160,7 +161,7 @@ const playSynthChime = () => {
         const gain2 = ctx.createGain();
         osc2.type = 'sine';
         osc2.frequency.setValueAtTime(987.77, now + 0.12);
-        gain2.gain.setValueAtTime(0.5, now + 0.12);
+        gain2.gain.setValueAtTime(0.4, now + 0.12);
         gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
         osc2.connect(gain2);
         gain2.connect(ctx.destination);
@@ -172,6 +173,13 @@ const playSynthChime = () => {
 };
 
 const playAlertSound = () => {
+    const now = Date.now();
+    // Throttle: Bunyi maksimal 1 kali per 5 detik agar tidak memekakkan telinga jika ada batch
+    if (now - lastSoundPlayedAt < 5000) {
+        return;
+    }
+    lastSoundPlayedAt = now;
+
     try {
         initAudio();
         if (notificationAudio) {
@@ -204,12 +212,38 @@ const getSeenNotifIds = () => {
     }
 };
 
-const markNotifAsSeen = (id) => {
+const saveSeenNotifIds = (seenSet) => {
     try {
-        const seen = getSeenNotifIds();
-        seen.add(id);
-        sessionStorage.setItem('hris_seen_approval_ids', JSON.stringify([...seen]));
+        const arr = [...seenSet].slice(-100);
+        sessionStorage.setItem('hris_seen_approval_ids', JSON.stringify(arr));
     } catch {}
+};
+
+const markNotifAsSeen = (id) => {
+    const seen = getSeenNotifIds();
+    seen.add(id);
+    saveSeenNotifIds(seen);
+};
+
+// Cek apakah sebuah notifikasi benar-benar baru terjadi (maksimal 2 menit terakhir)
+// Notifikasi yang dibuat > 2 menit yang lalu adalah notifikasi lama (cukup di lonceng notifikasi, jangan pop up suara)
+const isRealtimeAlert = (notif) => {
+    if (!notif?.created_at) return false;
+    const notifTime = new Date(notif.created_at).getTime();
+    if (isNaN(notifTime)) return false;
+    const now = Date.now();
+    return (now - notifTime) <= 120 * 1000; // 2 menit
+};
+
+// Tandai semua notifikasi yang sudah ada saat halaman dibuka agar tidak berbunyi spam
+const markExistingNotificationsAsSeen = () => {
+    const notifs = recentNotifications.value || [];
+    const seen = getSeenNotifIds();
+    notifs.forEach(n => {
+        if (n && n.id) seen.add(n.id);
+    });
+    saveSeenNotifIds(seen);
+    isInitialNotifCheckDone = true;
 };
 
 const startApprovalProgress = (duration) => {
@@ -268,19 +302,43 @@ const resumeApprovalAlert = () => {
 
 const checkPendingApprovalsNotification = () => {
     if (authUser.value?.role !== 'owner') return;
+
+    // Jika belum inisialisasi awal saat buka web, tandai yang lama dan jangan pop up
+    if (!isInitialNotifCheckDone) {
+        markExistingNotificationsAsSeen();
+        return;
+    }
+
     const notifs = recentNotifications.value || [];
     const seen = getSeenNotifIds();
 
-    const candidate = notifs.find(n => {
+    // Hanya ambil notifikasi yang:
+    // 1. Belum dibaca
+    // 2. Belum pernah dimunculkan (not in seen)
+    // 3. Masuk secara realtime (dibuat dalam 2 menit terakhir)
+    const freshNotifs = notifs.filter(n => {
         if (!n || n.read_at) return false;
         if (seen.has(n.id)) return false;
-        return true;
+        return isRealtimeAlert(n);
     });
 
-    if (candidate) {
-        triggerApprovalAlert(candidate);
+    // Tandai juga notifikasi lama yang belum di-seen agar tidak dicek berulang
+    notifs.forEach(n => {
+        if (n && n.id && !isRealtimeAlert(n)) {
+            seen.add(n.id);
+        }
+    });
+
+    if (freshNotifs.length > 0) {
+        // Tandai SEMUA freshNotifs sebagai seen sekaligus agar tidak berulang tiap 8 detik
+        freshNotifs.forEach(n => seen.add(n.id));
+        saveSeenNotifIds(seen);
+
+        // Munculkan popup untuk notifikasi yang paling baru
+        triggerApprovalAlert(freshNotifs[0]);
+    } else {
+        saveSeenNotifIds(seen);
     }
-    isInitialNotifCheckDone = true;
 };
 
 watch(
@@ -354,11 +412,9 @@ onMounted(() => {
     document.addEventListener('keydown', unlockAudio, { once: true });
 
     if (authUser.value?.role === 'owner') {
+        markExistingNotificationsAsSeen();
         // Polling cepat setiap 8 detik (antara 5-10 detik)
         pollInterval = setInterval(pollNotifications, 8000);
-        setTimeout(() => {
-            checkPendingApprovalsNotification();
-        }, 1200);
     }
 });
 

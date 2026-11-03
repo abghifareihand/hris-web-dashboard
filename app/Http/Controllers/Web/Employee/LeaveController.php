@@ -131,12 +131,22 @@ class LeaveController extends Controller
         $employee = $request->user()->employee;
         if (!$employee) abort(403);
 
+        $minDate = Carbon::today()->subDays(3)->toDateString();
+
         $request->validate([
             'leave_category_id' => 'required|exists:leave_categories,id',
-            'start_date' => 'required|date',
+            'start_date' => 'required|date|after_or_equal:' . $minDate,
             'end_date' => 'required|date|after_or_equal:start_date',
             'reason' => 'required|string|max:1000',
             'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+        ], [
+            'leave_category_id.required' => 'Kategori cuti wajib dipilih.',
+            'leave_category_id.exists' => 'Kategori cuti tidak valid.',
+            'start_date.required' => 'Tanggal mulai cuti wajib diisi.',
+            'start_date.after_or_equal' => 'Tanggal mulai cuti maksimal mundur 3 hari yang lalu (' . Carbon::parse($minDate)->translatedFormat('d F Y') . '). Pengajuan lebih lama dari itu tidak diperbolehkan.',
+            'end_date.required' => 'Tanggal selesai cuti wajib diisi.',
+            'end_date.after_or_equal' => 'Tanggal selesai cuti harus sama atau setelah tanggal mulai.',
+            'reason.required' => 'Alasan cuti wajib diisi.',
         ]);
 
         $category = LeaveCategory::where('company_id', $employee->company_id)

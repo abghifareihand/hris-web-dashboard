@@ -27,13 +27,13 @@ class PayrollController extends Controller
             'employee.division',
             'employee.branch',
         ])
-        ->where('employee_id', $employee->id)
-        ->whereHas('payroll', function ($q) use ($selectedYear) {
-            $q->where('status', 'paid');
-            if ($selectedYear) {
+        ->where('employee_id', $employee->id);
+
+        if ($selectedYear) {
+            $query->whereHas('payroll', function ($q) use ($selectedYear) {
                 $q->whereYear('start_date', $selectedYear);
-            }
-        });
+            });
+        }
 
         $payrollItems = $query->latest('id')->paginate(10)->withQueryString();
 
@@ -49,7 +49,8 @@ class PayrollController extends Controller
                 'period_label' => $start ? $start->locale('id')->translatedFormat('F Y') : '-',
                 'period_start' => $start ? $start->format('d M Y') : '-',
                 'period_end' => $end ? $end->format('d M Y') : '-',
-                'paid_at' => ($payroll && $payroll->paid_at) ? Carbon::parse($payroll->paid_at)->locale('id')->translatedFormat('d M Y, H:i') . ' WIB' : 'Sudah Dibayar',
+                'status' => $payroll ? $payroll->status : 'process',
+                'paid_at' => ($payroll && $payroll->paid_at) ? Carbon::parse($payroll->paid_at)->locale('id')->translatedFormat('d M Y, H:i') . ' WIB' : ($payroll && $payroll->status === 'process' ? 'Sedang Diproses' : '-'),
                 'net_salary' => (int) $item->net_salary,
                 'total_earnings' => (int) $item->total_earnings,
                 'total_deductions' => (int) $item->total_deductions,
@@ -107,9 +108,6 @@ class PayrollController extends Controller
         ])
         ->where('id', $id)
         ->where('employee_id', $employee->id)
-        ->whereHas('payroll', function ($q) {
-            $q->where('status', 'paid');
-        })
         ->firstOrFail();
 
         $payroll = $item->payroll;

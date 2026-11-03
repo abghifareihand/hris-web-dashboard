@@ -186,7 +186,9 @@ class LoanController extends Controller
             return back()->with('error', 'Hanya pengajuan yang berstatus menunggu yang dapat dibatalkan.');
         }
 
-        $loan->delete();
+        $loan->update([
+            'status' => 'cancelled'
+        ]);
 
         return back()->with('success', 'Pengajuan pinjaman kasbon berhasil dibatalkan.');
     }

@@ -19,7 +19,7 @@ return new class extends Migration
             $table->decimal('amount', 15, 2);
             $table->integer('tenor'); // in months
             $table->text('description')->nullable();
-            $table->enum('status', ['pending', 'approved', 'rejected', 'paid'])->default('approved');
+            $table->enum('status', ['pending', 'approved', 'rejected', 'paid', 'cancelled'])->default('approved');
             $table->timestamps();
         });
     }

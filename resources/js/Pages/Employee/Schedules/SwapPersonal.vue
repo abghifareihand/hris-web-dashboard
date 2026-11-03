@@ -73,6 +73,7 @@ const statusOptions = [
     { value: 'pending', label: 'Menunggu Persetujuan' },
     { value: 'approved', label: 'Disetujui' },
     { value: 'rejected', label: 'Ditolak' },
+    { value: 'cancelled', label: 'Dibatalkan' },
 ];
 
 const isModalOpen = ref(false);
@@ -118,6 +119,8 @@ const getBadgeVariant = (status) => {
             return 'success';
         case 'rejected':
             return 'danger';
+        case 'cancelled':
+            return 'secondary';
         case 'pending':
         default:
             return 'warning';
@@ -130,6 +133,8 @@ const getStatusLabel = (status) => {
             return 'Disetujui';
         case 'rejected':
             return 'Ditolak';
+        case 'cancelled':
+            return 'Dibatalkan';
         case 'pending':
         default:
             return 'Menunggu Review';

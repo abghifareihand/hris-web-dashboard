@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\LeaveBalance;
 use App\Models\LeaveCategory;
 use App\Models\LeaveRequest;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
@@ -123,13 +124,24 @@ class LeaveController extends Controller
             ], 403);
         }
 
+        $minDate = Carbon::today()->subDays(3)->toDateString();
+
         $validator = Validator::make($request->all(), [
             'leave_category_id' => 'required|exists:leave_categories,id',
-            'start_date' => 'required|date',
+            'start_date' => 'required|date|after_or_equal:' . $minDate,
             'end_date' => 'required|date|after_or_equal:start_date',
             'days_count' => 'required|integer|min:1',
             'reason' => 'nullable|string',
             'attachment' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+        ], [
+            'leave_category_id.required' => 'Kategori cuti wajib dipilih.',
+            'leave_category_id.exists' => 'Kategori cuti tidak valid.',
+            'start_date.required' => 'Tanggal mulai cuti wajib diisi.',
+            'start_date.after_or_equal' => 'Tanggal mulai cuti maksimal mundur 3 hari yang lalu (' . Carbon::parse($minDate)->translatedFormat('d F Y') . '). Pengajuan lebih lama dari itu tidak diperbolehkan.',
+            'end_date.required' => 'Tanggal selesai cuti wajib diisi.',
+            'end_date.after_or_equal' => 'Tanggal selesai cuti harus sama atau setelah tanggal mulai.',
+            'days_count.required' => 'Jumlah hari cuti wajib diisi.',
+            'days_count.min' => 'Jumlah hari cuti minimal 1 hari.',
         ]);
 
         if ($validator->fails()) {

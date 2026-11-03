@@ -428,6 +428,10 @@ class ScheduleController extends Controller
             return response()->json(['status' => false, 'message' => 'Data pertukaran jadwal tidak ditemukan.'], 404);
         }
 
+        if ($swap->status !== 'pending') {
+            return response()->json(['status' => false, 'message' => 'Hanya pertukaran jadwal berstatus pending yang dapat disetujui.'], 422);
+        }
+
         \Illuminate\Support\Facades\DB::transaction(function () use ($swap, $company) {
             $swap->update([
                 'status' => 'approved',
@@ -498,6 +502,10 @@ class ScheduleController extends Controller
         $swap = SwapPersonal::where('company_id', $company->id)->find($id);
         if (!$swap) {
             return response()->json(['status' => false, 'message' => 'Data pertukaran jadwal tidak ditemukan.'], 404);
+        }
+
+        if ($swap->status !== 'pending') {
+            return response()->json(['status' => false, 'message' => 'Hanya pertukaran jadwal berstatus pending yang dapat disetujui.'], 422);
         }
 
         $swap->update([
@@ -650,6 +658,10 @@ class ScheduleController extends Controller
             return response()->json(['status' => false, 'message' => 'Data pertukaran jadwal tim tidak ditemukan.'], 404);
         }
 
+        if ($swap->status !== 'pending') {
+            return response()->json(['status' => false, 'message' => 'Hanya pertukaran jadwal tim berstatus pending yang dapat diproses.'], 422);
+        }
+
         \Illuminate\Support\Facades\DB::transaction(function () use ($swap, $company) {
             $swap->update([
                 'status' => 'approved',
@@ -760,6 +772,10 @@ class ScheduleController extends Controller
         $swap = SwapTeam::with(['requestor', 'targetEmployee'])->where('company_id', $company->id)->find($id);
         if (!$swap) {
             return response()->json(['status' => false, 'message' => 'Data pertukaran jadwal tim tidak ditemukan.'], 404);
+        }
+
+        if ($swap->status !== 'pending') {
+            return response()->json(['status' => false, 'message' => 'Hanya pertukaran jadwal tim berstatus pending yang dapat diproses.'], 422);
         }
 
         $swap->update([

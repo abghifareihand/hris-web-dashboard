@@ -193,8 +193,8 @@ const payrollHeaders = [
 
                                 <!-- Status -->
                                 <td class="px-5 py-3.5 whitespace-nowrap text-center">
-                                    <Badge variant="success" size="sm">
-                                        Lunas
+                                    <Badge :variant="item.status === 'paid' ? 'success' : (item.status === 'cancelled' ? 'danger' : 'warning')" size="sm">
+                                        {{ item.status === 'paid' ? 'Lunas' : (item.status === 'cancelled' ? 'Dibatalkan' : 'Diproses') }}
                                     </Badge>
                                 </td>
 
@@ -262,7 +262,9 @@ const payrollHeaders = [
                         <div class="text-xl font-bold text-emerald-700">
                             {{ formatRupiah(selectedPayroll.net_salary) }}
                         </div>
-                        <Badge variant="success" size="sm" class="mt-1">Sudah Ditransfer</Badge>
+                        <Badge :variant="selectedPayroll.status === 'paid' ? 'success' : (selectedPayroll.status === 'cancelled' ? 'danger' : 'warning')" size="sm" class="mt-1">
+                            {{ selectedPayroll.status === 'paid' ? 'Sudah Ditransfer' : (selectedPayroll.status === 'cancelled' ? 'Dibatalkan' : 'Sedang Diproses') }}
+                        </Badge>
                     </div>
                 </div>
 
