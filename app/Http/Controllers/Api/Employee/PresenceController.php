@@ -434,7 +434,7 @@ class PresenceController extends Controller
 
             return response()->json([
                 'status' => true,
-                'message' => 'Absen Masuk (Clock In) berhasil.'
+                'message' => 'Absen Masuk berhasil.'
             ]);
         } else {
             // CLOCK OUT
@@ -510,7 +510,7 @@ class PresenceController extends Controller
 
             return response()->json([
                 'status' => true,
-                'message' => 'Absen Pulang (Clock Out) berhasil.'
+                'message' => 'Absen Pulang berhasil.'
             ]);
         }
     }
