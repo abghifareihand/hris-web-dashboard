@@ -616,7 +616,11 @@ class PayrollController extends Controller
             'items.employee.branch:id,name',
             'items.loanInstallment.loan',
             'items.reimbursements'
-        ])->where('company_id', $company->id)->findOrFail($id);
+        ])->where('company_id', $company->id)->find($id);
+
+        if (!$payroll) {
+            return redirect()->route('owner.finance.payrolls.index')->with('error', 'Batch penggajian tidak ditemukan atau telah dihapus.');
+        }
 
         $unpaidLoanInstallments = LoanInstallment::whereHas('loan', function($q) use ($company) {
                 $q->where('company_id', $company->id)->where('status', 'approved');
@@ -644,7 +648,11 @@ class PayrollController extends Controller
     public function showItem($id, $itemId)
     {
         $company = auth()->user()->company;
-        $payroll = Payroll::where('company_id', $company->id)->findOrFail($id);
+        $payroll = Payroll::where('company_id', $company->id)->find($id);
+
+        if (!$payroll) {
+            return redirect()->route('owner.finance.payrolls.index')->with('error', 'Batch penggajian tidak ditemukan atau telah dihapus.');
+        }
 
         $item = $payroll->items()
             ->with([
@@ -656,7 +664,11 @@ class PayrollController extends Controller
                 'loanInstallment.loan',
                 'reimbursements'
             ])
-            ->findOrFail($itemId);
+            ->find($itemId);
+
+        if (!$item) {
+            return redirect()->route('owner.finance.payrolls.show', $id)->with('error', 'Data rincian slip gaji tidak ditemukan atau telah dihapus.');
+        }
 
         $startDate = Carbon::parse($payroll->start_date);
         $endDate = Carbon::parse($payroll->end_date);
@@ -765,7 +777,11 @@ class PayrollController extends Controller
             'items.reimbursements'
         ])
         ->where('company_id', $company->id)
-        ->findOrFail($id);
+        ->find($id);
+
+        if (!$payroll) {
+            return redirect()->route('owner.finance.payrolls.index')->with('error', 'Batch penggajian tidak ditemukan atau telah dihapus.');
+        }
 
         $bpjsTk = $company->bpjsKetenagakerjaan()->firstOrCreate(['company_id' => $company->id]);
         $bpjsKes = $company->bpjsKesehatan()->firstOrCreate(['company_id' => $company->id]);
@@ -787,7 +803,11 @@ class PayrollController extends Controller
             'items.loanInstallment.loan',
         ])
         ->where('company_id', $company->id)
-        ->findOrFail($id);
+        ->find($id);
+
+        if (!$payroll) {
+            return redirect()->route('owner.finance.payrolls.index')->with('error', 'Batch penggajian tidak ditemukan atau telah dihapus.');
+        }
 
         $bpjsTk = $company->bpjsKetenagakerjaan()->firstOrCreate(['company_id' => $company->id]);
         $bpjsKes = $company->bpjsKesehatan()->firstOrCreate(['company_id' => $company->id]);
@@ -837,7 +857,11 @@ class PayrollController extends Controller
             'items.loanInstallment.loan',
         ])
         ->where('company_id', $company->id)
-        ->findOrFail($id);
+        ->find($id);
+
+        if (!$payroll) {
+            return redirect()->route('owner.finance.payrolls.index')->with('error', 'Batch penggajian tidak ditemukan atau telah dihapus.');
+        }
 
         $bpjsTk = $company->bpjsKetenagakerjaan()->firstOrCreate(['company_id' => $company->id]);
         $bpjsKes = $company->bpjsKesehatan()->firstOrCreate(['company_id' => $company->id]);
@@ -907,7 +931,11 @@ class PayrollController extends Controller
             }
         ])
         ->where('company_id', $company->id)
-        ->findOrFail($id);
+        ->find($id);
+
+        if (!$payroll) {
+            return redirect()->route('owner.finance.payrolls.index')->with('error', 'Batch penggajian tidak ditemukan atau telah dihapus.');
+        }
 
         if ($payroll->items->isEmpty()) {
             abort(404, 'Data slip gaji tidak ditemukan');
@@ -926,7 +954,11 @@ class PayrollController extends Controller
     public function exportBankExcel($id)
     {
         $company = auth()->user()->company;
-        $payroll = Payroll::with(['items.employee'])->where('company_id', $company->id)->findOrFail($id);
+        $payroll = Payroll::with(['items.employee'])->where('company_id', $company->id)->find($id);
+
+        if (!$payroll) {
+            return redirect()->route('owner.finance.payrolls.index')->with('error', 'Batch penggajian tidak ditemukan atau telah dihapus.');
+        }
 
         $period = Carbon::parse($payroll->start_date)->locale('id')->translatedFormat('F-Y');
         $filename = 'Bank-Transfer-' . Str::slug($payroll->code) . '-' . $period . '.xlsx';
@@ -942,7 +974,11 @@ class PayrollController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $company = auth()->user()->company;
-        $payroll = Payroll::where('company_id', $company->id)->findOrFail($id);
+        $payroll = Payroll::where('company_id', $company->id)->find($id);
+
+        if (!$payroll) {
+            return redirect()->route('owner.finance.payrolls.index')->with('error', 'Batch penggajian tidak ditemukan atau telah dihapus.');
+        }
         
         $request->validate(['status' => 'required|in:process,paid,cancelled']);
 
@@ -1012,7 +1048,11 @@ class PayrollController extends Controller
     public function updateItems(Request $request, $id)
     {
         $company = auth()->user()->company;
-        $payroll = Payroll::where('company_id', $company->id)->findOrFail($id);
+        $payroll = Payroll::where('company_id', $company->id)->find($id);
+
+        if (!$payroll) {
+            return redirect()->route('owner.finance.payrolls.index')->with('error', 'Batch penggajian tidak ditemukan atau telah dihapus.');
+        }
 
         if ($payroll->status === 'paid') {
             return redirect()->back()->with('error', 'Tidak dapat mengubah data penyesuaian karena status penggajian sudah PAID.');
@@ -1057,7 +1097,11 @@ class PayrollController extends Controller
     public function destroy($id)
     {
         $company = auth()->user()->company;
-        $payroll = Payroll::where('company_id', $company->id)->findOrFail($id);
+        $payroll = Payroll::where('company_id', $company->id)->find($id);
+
+        if (!$payroll) {
+            return redirect()->route('owner.finance.payrolls.index')->with('error', 'Data penggajian tidak ditemukan atau telah dihapus.');
+        }
 
         if ($payroll->status === 'paid') {
             return redirect()->back()->with('error', 'Data penggajian yang sudah berstatus PAID tidak dapat dihapus demi integritas pembukuan keuangan.');

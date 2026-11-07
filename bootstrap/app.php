@@ -49,4 +49,27 @@ return Application::configure(basePath: dirname(__DIR__))
                 ], 422);
             }
         });
+
+        // Gracefully handle 404 & ModelNotFound for Inertia requests & APIs
+        $exceptions->render(function (\Illuminate\Database\Eloquent\ModelNotFoundException|\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, Request $request) {
+            if ($request->is('api/*') || ($request->expectsJson() && !$request->header('X-Inertia'))) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Data tidak ditemukan.',
+                ], 404);
+            }
+
+            if ($request->header('X-Inertia')) {
+                $prevUrl = url()->previous();
+                $currUrl = $request->fullUrl();
+
+                if ($prevUrl && $prevUrl !== $currUrl) {
+                    return redirect($prevUrl)->with('error', 'Data yang Anda akses tidak ditemukan atau telah dihapus.');
+                }
+
+                $role = $request->user()?->role;
+                $fallbackRoute = ($role === 'owner') ? 'owner.dashboard' : (($role === 'admin') ? 'admin.dashboard' : 'employee.dashboard');
+                return redirect()->route($fallbackRoute)->with('error', 'Data yang Anda akses tidak ditemukan atau telah dihapus.');
+            }
+        });
     })->create();

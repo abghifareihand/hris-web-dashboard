@@ -8,6 +8,7 @@ use App\Models\Branch;
 use App\Models\Holiday;
 use App\Models\WorkSchedule;
 use App\Models\AttendanceSetting;
+use App\Models\LeaveRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Validator;
@@ -78,15 +79,53 @@ class PresenceController extends Controller
         // 4. Cek Setting Perusahaan
         $setting = AttendanceSetting::where('company_id', $employee->company_id)->first();
 
+        // 5. Cek Pengajuan Cuti Aktif
+        $activeLeave = LeaveRequest::with('leaveCategory')
+            ->where('employee_id', $employee->id)
+            ->where('status', 'approved')
+            ->where('start_date', '<=', $today)
+            ->where('end_date', '>=', $today)
+            ->first();
+
+        if (!$attendance && $activeLeave) {
+            $attendance = Attendance::updateOrCreate(
+                [
+                    'company_id' => $employee->company_id,
+                    'employee_id' => $employee->id,
+                    'date' => $today,
+                ],
+                [
+                    'attendance_status' => 'leave',
+                    'notes' => 'Cuti: ' . ($activeLeave->leaveCategory->name ?? 'Cuti') . ($activeLeave->reason ? ' (' . $activeLeave->reason . ')' : ''),
+                ]
+            );
+        }
+
         $canClockIn = false;
         $canClockOut = false;
         $clockInMessage = '';
 
-        if ($attendance && $attendance->clock_out_time) {
+        if (($attendance && $attendance->attendance_status === 'leave') || $activeLeave) {
+            $canClockIn = false;
+            $canClockOut = false;
+
+            $categoryName = $activeLeave?->leaveCategory?->name;
+            if (!$categoryName && $attendance?->notes) {
+                if (preg_match('/Cuti:\s*([^(]+)/', $attendance->notes, $matches)) {
+                    $categoryName = trim($matches[1]);
+                }
+            }
+            $categoryName = $categoryName ?: 'Cuti';
+            $clockInMessage = 'Hari ini Anda sedang Cuti (' . $categoryName . ')';
+        } elseif ($attendance && $attendance->attendance_status === 'alpha') {
+            $canClockIn = false;
+            $canClockOut = false;
+            $clockInMessage = 'Hari ini Anda tercatat Alpha.';
+        } elseif ($attendance && $attendance->clock_out_time) {
             $canClockIn = false;
             $canClockOut = false;
             $clockInMessage = 'Anda sudah menyelesaikan absensi hari ini.';
-        } elseif ($attendance && !$attendance->clock_out_time) {
+        } elseif ($attendance && $attendance->clock_in_time && !$attendance->clock_out_time) {
             $canClockIn = false;
             $canClockOut = true;
             $clockInMessage = 'Silakan lakukan absensi keluar.';
@@ -311,6 +350,37 @@ class PresenceController extends Controller
         $now = Carbon::now($tz);
         $division = $employee->division;
         $setting = AttendanceSetting::where('company_id', $employee->company_id)->first();
+
+        // 0. Cek Cuti & Alpha
+        $attendance = Attendance::where('employee_id', $employee->id)->where('date', $today)->first();
+
+        $activeLeave = LeaveRequest::with('leaveCategory')
+            ->where('employee_id', $employee->id)
+            ->where('status', 'approved')
+            ->where('start_date', '<=', $today)
+            ->where('end_date', '>=', $today)
+            ->first();
+
+        if (($attendance && $attendance->attendance_status === 'leave') || $activeLeave) {
+            $categoryName = $activeLeave?->leaveCategory?->name;
+            if (!$categoryName && $attendance?->notes) {
+                if (preg_match('/Cuti:\s*([^(]+)/', $attendance->notes, $matches)) {
+                    $categoryName = trim($matches[1]);
+                }
+            }
+            $categoryName = $categoryName ?: 'Cuti';
+            return response()->json([
+                'status' => false,
+                'message' => 'Hari ini Anda sedang Cuti (' . $categoryName . '). Tidak dapat melakukan absensi.'
+            ], 400);
+        }
+
+        if ($attendance && $attendance->attendance_status === 'alpha') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Hari ini Anda tercatat Alpha. Tidak dapat melakukan absensi.'
+            ], 400);
+        }
         
         // 1. Validasi Jadwal
         $schedule = WorkSchedule::with('shift')->where('employee_id', $employee->id)->where('date', $today)->first();
@@ -369,7 +439,7 @@ class PresenceController extends Controller
         // Cek existing attendance
         $attendance = Attendance::where('employee_id', $employee->id)->where('date', $today)->first();
 
-        if (!$attendance) {
+        if (!$attendance || !$attendance->clock_in_time) {
             // CLOCK IN
             $lateMinutes = 0;
             if ($schedule && $schedule->shift) {
@@ -416,21 +486,36 @@ class PresenceController extends Controller
                 }
             }
 
-            $attendance = Attendance::create([
-                'company_id' => $employee->company_id,
-                'employee_id' => $employee->id,
-                'date' => $today,
-                'shift_id' => $schedule ? $schedule->shift_id : null,
-                'clock_in_time' => $now,
-                'clock_in_latitude' => $request->latitude,
-                'clock_in_longitude' => $request->longitude,
-                'clock_in_address' => $request->address,
-                'clock_in_photo' => $photoPath,
-                'late_minutes' => $lateMinutes,
-                'total_violation_minutes' => $lateMinutes,
-                'notes' => 'Masuk: ' . ($request->notes ?: '-'),
-                'attendance_status' => 'clocked_in'
-            ]);
+            if ($attendance) {
+                $attendance->update([
+                    'shift_id' => $schedule ? $schedule->shift_id : null,
+                    'clock_in_time' => $now,
+                    'clock_in_latitude' => $request->latitude,
+                    'clock_in_longitude' => $request->longitude,
+                    'clock_in_address' => $request->address,
+                    'clock_in_photo' => $photoPath,
+                    'late_minutes' => $lateMinutes,
+                    'total_violation_minutes' => $lateMinutes,
+                    'notes' => 'Masuk: ' . ($request->notes ?: '-'),
+                    'attendance_status' => 'clocked_in'
+                ]);
+            } else {
+                $attendance = Attendance::create([
+                    'company_id' => $employee->company_id,
+                    'employee_id' => $employee->id,
+                    'date' => $today,
+                    'shift_id' => $schedule ? $schedule->shift_id : null,
+                    'clock_in_time' => $now,
+                    'clock_in_latitude' => $request->latitude,
+                    'clock_in_longitude' => $request->longitude,
+                    'clock_in_address' => $request->address,
+                    'clock_in_photo' => $photoPath,
+                    'late_minutes' => $lateMinutes,
+                    'total_violation_minutes' => $lateMinutes,
+                    'notes' => 'Masuk: ' . ($request->notes ?: '-'),
+                    'attendance_status' => 'clocked_in'
+                ]);
+            }
 
             return response()->json([
                 'status' => true,

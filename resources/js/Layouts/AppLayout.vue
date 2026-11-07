@@ -392,6 +392,9 @@ const pollNotifications = () => {
         only: onlyKeys,
         preserveScroll: true,
         preserveState: true,
+        onError: () => {
+            isPolling = false;
+        },
         onFinish: () => {
             isPolling = false;
         },
