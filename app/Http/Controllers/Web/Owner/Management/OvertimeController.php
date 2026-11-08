@@ -182,4 +182,34 @@ class OvertimeController extends Controller
 
         return redirect()->back()->with('success', 'Pengajuan lembur telah ditolak.');
     }
+
+    public function destroy(Request $request, $id)
+    {
+        $company = $request->user()->company;
+        if (!$company) {
+            abort(403, 'Akses ditolak.');
+        }
+
+        $overtime = Overtime::where('company_id', $company->id)->find($id);
+        if (!$overtime) {
+            return redirect()->back()->with('error', 'Data pengajuan lembur tidak ditemukan.');
+        }
+
+        if ($overtime->status === 'approved') {
+            return redirect()->back()->with('error', 'Pengajuan lembur yang sudah disetujui tidak dapat dihapus.');
+        }
+
+        if ($overtime->status === 'pending') {
+            return redirect()->back()->with('error', 'Pengajuan yang masih pending tidak dapat dihapus. Silakan setujui atau tolak terlebih dahulu.');
+        }
+
+        if (!in_array($overtime->status, ['rejected', 'cancelled'])) {
+            return redirect()->back()->with('error', 'Hanya pengajuan yang ditolak atau dibatalkan yang dapat dihapus.');
+        }
+
+        $overtime->delete();
+
+        return redirect()->route('owner.management.overtimes.index')
+            ->with('success', 'Data pengajuan lembur berhasil dihapus.');
+    }
 }

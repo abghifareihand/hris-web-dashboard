@@ -13,6 +13,7 @@ use App\Models\Attendance;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class LeaveController extends Controller
@@ -500,5 +501,39 @@ class LeaveController extends Controller
 
         return redirect()->route('owner.management.leaves.categories.index')
             ->with('success', 'Kategori cuti berhasil dihapus.');
+    }
+
+    public function destroy(Request $request, $id)
+    {
+        $company = $request->user()->company;
+        if (!$company) {
+            abort(403, 'Akses ditolak.');
+        }
+
+        $leave = LeaveRequest::where('company_id', $company->id)->find($id);
+        if (!$leave) {
+            return redirect()->back()->with('error', 'Data pengajuan cuti tidak ditemukan.');
+        }
+
+        if ($leave->status === 'approved') {
+            return redirect()->back()->with('error', 'Pengajuan cuti yang sudah disetujui tidak dapat dihapus.');
+        }
+
+        if ($leave->status === 'pending') {
+            return redirect()->back()->with('error', 'Pengajuan yang masih pending tidak dapat dihapus. Silakan setujui atau tolak terlebih dahulu.');
+        }
+
+        if (!in_array($leave->status, ['rejected', 'cancelled'])) {
+            return redirect()->back()->with('error', 'Hanya pengajuan yang ditolak atau dibatalkan yang dapat dihapus.');
+        }
+
+        if ($leave->attachment && Storage::disk('public')->exists($leave->attachment)) {
+            Storage::disk('public')->delete($leave->attachment);
+        }
+
+        $leave->delete();
+
+        return redirect()->route('owner.management.leaves.index')
+            ->with('success', 'Data pengajuan cuti berhasil dihapus.');
     }
 }

@@ -52,6 +52,8 @@ const filters = reactive({
 const statusOptions = [
     { value: 'approved', label: 'Sedang Berjalan' },
     { value: 'paid', label: 'Lunas (Paid)' },
+    { value: 'rejected', label: 'Ditolak' },
+    { value: 'cancelled', label: 'Dibatalkan' },
 ];
 
 const selectedDeleteId = ref(null);
@@ -401,6 +403,8 @@ const getProgressPercent = (installments) => {
                     <td class="px-5 py-3.5 whitespace-nowrap">
                         <Badge v-if="loan.status === 'paid'" variant="success">Lunas (Paid)</Badge>
                         <Badge v-else-if="loan.status === 'approved'" variant="warning">Berjalan</Badge>
+                        <Badge v-else-if="loan.status === 'rejected'" variant="danger">Ditolak</Badge>
+                        <Badge v-else-if="loan.status === 'cancelled'" variant="secondary">Dibatalkan</Badge>
                         <Badge v-else variant="secondary">{{ loan.status }}</Badge>
                     </td>
 
@@ -419,7 +423,7 @@ const getProgressPercent = (installments) => {
                             </Link>
 
                             <button
-                                v-if="loan.status !== 'paid' && (!loan.installments || getPaidCount(loan.installments) === 0)"
+                                v-if="['rejected', 'cancelled'].includes(loan.status)"
                                 type="button"
                                 class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition inline-flex items-center justify-center cursor-pointer"
                                 title="Hapus Pinjaman"

@@ -14,7 +14,19 @@ const props = defineProps({
 const isConfirmModalOpen = ref(false)
 const selectedInstallment = ref(null)
 const selectedIndex = ref(0)
+const isDeleteModalOpen = ref(false)
 const isProcessing = ref(false)
+const isDeleting = ref(false)
+
+const executeDelete = () => {
+    isDeleting.value = true
+    router.delete(route('owner.finance.loans.destroy', props.loan.id), {
+        onFinish: () => {
+            isDeleting.value = false
+            isDeleteModalOpen.value = false
+        },
+    })
+}
 
 const openConfirmModal = (installment, index) => {
     selectedInstallment.value = installment
@@ -145,8 +157,10 @@ const monthlyInstallment = computed(() => {
                             </span>
                             <Badge v-if="loan.status === 'paid'" variant="success">Lunas (Paid)</Badge>
                             <Badge v-else-if="loan.status === 'approved'" variant="warning">Sedang Berjalan</Badge>
-                            <Badge v-else-if="loan.status === 'pending'" variant="secondary">Menunggu Persetujuan</Badge>
-                            <Badge v-else variant="danger">Ditolak</Badge>
+                            <Badge v-else-if="loan.status === 'pending'" variant="warning">Menunggu Persetujuan</Badge>
+                            <Badge v-else-if="loan.status === 'cancelled'" variant="secondary">Dibatalkan</Badge>
+                            <Badge v-else-if="loan.status === 'rejected'" variant="danger">Ditolak</Badge>
+                            <Badge v-else variant="danger">{{ loan.status }}</Badge>
                         </div>
                         <p class="text-xs sm:text-sm text-slate-500 flex flex-wrap items-center gap-2">
                             <span class="font-medium text-slate-700">{{ loan.employee?.name || '-' }}</span>
@@ -156,6 +170,20 @@ const monthlyInstallment = computed(() => {
                             <span>Tanggal Pinjaman: {{ formatDate(loan.date) }}</span>
                         </p>
                     </div>
+                </div>
+
+                <!-- Action Button -->
+                <div v-if="['rejected', 'cancelled'].includes(loan.status)" class="flex items-center gap-2.5 shrink-0">
+                    <button
+                        type="button"
+                        @click="isDeleteModalOpen = true"
+                        class="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition cursor-pointer"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        <span>Hapus Pinjaman</span>
+                    </button>
                 </div>
             </div>
 
@@ -507,6 +535,43 @@ const monthlyInstallment = computed(() => {
                         @click="executeToggleInstallment"
                     >
                         {{ selectedInstallment.status === 'paid' ? 'Ya, Kembalikan Belum Lunas' : 'Ya, Tandai Lunas' }}
+                    </Button>
+                </div>
+            </div>
+        </Modal>
+
+        <!-- Modal Hapus -->
+        <Modal
+            :show="isDeleteModalOpen"
+            maxWidth="md"
+            @close="isDeleteModalOpen = false"
+        >
+            <div class="p-6">
+                <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                </div>
+                <h3 class="text-lg font-bold text-slate-900 text-center">
+                    Hapus Data Pinjaman?
+                </h3>
+                <p class="text-sm text-slate-600 text-center mt-2">
+                    Apakah Anda yakin ingin menghapus data pinjaman ini? Data yang dihapus tidak dapat dikembalikan.
+                </p>
+                <div class="mt-6 flex items-center justify-center gap-3">
+                    <Button
+                        variant="secondary"
+                        @click="isDeleteModalOpen = false"
+                        :disabled="isDeleting"
+                    >
+                        Batal
+                    </Button>
+                    <Button
+                        variant="danger"
+                        @click="executeDelete"
+                        :loading="isDeleting"
+                    >
+                        Ya, Hapus
                     </Button>
                 </div>
             </div>

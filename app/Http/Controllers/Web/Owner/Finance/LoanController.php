@@ -260,6 +260,22 @@ class LoanController extends Controller
         $company = Auth::user()->company;
         $loan = Loan::where('company_id', $company->id)->findOrFail($id);
 
+        if ($loan->status === 'paid') {
+            return redirect()->back()->with('error', 'Pinjaman yang sudah berstatus lunas tidak dapat dihapus.');
+        }
+
+        if ($loan->status === 'approved') {
+            return redirect()->back()->with('error', 'Pinjaman yang sedang berjalan / sudah disetujui tidak dapat dihapus.');
+        }
+
+        if ($loan->status === 'pending') {
+            return redirect()->back()->with('error', 'Pengajuan pinjaman yang masih pending tidak dapat dihapus. Silakan setujui atau tolak terlebih dahulu.');
+        }
+
+        if (!in_array($loan->status, ['rejected', 'cancelled'])) {
+            return redirect()->back()->with('error', 'Hanya pinjaman yang ditolak atau dibatalkan yang dapat dihapus.');
+        }
+
         $hasPaidInstallment = $loan->installments()->where('status', 'paid')->exists();
         if ($hasPaidInstallment) {
             return redirect()->back()->with('error', 'Pinjaman yang sudah memiliki riwayat pembayaran tidak dapat dihapus.');

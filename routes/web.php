@@ -172,6 +172,7 @@ Route::middleware('auth')->group(function () {
                 Route::post('/pending/{id}/reject', [LeaveController::class, 'reject'])->name('pending.reject');
 
                 Route::get('/', [LeaveController::class, 'index'])->name('index');
+                Route::delete('/{id}', [LeaveController::class, 'destroy'])->name('destroy');
 
                 Route::get('/balance', [LeaveController::class, 'balance'])->name('balance.index');
                 Route::get('/balance/{id}/edit', [LeaveController::class, 'editBalance'])->name('balance.edit');
@@ -191,6 +192,7 @@ Route::middleware('auth')->group(function () {
                 Route::post('/pending/{id}/approve', [OvertimeController::class, 'approve'])->name('pending.approve');
                 Route::post('/pending/{id}/reject', [OvertimeController::class, 'reject'])->name('pending.reject');
                 Route::get('/', [OvertimeController::class, 'index'])->name('index');
+                Route::delete('/{id}', [OvertimeController::class, 'destroy'])->name('destroy');
             });
         });
 

@@ -241,6 +241,18 @@ class ReimbursementController extends Controller
             return redirect()->back()->with('error', 'Klaim biaya yang sudah terhubung dengan penggajian atau sudah berstatus PAID tidak dapat dihapus.');
         }
 
+        if ($reimbursement->status === 'approved') {
+            return redirect()->back()->with('error', 'Klaim biaya yang sudah disetujui tidak dapat dihapus.');
+        }
+
+        if ($reimbursement->status === 'pending') {
+            return redirect()->back()->with('error', 'Pengajuan klaim yang masih pending tidak dapat dihapus. Silakan setujui atau tolak terlebih dahulu.');
+        }
+
+        if (!in_array($reimbursement->status, ['rejected', 'cancelled'])) {
+            return redirect()->back()->with('error', 'Hanya klaim yang ditolak atau dibatalkan yang dapat dihapus.');
+        }
+
         if ($reimbursement->attachment && Storage::disk('public')->exists($reimbursement->attachment)) {
             Storage::disk('public')->delete($reimbursement->attachment);
         }

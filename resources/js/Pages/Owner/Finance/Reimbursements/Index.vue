@@ -332,6 +332,7 @@ const getAttachmentUrl = (path) => {
                                 { value: 'approved', label: 'Disetujui (Approved)', dotClass: 'bg-emerald-500' },
                                 { value: 'paid', label: 'Terbayar (Paid)', dotClass: 'bg-blue-500' },
                                 { value: 'rejected', label: 'Ditolak (Rejected)', dotClass: 'bg-rose-500' },
+                                { value: 'cancelled', label: 'Dibatalkan (Cancelled)', dotClass: 'bg-slate-400' },
                             ]"
                             @change="onFilterChange"
                         />
@@ -421,6 +422,7 @@ const getAttachmentUrl = (path) => {
                         <Badge v-if="item.status === 'paid'" variant="success">Lunas (Paid)</Badge>
                         <Badge v-else-if="item.status === 'approved'" variant="info">Disetujui</Badge>
                         <Badge v-else-if="item.status === 'rejected'" variant="danger">Ditolak</Badge>
+                        <Badge v-else-if="item.status === 'cancelled'" variant="secondary">Dibatalkan</Badge>
                         <Badge v-else variant="warning">{{ item.status }}</Badge>
                     </td>
 
@@ -457,7 +459,7 @@ const getAttachmentUrl = (path) => {
                             </button>
 
                             <button
-                                v-if="item.status !== 'paid' && !item.payroll_item_id"
+                                v-if="['rejected', 'cancelled'].includes(item.status) && !item.payroll_item_id"
                                 type="button"
                                 @click="openDeleteModal(item.id)"
                                 class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
@@ -508,6 +510,7 @@ const getAttachmentUrl = (path) => {
                     <Badge v-if="selectedDetailItem.status === 'paid'" variant="success">Lunas (Paid)</Badge>
                     <Badge v-else-if="selectedDetailItem.status === 'approved'" variant="info">Disetujui</Badge>
                     <Badge v-else-if="selectedDetailItem.status === 'rejected'" variant="danger">Ditolak</Badge>
+                    <Badge v-else-if="selectedDetailItem.status === 'cancelled'" variant="secondary">Dibatalkan</Badge>
                     <Badge v-else variant="warning">{{ selectedDetailItem.status }}</Badge>
                 </div>
 

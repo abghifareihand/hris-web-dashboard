@@ -1,5 +1,5 @@
 <script setup>
-import { reactive } from 'vue';
+import { ref, reactive } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Button from '@/Components/UI/Button.vue';
@@ -10,6 +10,7 @@ import Badge from '@/Components/UI/Badge.vue';
 import DataTable from '@/Components/Table/DataTable.vue';
 import TablePagination from '@/Components/Table/TablePagination.vue';
 import TableEmpty from '@/Components/Table/TableEmpty.vue';
+import Modal from '@/Components/UI/Modal.vue';
 import { useDebounce } from '@/Composables/useDebounce';
 
 defineOptions({
@@ -97,6 +98,28 @@ const hasActiveFilters = () => {
     );
 };
 
+const selectedDeleteLeave = ref(null);
+const isDeleteModalOpen = ref(false);
+const isDeleting = ref(false);
+
+const openDeleteModal = (item) => {
+    selectedDeleteLeave.value = item;
+    isDeleteModalOpen.value = true;
+};
+
+const executeDelete = () => {
+    if (!selectedDeleteLeave.value) return;
+    isDeleting.value = true;
+    router.delete(route('owner.management.leaves.destroy', selectedDeleteLeave.value.id), {
+        preserveScroll: true,
+        onFinish: () => {
+            isDeleting.value = false;
+            isDeleteModalOpen.value = false;
+            selectedDeleteLeave.value = null;
+        },
+    });
+};
+
 const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     return new Date(dateStr).toLocaleDateString('id-ID', {
@@ -110,6 +133,7 @@ const statusVariant = (status) => {
     switch (status) {
         case 'approved': return 'success';
         case 'rejected': return 'danger';
+        case 'cancelled': return 'secondary';
         default: return 'warning';
     }
 };
@@ -118,6 +142,7 @@ const statusLabel = (status) => {
     switch (status) {
         case 'approved': return 'Disetujui';
         case 'rejected': return 'Ditolak';
+        case 'cancelled': return 'Dibatalkan';
         default: return 'Menunggu';
     }
 };
@@ -199,6 +224,7 @@ const getAttachmentUrl = (path) => {
                                 { value: '', label: 'Semua Status' },
                                 { value: 'approved', label: 'Disetujui', dotClass: 'bg-emerald-500' },
                                 { value: 'rejected', label: 'Ditolak', dotClass: 'bg-rose-500' },
+                                { value: 'cancelled', label: 'Dibatalkan', dotClass: 'bg-slate-400' },
                             ]"
                             @change="onFilterChange"
                         />
@@ -250,7 +276,7 @@ const getAttachmentUrl = (path) => {
         </div>
 
         <!-- Table -->
-        <DataTable :headers="['Karyawan', 'Jenis Cuti', 'Periode Cuti', 'Durasi', 'Status', 'Lampiran', 'Alasan / Catatan']">
+        <DataTable :headers="['Karyawan', 'Jenis Cuti', 'Periode Cuti', 'Durasi', 'Status', 'Lampiran', 'Alasan / Catatan', 'Aksi']">
             <template v-if="leaves.data && leaves.data.length > 0">
                 <tr v-for="item in leaves.data" :key="item.id" class="hover:bg-slate-50/70 transition">
                     <td class="px-5 py-3.5">
@@ -301,13 +327,65 @@ const getAttachmentUrl = (path) => {
                             Catatan: {{ item.reject_reason }}
                         </div>
                     </td>
+                    <td class="px-5 py-3.5 whitespace-nowrap text-right">
+                        <button
+                            v-if="['rejected', 'cancelled'].includes(item.status)"
+                            type="button"
+                            @click="openDeleteModal(item)"
+                            class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                            title="Hapus Riwayat Cuti"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                        <span v-else class="text-xs text-slate-300">-</span>
+                    </td>
                 </tr>
             </template>
             <template v-else>
-                <TableEmpty :colspan="7" message="Tidak ada riwayat pengajuan cuti yang cocok dengan filter." />
+                <TableEmpty :colspan="8" message="Tidak ada riwayat pengajuan cuti yang cocok dengan filter." />
             </template>
         </DataTable>
 
         <TablePagination :pagination="leaves" />
+
+        <!-- Modal Hapus -->
+        <Modal
+            :show="isDeleteModalOpen"
+            maxWidth="sm"
+            @close="isDeleteModalOpen = false"
+        >
+            <div>
+                <h3 class="text-base sm:text-lg font-bold text-slate-900">
+                    Hapus Riwayat Cuti
+                </h3>
+                <p class="text-sm text-slate-500 mt-2">
+                    Apakah Anda yakin ingin menghapus data cuti untuk
+                    <span class="font-semibold text-slate-800">{{ selectedDeleteLeave?.employee?.name }}</span>?
+                    Data yang dihapus tidak dapat dikembalikan.
+                </p>
+            </div>
+
+            <template #footer>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    :disabled="isDeleting"
+                    @click="isDeleteModalOpen = false"
+                >
+                    Batal
+                </Button>
+                <Button
+                    type="button"
+                    variant="danger"
+                    :loading="isDeleting"
+                    :disabled="isDeleting"
+                    @click="executeDelete"
+                >
+                    Ya, Hapus
+                </Button>
+            </template>
+        </Modal>
     </div>
 </template>
