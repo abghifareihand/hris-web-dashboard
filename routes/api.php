@@ -50,11 +50,13 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
     Route::get('/schedule-swaps/personal/{id}', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'getPersonalSwapDetail']);
     Route::post('/schedule-swaps/personal/{id}/approve', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'approvePersonalSwap']);
     Route::post('/schedule-swaps/personal/{id}/reject', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'rejectPersonalSwap']);
+    Route::delete('/schedule-swaps/personal/{id}', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'destroyPersonalSwap']);
     
     Route::get('/schedule-swaps/team', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'getTeamSwaps']);
     Route::get('/schedule-swaps/team/{id}', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'getTeamSwapDetail']);
     Route::post('/schedule-swaps/team/{id}/approve', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'approveTeamSwap']);
     Route::post('/schedule-swaps/team/{id}/reject', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'rejectTeamSwap']);
+    Route::delete('/schedule-swaps/team/{id}', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'destroyTeamSwap']);
     
     // Company Profile for Owner
     Route::get('/company', [\App\Http\Controllers\Api\Owner\CompanyController::class, 'show']);
@@ -75,12 +77,14 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
     Route::get('/pending-employees/{id}', [\App\Http\Controllers\Api\Owner\PendingEmployeeController::class, 'show']);
     Route::post('/pending-employees/{id}/approve', [\App\Http\Controllers\Api\Owner\PendingEmployeeController::class, 'approve']);
     Route::post('/pending-employees/{id}/reject', [\App\Http\Controllers\Api\Owner\PendingEmployeeController::class, 'reject']);
+    Route::delete('/pending-employees/{id}', [\App\Http\Controllers\Api\Owner\PendingEmployeeController::class, 'destroy']);
 
     // Alias routes for /employees/pending
     Route::get('/employees/pending', [\App\Http\Controllers\Api\Owner\PendingEmployeeController::class, 'index']);
     Route::get('/employees/pending/{id}', [\App\Http\Controllers\Api\Owner\PendingEmployeeController::class, 'show']);
     Route::post('/employees/pending/{id}/approve', [\App\Http\Controllers\Api\Owner\PendingEmployeeController::class, 'approve']);
     Route::post('/employees/pending/{id}/reject', [\App\Http\Controllers\Api\Owner\PendingEmployeeController::class, 'reject']);
+    Route::delete('/employees/pending/{id}', [\App\Http\Controllers\Api\Owner\PendingEmployeeController::class, 'destroy']);
 
     // Branches for Owner
     Route::get('/branches', [\App\Http\Controllers\Api\Owner\BranchController::class, 'index']);
@@ -202,13 +206,11 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
     Route::post('/change-email', [AuthController::class, 'changeEmail']);
 
     // Notifications for Owner
-    Route::prefix('notifications')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Api\Owner\NotificationController::class, 'index']);
-        Route::get('/unread-count', [\App\Http\Controllers\Api\Owner\NotificationController::class, 'unreadCount']);
-        Route::post('/{id}/read', [\App\Http\Controllers\Api\Owner\NotificationController::class, 'markAsRead']);
-        Route::post('/mark-all-read', [\App\Http\Controllers\Api\Owner\NotificationController::class, 'markAllAsRead']);
-        Route::delete('/{id}', [\App\Http\Controllers\Api\Owner\NotificationController::class, 'destroy']);
-    });
+    Route::get('/notifications', [\App\Http\Controllers\Api\Owner\NotificationController::class, 'index']);
+    Route::get('/notifications/unread-count', [\App\Http\Controllers\Api\Owner\NotificationController::class, 'unreadCount']);
+    Route::post('/notifications/{id}/read', [\App\Http\Controllers\Api\Owner\NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/mark-all-read', [\App\Http\Controllers\Api\Owner\NotificationController::class, 'markAllAsRead']);
+    Route::delete('/notifications/{id}', [\App\Http\Controllers\Api\Owner\NotificationController::class, 'destroy']);
 });
 
 // API Employee Routes
@@ -294,13 +296,11 @@ Route::middleware('auth:sanctum')->prefix('employee')->group(function () {
     Route::get('/thr/{id}/download', [\App\Http\Controllers\Api\Employee\ThrController::class, 'download'])->name('api.employee.thr.download');
 
     // Notifications for Employee
-    Route::prefix('notifications')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Api\Employee\NotificationController::class, 'index']);
-        Route::get('/unread-count', [\App\Http\Controllers\Api\Employee\NotificationController::class, 'unreadCount']);
-        Route::post('/{id}/read', [\App\Http\Controllers\Api\Employee\NotificationController::class, 'markAsRead']);
-        Route::post('/mark-all-read', [\App\Http\Controllers\Api\Employee\NotificationController::class, 'markAllAsRead']);
-        Route::delete('/{id}', [\App\Http\Controllers\Api\Employee\NotificationController::class, 'destroy']);
-    });
+    Route::get('/notifications', [\App\Http\Controllers\Api\Employee\NotificationController::class, 'index']);
+    Route::get('/notifications/unread-count', [\App\Http\Controllers\Api\Employee\NotificationController::class, 'unreadCount']);
+    Route::post('/notifications/{id}/read', [\App\Http\Controllers\Api\Employee\NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/mark-all-read', [\App\Http\Controllers\Api\Employee\NotificationController::class, 'markAllAsRead']);
+    Route::delete('/notifications/{id}', [\App\Http\Controllers\Api\Employee\NotificationController::class, 'destroy']);
 });
 
 

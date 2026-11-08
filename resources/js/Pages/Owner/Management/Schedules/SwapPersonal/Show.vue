@@ -27,6 +27,7 @@ const props = defineProps({
 
 const isApproveModalOpen = ref(false);
 const isRejectModalOpen = ref(false);
+const isDeleteModalOpen = ref(false);
 const isProcessing = ref(false);
 
 const formatDate = (dateStr) => {
@@ -66,6 +67,8 @@ const statusVariant = (status) => {
             return "success";
         case "rejected":
             return "danger";
+        case "cancelled":
+            return "secondary";
         case "pending":
         default:
             return "warning";
@@ -78,6 +81,8 @@ const statusLabel = (status) => {
             return "Disetujui";
         case "rejected":
             return "Ditolak";
+        case "cancelled":
+            return "Dibatalkan";
         case "pending":
         default:
             return "Menunggu Persetujuan";
@@ -109,6 +114,19 @@ const executeReject = () => {
             onFinish: () => {
                 isProcessing.value = false;
                 isRejectModalOpen.value = false;
+            },
+        }
+    );
+};
+
+const executeDelete = () => {
+    isProcessing.value = true;
+    router.delete(
+        route("owner.management.schedules.swap-personal.destroy", props.swap.id),
+        {
+            onFinish: () => {
+                isProcessing.value = false;
+                isDeleteModalOpen.value = false;
             },
         }
     );
@@ -179,6 +197,19 @@ const executeReject = () => {
                         <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
                     </svg>
                     <span>Setujui Permohonan</span>
+                </button>
+            </div>
+
+            <div v-else-if="['rejected', 'cancelled'].includes(swap.status)" class="flex items-center gap-2.5 shrink-0 flex-wrap">
+                <button
+                    type="button"
+                    @click="isDeleteModalOpen = true"
+                    class="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition cursor-pointer"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span>Hapus Permohonan</span>
                 </button>
             </div>
         </div>
@@ -331,9 +362,13 @@ const executeReject = () => {
                             <span class="text-slate-500">Waktu Pengajuan</span>
                             <span class="font-medium text-slate-700">{{ formatDateTime(swap.created_at) }}</span>
                         </div>
-                        <div v-if="swap.status !== 'pending'" class="py-2.5 flex items-center justify-between">
+                        <div v-if="swap.status !== 'pending' && swap.status !== 'cancelled'" class="py-2.5 flex items-center justify-between">
                             <span class="text-slate-500">Diproses Oleh</span>
                             <span class="font-medium text-slate-800">{{ swap.approver?.name || "Administrator" }}</span>
+                        </div>
+                        <div v-if="swap.status === 'cancelled'" class="py-2.5 flex items-center justify-between">
+                            <span class="text-slate-500">Keterangan</span>
+                            <span class="font-medium text-slate-700">Dibatalkan oleh Karyawan</span>
                         </div>
                         <div v-if="swap.status !== 'pending'" class="py-2.5 flex items-center justify-between">
                             <span class="text-slate-500">Waktu Proses</span>
@@ -343,7 +378,18 @@ const executeReject = () => {
                 </div>
 
                 <!-- Info Notice -->
-                <div class="p-4 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs text-amber-800 space-y-1.5">
+                <div v-if="swap.status === 'cancelled'" class="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1.5">
+                    <div class="flex items-center gap-1.5 font-bold text-slate-700">
+                        <svg class="w-4 h-4 text-slate-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Status Permohonan Dibatalkan</span>
+                    </div>
+                    <p class="leading-relaxed">
+                        Permohonan ini telah dibatalkan oleh karyawan sehingga jadwal kerja tetap sesuai jadwal semula. Data permohonan yang dibatalkan dapat dihapus dari sistem.
+                    </p>
+                </div>
+                <div v-else class="p-4 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs text-amber-800 space-y-1.5">
                     <div class="flex items-center gap-1.5 font-bold">
                         <svg class="w-4 h-4 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -429,6 +475,43 @@ const executeReject = () => {
                         :loading="isProcessing"
                     >
                         Ya, Tolak
+                    </Button>
+                </div>
+            </div>
+        </Modal>
+
+        <!-- Modal Hapus -->
+        <Modal
+            :show="isDeleteModalOpen"
+            maxWidth="md"
+            @close="isDeleteModalOpen = false"
+        >
+            <div class="p-6">
+                <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                </div>
+                <h3 class="text-lg font-bold text-slate-900 text-center">
+                    Hapus Permohonan Tukar Jadwal?
+                </h3>
+                <p class="text-sm text-slate-600 text-center mt-2">
+                    Apakah Anda yakin ingin menghapus permohonan tukar jadwal ini? Data yang dihapus tidak dapat dikembalikan.
+                </p>
+                <div class="mt-6 flex items-center justify-center gap-3">
+                    <Button
+                        variant="secondary"
+                        @click="isDeleteModalOpen = false"
+                        :disabled="isProcessing"
+                    >
+                        Batal
+                    </Button>
+                    <Button
+                        variant="danger"
+                        @click="executeDelete"
+                        :loading="isProcessing"
+                    >
+                        Ya, Hapus
                     </Button>
                 </div>
             </div>

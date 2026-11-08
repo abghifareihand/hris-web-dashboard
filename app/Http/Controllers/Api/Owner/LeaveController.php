@@ -636,7 +636,21 @@ class LeaveController extends Controller
         if ($leaveRequest->status === 'approved') {
             return response()->json([
                 'status' => false,
-                'message' => 'Pengajuan cuti yang sudah disetujui tidak dapat dihapus. Silakan batalkan terlebih dahulu jika perlu (hubungi tim dukungan).'
+                'message' => 'Pengajuan cuti yang sudah disetujui tidak dapat dihapus.'
+            ], 422);
+        }
+
+        if ($leaveRequest->status === 'pending') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Pengajuan yang masih pending tidak dapat dihapus. Silakan setujui atau tolak terlebih dahulu.'
+            ], 422);
+        }
+
+        if (!in_array($leaveRequest->status, ['rejected', 'cancelled'])) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Hanya pengajuan yang ditolak atau dibatalkan yang dapat dihapus.'
             ], 422);
         }
 

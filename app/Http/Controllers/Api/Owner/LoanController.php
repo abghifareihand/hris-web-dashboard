@@ -267,12 +267,26 @@ class LoanController extends Controller
             ], 404);
         }
 
+        if ($loan->status === 'approved' || $loan->status === 'paid') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Pinjaman yang sudah disetujui atau lunas tidak dapat dihapus.'
+            ], 422);
+        }
+
+        if ($loan->status === 'pending') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Pengajuan yang masih pending tidak dapat dihapus. Silakan setujui atau tolak terlebih dahulu.'
+            ], 422);
+        }
+
         $hasPaidInstallment = $loan->installments()->where('status', 'paid')->exists();
         if ($hasPaidInstallment) {
             return response()->json([
                 'status' => false,
                 'message' => 'Pinjaman yang sudah memiliki riwayat pembayaran tidak dapat dihapus.'
-            ], 400);
+            ], 422);
         }
 
         $installmentIds = $loan->installments()->pluck('id');
@@ -281,7 +295,14 @@ class LoanController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => 'Pinjaman ini memiliki cicilan yang sedang diproses dalam penggajian dan tidak dapat dihapus.'
-            ], 400);
+            ], 422);
+        }
+
+        if (!in_array($loan->status, ['rejected', 'cancelled'])) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Hanya pengajuan yang ditolak atau dibatalkan yang dapat dihapus.'
+            ], 422);
         }
 
         $loan->installments()->delete();

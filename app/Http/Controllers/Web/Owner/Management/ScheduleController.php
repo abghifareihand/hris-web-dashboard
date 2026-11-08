@@ -777,6 +777,36 @@ class ScheduleController extends Controller
             ->with('success', 'Tukar jadwal mandiri telah ditolak.');
     }
 
+    public function destroySwapPersonal($id)
+    {
+        $company = auth()->user()->company;
+        if (!$company) {
+            abort(403, 'Akses ditolak.');
+        }
+
+        $swap = SwapPersonal::where('company_id', $company->id)->find($id);
+        if (!$swap) {
+            return redirect()->back()->with('error', 'Data pertukaran jadwal personal tidak ditemukan.');
+        }
+
+        if ($swap->status === 'approved') {
+            return redirect()->back()->with('error', 'Pengajuan pertukaran jadwal personal yang sudah disetujui tidak dapat dihapus.');
+        }
+
+        if ($swap->status === 'pending') {
+            return redirect()->back()->with('error', 'Pengajuan yang masih pending tidak dapat dihapus. Silakan setujui atau tolak terlebih dahulu.');
+        }
+
+        if (!in_array($swap->status, ['rejected', 'cancelled'])) {
+            return redirect()->back()->with('error', 'Hanya pengajuan yang ditolak atau dibatalkan yang dapat dihapus.');
+        }
+
+        $swap->delete();
+
+        return redirect()->route('owner.management.schedules.swap-personal.index')
+            ->with('success', 'Data pengajuan tukar jadwal personal berhasil dihapus.');
+    }
+
     // ==========================================
     // SWAP TEAM
     // ==========================================
@@ -983,5 +1013,35 @@ class ScheduleController extends Controller
 
         return redirect()->back()
             ->with('success', 'Tukar jadwal tim telah ditolak.');
+    }
+
+    public function destroySwapTeam($id)
+    {
+        $company = auth()->user()->company;
+        if (!$company) {
+            abort(403, 'Akses ditolak.');
+        }
+
+        $swap = SwapTeam::where('company_id', $company->id)->find($id);
+        if (!$swap) {
+            return redirect()->back()->with('error', 'Data pertukaran jadwal tim tidak ditemukan.');
+        }
+
+        if ($swap->status === 'approved') {
+            return redirect()->back()->with('error', 'Pengajuan pertukaran jadwal tim yang sudah disetujui tidak dapat dihapus.');
+        }
+
+        if ($swap->status === 'pending') {
+            return redirect()->back()->with('error', 'Pengajuan yang masih pending tidak dapat dihapus. Silakan setujui atau tolak terlebih dahulu.');
+        }
+
+        if (!in_array($swap->status, ['rejected', 'cancelled'])) {
+            return redirect()->back()->with('error', 'Hanya pengajuan yang ditolak atau dibatalkan yang dapat dihapus.');
+        }
+
+        $swap->delete();
+
+        return redirect()->route('owner.management.schedules.swap-team.index')
+            ->with('success', 'Data pengajuan tukar jadwal tim berhasil dihapus.');
     }
 }

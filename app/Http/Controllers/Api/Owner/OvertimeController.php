@@ -196,12 +196,25 @@ class OvertimeController extends Controller
             ], 404);
         }
 
-        // Only allow deleting non-pending requests (approved, rejected, or cancelled)
+        if ($overtime->status === 'approved') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Pengajuan lembur yang sudah disetujui tidak dapat dihapus.'
+            ], 422);
+        }
+
         if ($overtime->status === 'pending') {
             return response()->json([
                 'status' => false,
-                'message' => 'Pengajuan yang masih pending tidak dapat dihapus. Silakan setujui/tolak terlebih dahulu.'
-            ], 400);
+                'message' => 'Pengajuan yang masih pending tidak dapat dihapus. Silakan setujui atau tolak terlebih dahulu.'
+            ], 422);
+        }
+
+        if (!in_array($overtime->status, ['rejected', 'cancelled'])) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Hanya pengajuan yang ditolak atau dibatalkan yang dapat dihapus.'
+            ], 422);
         }
 
         $overtime->delete();

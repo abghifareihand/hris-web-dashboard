@@ -160,9 +160,35 @@ class PendingEmployeeController extends Controller
             ->where('status', 'pending')
             ->findOrFail($id);
 
-        $pending->update(['status' => 'rejected']);
+        $pending->delete();
 
         return redirect()->route('owner.management.employees.pending.index')
-            ->with('success', 'Pendaftaran calon karyawan telah ditolak.');
+            ->with('success', 'Pendaftaran calon karyawan telah ditolak dan data telah dihapus.');
+    }
+
+    public function destroy(Request $request, $id)
+    {
+        $company = auth()->user()->company;
+
+        if (!$company) {
+            abort(403, 'Anda tidak memiliki akses perusahaan.');
+        }
+
+        $pending = PendingEmployee::where('company_id', $company->id)->find($id);
+
+        if (!$pending) {
+            return redirect()->route('owner.management.employees.pending.index')
+                ->with('error', 'Data calon karyawan tidak ditemukan.');
+        }
+
+        if ($pending->status === 'approved') {
+            return redirect()->route('owner.management.employees.pending.index')
+                ->with('error', 'Calon karyawan yang sudah disetujui tidak dapat dihapus dari daftar ini.');
+        }
+
+        $pending->delete();
+
+        return redirect()->route('owner.management.employees.pending.index')
+            ->with('success', 'Data calon karyawan berhasil dihapus.');
     }
 }

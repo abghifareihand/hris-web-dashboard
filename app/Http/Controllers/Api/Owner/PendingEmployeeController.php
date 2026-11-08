@@ -285,17 +285,48 @@ class PendingEmployeeController extends Controller
             ], 404);
         }
 
-        $pending->update([
-            'status' => 'rejected'
-        ]);
+        $pending->delete();
 
         return response()->json([
             'status'  => true,
-            'message' => 'Pendaftaran calon karyawan telah ditolak.',
-            'data'    => [
-                'id'     => $pending->id,
-                'status' => 'rejected'
-            ]
+            'message' => 'Pendaftaran calon karyawan telah ditolak dan data telah dihapus.',
+        ]);
+    }
+
+    /**
+     * Delete/Destroy pending employee registration record.
+     */
+    public function destroy(Request $request, $id)
+    {
+        $company = $request->user()->company;
+        if (!$company) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+            ], 403);
+        }
+
+        $pending = PendingEmployee::where('company_id', $company->id)->find($id);
+
+        if (!$pending) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Data calon karyawan tidak ditemukan.'
+            ], 404);
+        }
+
+        if ($pending->status === 'approved') {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Calon karyawan yang sudah disetujui tidak dapat dihapus dari daftar ini karena sudah menjadi karyawan aktif.'
+            ], 400);
+        }
+
+        $pending->delete();
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'Data calon karyawan berhasil dihapus.',
         ]);
     }
 

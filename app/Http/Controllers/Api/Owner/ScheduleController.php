@@ -535,6 +535,50 @@ class ScheduleController extends Controller
     }
 
     /**
+     * Destroy Personal Swap (Only allowed for rejected or cancelled status)
+     */
+    public function destroyPersonalSwap(Request $request, $id)
+    {
+        $company = $request->user()->company;
+        if (!$company) {
+            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+        }
+
+        $swap = SwapPersonal::where('company_id', $company->id)->find($id);
+        if (!$swap) {
+            return response()->json(['status' => false, 'message' => 'Data pertukaran jadwal personal tidak ditemukan.'], 404);
+        }
+
+        if ($swap->status === 'approved') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Pengajuan pertukaran jadwal personal yang sudah disetujui tidak dapat dihapus.'
+            ], 422);
+        }
+
+        if ($swap->status === 'pending') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Pengajuan yang masih pending tidak dapat dihapus. Silakan setujui atau tolak terlebih dahulu.'
+            ], 422);
+        }
+
+        if (!in_array($swap->status, ['rejected', 'cancelled'])) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Hanya pengajuan yang ditolak atau dibatalkan yang dapat dihapus.'
+            ], 422);
+        }
+
+        $swap->delete();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Data pengajuan tukar jadwal personal berhasil dihapus.'
+        ]);
+    }
+
+    /**
      * Get Team Swaps
      */
     public function getTeamSwaps(Request $request)
@@ -798,6 +842,50 @@ class ScheduleController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Pertukaran jadwal tim ditolak.'
+        ]);
+    }
+
+    /**
+     * Destroy Team Swap (Only allowed for rejected or cancelled status)
+     */
+    public function destroyTeamSwap(Request $request, $id)
+    {
+        $company = $request->user()->company;
+        if (!$company) {
+            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+        }
+
+        $swap = SwapTeam::where('company_id', $company->id)->find($id);
+        if (!$swap) {
+            return response()->json(['status' => false, 'message' => 'Data pertukaran jadwal tim tidak ditemukan.'], 404);
+        }
+
+        if ($swap->status === 'approved') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Pengajuan pertukaran jadwal tim yang sudah disetujui tidak dapat dihapus.'
+            ], 422);
+        }
+
+        if ($swap->status === 'pending') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Pengajuan yang masih pending tidak dapat dihapus. Silakan setujui atau tolak terlebih dahulu.'
+            ], 422);
+        }
+
+        if (!in_array($swap->status, ['rejected', 'cancelled'])) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Hanya pengajuan yang ditolak atau dibatalkan yang dapat dihapus.'
+            ], 422);
+        }
+
+        $swap->delete();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Data pengajuan tukar jadwal tim berhasil dihapus.'
         ]);
     }
 }

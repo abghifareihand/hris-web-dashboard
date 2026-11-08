@@ -51,6 +51,7 @@ const sortOptions = [
 const selectedSwap = ref(null);
 const isApproveModalOpen = ref(false);
 const isRejectModalOpen = ref(false);
+const isDeleteModalOpen = ref(false);
 const isProcessing = ref(false);
 
 const applyFilters = () => {
@@ -113,6 +114,11 @@ const openReject = (swap) => {
     isRejectModalOpen.value = true;
 };
 
+const openDelete = (swap) => {
+    selectedSwap.value = swap;
+    isDeleteModalOpen.value = true;
+};
+
 const executeApprove = () => {
     if (!selectedSwap.value) return;
     isProcessing.value = true;
@@ -145,6 +151,22 @@ const executeReject = () => {
     );
 };
 
+const executeDelete = () => {
+    if (!selectedSwap.value) return;
+    isProcessing.value = true;
+    router.delete(
+        route("owner.management.schedules.swap-personal.destroy", selectedSwap.value.id),
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                isProcessing.value = false;
+                isDeleteModalOpen.value = false;
+                selectedSwap.value = null;
+            },
+        },
+    );
+};
+
 const formatDate = (dateStr) => {
     if (!dateStr) return "-";
     return new Date(dateStr).toLocaleDateString("id-ID", {
@@ -160,6 +182,8 @@ const statusVariant = (status) => {
             return "success";
         case "rejected":
             return "danger";
+        case "cancelled":
+            return "secondary";
         default:
             return "warning";
     }
@@ -171,6 +195,8 @@ const statusLabel = (status) => {
             return "Disetujui";
         case "rejected":
             return "Ditolak";
+        case "cancelled":
+            return "Dibatalkan";
         default:
             return "Menunggu";
     }
@@ -181,6 +207,7 @@ const statusOptions = [
     { value: "pending", label: "Menunggu Persetujuan", dotClass: "bg-amber-500" },
     { value: "approved", label: "Disetujui", dotClass: "bg-emerald-500" },
     { value: "rejected", label: "Ditolak", dotClass: "bg-rose-500" },
+    { value: "cancelled", label: "Dibatalkan", dotClass: "bg-slate-400" },
 ];
 </script>
 
@@ -377,7 +404,7 @@ const statusOptions = [
 
                     <!-- Actions -->
                     <td class="px-5 py-3.5 text-right whitespace-nowrap">
-                        <div class="inline-flex items-center gap-2 justify-end">
+                        <div class="inline-flex items-center gap-1.5 justify-end">
                             <template v-if="item.status === 'pending'">
                                 <button
                                     type="button"
@@ -414,6 +441,29 @@ const statusOptions = [
                                         />
                                     </svg>
                                     <span>Setujui</span>
+                                </button>
+                            </template>
+
+                            <template v-else-if="['cancelled', 'rejected'].includes(item.status)">
+                                <button
+                                    type="button"
+                                    @click="openDelete(item)"
+                                    class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                                    title="Hapus Permohonan"
+                                >
+                                    <svg
+                                        class="w-4 h-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                        />
+                                    </svg>
                                 </button>
                             </template>
 
@@ -530,6 +580,44 @@ const statusOptions = [
                     @click="executeReject"
                 >
                     Ya, Tolak
+                </Button>
+            </template>
+        </Modal>
+
+        <!-- Modal Hapus -->
+        <Modal
+            :show="isDeleteModalOpen"
+            maxWidth="sm"
+            @close="isDeleteModalOpen = false"
+        >
+            <div>
+                <h3 class="text-base sm:text-lg font-bold text-slate-900">
+                    Hapus Permohonan Tukar
+                </h3>
+                <p class="text-sm text-slate-500 mt-2">
+                    Apakah Anda yakin ingin menghapus permohonan tukar jadwal dari
+                    <span class="font-semibold text-slate-800">{{ selectedSwap?.employee?.name }}</span>?
+                    Data yang dihapus tidak dapat dikembalikan.
+                </p>
+            </div>
+
+            <template #footer>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    :disabled="isProcessing"
+                    @click="isDeleteModalOpen = false"
+                >
+                    Batal
+                </Button>
+                <Button
+                    type="button"
+                    variant="danger"
+                    :loading="isProcessing"
+                    :disabled="isProcessing"
+                    @click="executeDelete"
+                >
+                    Ya, Hapus
                 </Button>
             </template>
         </Modal>

@@ -216,19 +216,25 @@ class ReimbursementController extends Controller
             ], 404);
         }
 
-        // Only allow deleting non-pending requests
+        if ($reimbursement->status === 'approved' || $reimbursement->status === 'paid' || !empty($reimbursement->payroll_item_id)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Klaim biaya yang sudah disetujui atau dibayarkan tidak dapat dihapus.'
+            ], 422);
+        }
+
         if ($reimbursement->status === 'pending') {
             return response()->json([
                 'status' => false,
                 'message' => 'Pengajuan yang masih pending tidak dapat dihapus. Silakan setujui atau tolak terlebih dahulu.'
-            ], 400);
+            ], 422);
         }
 
-        if ($reimbursement->status === 'paid' || !empty($reimbursement->payroll_item_id)) {
+        if (!in_array($reimbursement->status, ['rejected', 'cancelled'])) {
             return response()->json([
                 'status' => false,
-                'message' => 'Klaim biaya yang sudah dibayarkan atau terhubung dengan payroll tidak dapat dihapus.'
-            ], 400);
+                'message' => 'Hanya pengajuan yang ditolak atau dibatalkan yang dapat dihapus.'
+            ], 422);
         }
 
         if ($reimbursement->attachment && Storage::disk('public')->exists($reimbursement->attachment)) {

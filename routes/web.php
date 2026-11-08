@@ -101,6 +101,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/employees/pending', [PendingEmployeeController::class, 'index'])->name('employees.pending.index');
             Route::post('/employees/pending/{id}/approve', [PendingEmployeeController::class, 'approve'])->name('employees.pending.approve');
             Route::post('/employees/pending/{id}/reject', [PendingEmployeeController::class, 'reject'])->name('employees.pending.reject');
+            Route::delete('/employees/pending/{id}', [PendingEmployeeController::class, 'destroy'])->name('employees.pending.destroy');
 
             // Employees CRUD
             Route::resource('employees', EmployeeController::class);
@@ -154,12 +155,14 @@ Route::middleware('auth')->group(function () {
                 Route::get('/swap-personal/{id}', [ScheduleController::class, 'showSwapPersonal'])->name('swap-personal.show');
                 Route::post('/swap-personal/{id}/approve', [ScheduleController::class, 'approveSwapPersonal'])->name('swap-personal.approve');
                 Route::post('/swap-personal/{id}/reject', [ScheduleController::class, 'rejectSwapPersonal'])->name('swap-personal.reject');
+                Route::delete('/swap-personal/{id}', [ScheduleController::class, 'destroySwapPersonal'])->name('swap-personal.destroy');
 
                 // Swap Team
                 Route::get('/swap-team', [ScheduleController::class, 'swapTeam'])->name('swap-team.index');
                 Route::get('/swap-team/{id}', [ScheduleController::class, 'showSwapTeam'])->name('swap-team.show');
                 Route::post('/swap-team/{id}/approve', [ScheduleController::class, 'approveSwapTeam'])->name('swap-team.approve');
                 Route::post('/swap-team/{id}/reject', [ScheduleController::class, 'rejectSwapTeam'])->name('swap-team.reject');
+                Route::delete('/swap-team/{id}', [ScheduleController::class, 'destroySwapTeam'])->name('swap-team.destroy');
             });
 
             // Leaves
