@@ -301,7 +301,6 @@ class EmployeeDataSeeder extends Seeder
                 'content' => "Diberitahukan kepada seluruh karyawan mengenai update kebijakan dan jadwal kegiatan kantor edisi #$i.",
                 'start_date' => $startDate,
                 'end_date' => $endDate,
-                'is_active' => true,
             ]);
         }
         $this->command->info('✓ 25 Pengumuman dibuat.');

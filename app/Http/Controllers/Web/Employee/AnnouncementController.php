@@ -22,7 +22,6 @@ class AnnouncementController extends Controller
 
         $query = Announcement::with(['branch:id,name', 'division:id,name'])
             ->where('company_id', $employee->company_id)
-            ->where('is_active', true)
             ->where(function ($q) use ($employee) {
                 $q->whereNull('branch_id')
                   ->orWhere('branch_id', $employee->branch_id);
@@ -54,7 +53,10 @@ class AnnouncementController extends Controller
             });
         }
 
-        $announcements = $query->latest('id')->paginate(10)->withQueryString();
+        $announcements = $query->orderBy('start_date', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->paginate(10)
+            ->withQueryString();
 
         return Inertia::render('Employee/Announcements/Index', [
             'announcements' => $announcements,

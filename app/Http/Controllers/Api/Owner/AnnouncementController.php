@@ -152,13 +152,12 @@ class AnnouncementController extends Controller
             'start_date' => Carbon::parse($request->start_date)->format('Y-m-d'),
             'end_date' => Carbon::parse($request->end_date)->format('Y-m-d'),
             'image' => $imagePath,
-            'is_active' => $request->has('is_active') ? $request->boolean('is_active') : true,
         ]);
 
         $announcement->load(['branch:id,name', 'division:id,name']);
 
         // Notify targeted employees
-        $empQuery = \App\Models\Employee::with('user')->where('company_id', $company->id)->where('status', 'active');
+        $empQuery = \App\Models\Employee::with('user')->where('company_id', $company->id)->where('is_active', true);
         if ($branchId) {
             $empQuery->where('branch_id', $branchId);
         }
@@ -276,10 +275,6 @@ class AnnouncementController extends Controller
             'end_date' => Carbon::parse($request->end_date)->format('Y-m-d'),
         ];
 
-        if ($request->has('is_active')) {
-            $data['is_active'] = $request->boolean('is_active');
-        }
-
         if ($request->boolean('remove_image')) {
             if ($announcement->image && Storage::disk('public')->exists($announcement->image)) {
                 Storage::disk('public')->delete($announcement->image);
@@ -382,7 +377,6 @@ class AnnouncementController extends Controller
             'date_formatted' => $dateFormatted,
             'status' => $status,
             'status_label' => $statusLabel,
-            'is_active' => (bool) $announcement->is_active,
             'branch_id' => $announcement->branch_id,
             'branch_name' => $announcement->branch ? $announcement->branch->name : 'Semua Cabang',
             'division_id' => $announcement->division_id,

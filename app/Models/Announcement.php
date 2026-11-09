@@ -15,7 +15,6 @@ class Announcement extends Model
     protected $casts = [
         'start_date' => 'date:Y-m-d',
         'end_date' => 'date:Y-m-d',
-        'is_active' => 'boolean',
     ];
 
     protected $appends = ['image_url'];

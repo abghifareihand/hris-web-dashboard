@@ -156,7 +156,6 @@ class AnnouncementController extends Controller
             'end_date' => $request->end_date,
             'content' => $request->content,
             'image' => $imagePath,
-            'is_active' => true,
         ]);
 
         return redirect()->route('owner.announcements.index')
@@ -235,7 +234,6 @@ class AnnouncementController extends Controller
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
             'content' => $request->content,
-            'is_active' => true,
         ];
 
         if ($request->boolean('remove_image')) {

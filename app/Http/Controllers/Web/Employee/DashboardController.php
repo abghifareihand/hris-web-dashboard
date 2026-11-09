@@ -92,7 +92,6 @@ class DashboardController extends Controller
 
         // 6. Announcements (active for employee's branch/division/global)
         $announcements = Announcement::where('company_id', $employee->company_id)
-            ->where('is_active', true)
             ->where('start_date', '<=', $today)
             ->where('end_date', '>=', $today)
             ->where(function ($q) use ($employee) {
@@ -101,7 +100,8 @@ class DashboardController extends Controller
             ->where(function ($q) use ($employee) {
                 $q->whereNull('division_id')->orWhere('division_id', $employee->division_id);
             })
-            ->latest()
+            ->orderBy('start_date', 'desc')
+            ->orderBy('created_at', 'desc')
             ->take(3)
             ->get();
 

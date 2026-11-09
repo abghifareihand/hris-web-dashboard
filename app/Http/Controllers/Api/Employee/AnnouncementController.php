@@ -27,7 +27,6 @@ class AnnouncementController extends Controller
 
         $query = Announcement::with(['branch:id,name', 'division:id,name'])
             ->where('company_id', $employee->company_id)
-            ->where('is_active', true)
             ->where(function ($q) use ($today) {
                 $q->whereNull('start_date')
                   ->orWhere('start_date', '<=', $today);
@@ -53,7 +52,9 @@ class AnnouncementController extends Controller
             });
         }
 
-        $announcements = $query->latest('id')->paginate($this->getPerPage($request));
+        $announcements = $query->orderBy('start_date', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->paginate($this->getPerPage($request));
 
         $announcements->getCollection()->transform(function ($item) {
             return [
