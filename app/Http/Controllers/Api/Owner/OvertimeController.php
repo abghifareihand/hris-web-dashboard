@@ -51,7 +51,8 @@ class OvertimeController extends Controller
                 'description' => $overtime->description,
                 'status' => $overtime->status,
                 'reject_reason' => $overtime->reject_reason,
-                'created_at' => $overtime->created_at->format('Y-m-d H:i:s'),
+                'created_at' => Carbon::parse($overtime->created_at ?? now())->format('Y-m-d H:i:s'),
+                'updated_at' => Carbon::parse($overtime->updated_at ?? $overtime->created_at ?? now())->format('Y-m-d H:i:s'),
                 'employee' => $overtime->employee ? [
                     'id' => $overtime->employee->id,
                     'name' => $overtime->employee->name,

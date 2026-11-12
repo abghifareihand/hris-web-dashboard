@@ -112,7 +112,7 @@ Route::middleware('auth')->group(function () {
                 Route::match(['put', 'post'], '/profile', [CompanyProfileController::class, 'update'])->name('profile.update');
                 Route::resource('branches', BranchController::class);
                 Route::resource('divisions', DivisionController::class)->except(['show']);
-                Route::resource('positions', PositionController::class)->except(['show']);
+                Route::resource('positions', PositionController::class);
             });
 
             // Attendance Settings

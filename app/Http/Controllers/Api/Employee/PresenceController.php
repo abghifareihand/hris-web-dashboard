@@ -214,8 +214,8 @@ class PresenceController extends Controller
                 'is_day_off' => $schedule->is_day_off,
                 'attendance_type' => $schedule->attendance_type,
                 'allowed_branches' => $allowedBranchesFormatted,
-                'created_at' => $schedule->created_at,
-                'updated_at' => $schedule->updated_at,
+                'created_at' => Carbon::parse($schedule->created_at ?? now())->format('Y-m-d H:i:s'),
+                'updated_at' => Carbon::parse($schedule->updated_at ?? $schedule->created_at ?? now())->format('Y-m-d H:i:s'),
                 'shift' => $schedule->shift,
             ];
         }

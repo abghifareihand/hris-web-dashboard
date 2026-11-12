@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Owner;
 
 use App\Http\Controllers\Controller;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -44,6 +45,8 @@ class ProfileController extends Controller
                     'avatar' => $user->avatar,
                     'avatar_url' => $avatarUrl,
                     'role' => $user->role,
+                    'created_at' => Carbon::parse($user->created_at ?? now())->format('Y-m-d H:i:s'),
+                    'updated_at' => Carbon::parse($user->updated_at ?? $user->created_at ?? now())->format('Y-m-d H:i:s'),
                 ],
                 'company' => $company ? [
                     'id' => $company->id,
@@ -52,6 +55,8 @@ class ProfileController extends Controller
                     'phone' => $company->phone,
                     'address' => $company->address,
                     'logo_url' => $logoUrl,
+                    'created_at' => Carbon::parse($company->created_at ?? now())->format('Y-m-d H:i:s'),
+                    'updated_at' => Carbon::parse($company->updated_at ?? $company->created_at ?? now())->format('Y-m-d H:i:s'),
                 ] : null,
             ]
         ]);

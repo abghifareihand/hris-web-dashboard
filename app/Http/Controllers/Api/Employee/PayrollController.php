@@ -66,7 +66,7 @@ class PayrollController extends Controller
                 'period_start' => $payroll ? Carbon::parse($payroll->start_date)->format('Y-m-d') : null,
                 'period_end' => $payroll ? Carbon::parse($payroll->end_date)->format('Y-m-d') : null,
                 'payment_status' => $payroll ? $payroll->status : 'process',
-                'paid_at' => ($payroll && $payroll->paid_at) ? Carbon::parse($payroll->paid_at)->format('Y-m-d H:i') : null,
+                'paid_at' => ($payroll && $payroll->paid_at) ? Carbon::parse($payroll->paid_at)->format('Y-m-d H:i:s') : null,
 
                 // Summary Totals
                 'net_salary' => (int) $item->net_salary,
@@ -109,6 +109,8 @@ class PayrollController extends Controller
 
                 'remarks' => $item->remarks,
                 'download_url' => route('api.employee.payrolls.download', $item->id),
+                'created_at' => Carbon::parse($item->created_at ?? ($payroll ? $payroll->created_at : now()))->format('Y-m-d H:i:s'),
+                'updated_at' => Carbon::parse($item->updated_at ?? $item->created_at ?? now())->format('Y-m-d H:i:s'),
             ];
         });
 

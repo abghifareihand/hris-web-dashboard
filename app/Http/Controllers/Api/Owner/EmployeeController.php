@@ -39,7 +39,7 @@ class EmployeeController extends Controller
             'position:id,name',
             'division:id,name',
             'branch:id,name',
-            'user:id,name,email,avatar'
+            'user:id,name,email,phone,gender,birth_date,address,avatar'
         ])->where('company_id', $company->id);
 
         if ($request->filled('search')) {
@@ -105,8 +105,8 @@ class EmployeeController extends Controller
                     'name' => $emp->position->name,
                 ] : null,
                 'joined_at' => $emp->joined_at ? Carbon::parse($emp->joined_at)->format('Y-m-d') : null,
-                'created_at' => $emp->created_at ? Carbon::parse($emp->created_at)->format('Y-m-d H:i') : null,
-                'updated_at' => $emp->updated_at ? Carbon::parse($emp->updated_at)->format('Y-m-d H:i') : null,
+                'created_at' => Carbon::parse($emp->created_at ?? now())->format('Y-m-d H:i:s'),
+                'updated_at' => Carbon::parse($emp->updated_at ?? $emp->created_at ?? now())->format('Y-m-d H:i:s'),
             ];
         });
 
@@ -131,7 +131,7 @@ class EmployeeController extends Controller
             'branch:id,name',
             'division:id,name',
             'position:id,name',
-            'user:id,name,email,avatar',
+            'user:id,name,email,phone,gender,birth_date,address,avatar',
         ])
         ->where('company_id', $company->id)
         ->find($id);
@@ -221,8 +221,8 @@ class EmployeeController extends Controller
                 'bpjs_kesehatan_number' => $employee->bpjs_kesehatan_no,
                 'bpjs_ketenagakerjaan_number' => $employee->jht_no,
 
-                'created_at' => $employee->created_at ? Carbon::parse($employee->created_at)->format('Y-m-d H:i') : null,
-                'updated_at' => $employee->updated_at ? Carbon::parse($employee->updated_at)->format('Y-m-d H:i') : null,
+                'created_at' => Carbon::parse($employee->created_at ?? now())->format('Y-m-d H:i:s'),
+                'updated_at' => Carbon::parse($employee->updated_at ?? $employee->created_at ?? now())->format('Y-m-d H:i:s'),
             ]
         ]);
     }

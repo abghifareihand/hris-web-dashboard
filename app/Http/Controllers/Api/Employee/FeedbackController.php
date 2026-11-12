@@ -176,7 +176,8 @@ class FeedbackController extends Controller
             'criticism' => $feedback->criticism,
             'suggestion' => $feedback->suggestion,
             'is_anonymous' => (bool) $feedback->is_anonymous,
-            'created_at' => $createdAt->format('Y-m-d H:i'),
+            'created_at' => Carbon::parse($feedback->created_at ?? now())->format('Y-m-d H:i:s'),
+            'updated_at' => Carbon::parse($feedback->updated_at ?? $feedback->created_at ?? now())->format('Y-m-d H:i:s'),
             'date_formatted' => $isDetail
                 ? $createdAt->translatedFormat('l, d F Y \p\u\k\u\l H:i')
                 : $createdAt->translatedFormat('d M Y, H:i'),

@@ -241,8 +241,8 @@ class ShiftController extends Controller
             'clock_out_raw' => $shift->clock_out,
             'time_formatted' => "{$clockIn} - {$clockOut}",
             'schedules_count' => (int) ($shift->work_schedules_count ?? $shift->workSchedules()->count()),
-            'created_at' => $shift->created_at ? Carbon::parse($shift->created_at)->format('Y-m-d H:i') : null,
-            'updated_at' => $shift->updated_at ? Carbon::parse($shift->updated_at)->format('Y-m-d H:i') : null,
+            'created_at' => Carbon::parse($shift->created_at ?? now())->format('Y-m-d H:i:s'),
+            'updated_at' => Carbon::parse($shift->updated_at ?? $shift->created_at ?? now())->format('Y-m-d H:i:s'),
         ];
     }
 }

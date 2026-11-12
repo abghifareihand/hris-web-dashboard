@@ -237,8 +237,8 @@ class DivisionController extends Controller
             'is_attendance_schedule' => (bool) $division->is_attendance_schedule,
             'is_attendance_radius' => (bool) $division->is_attendance_radius,
             'employees_count' => (int) ($division->employees_count ?? $division->employees()->count()),
-            'created_at' => $division->created_at ? Carbon::parse($division->created_at)->format('Y-m-d H:i') : null,
-            'updated_at' => $division->updated_at ? Carbon::parse($division->updated_at)->format('Y-m-d H:i') : null,
+            'created_at' => Carbon::parse($division->created_at ?? now())->format('Y-m-d H:i:s'),
+            'updated_at' => Carbon::parse($division->updated_at ?? $division->created_at ?? now())->format('Y-m-d H:i:s'),
         ];
     }
 }

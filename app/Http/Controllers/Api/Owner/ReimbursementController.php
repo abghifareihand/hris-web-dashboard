@@ -67,8 +67,9 @@ class ReimbursementController extends Controller
                 'payout_method' => $item->payout_method, // 'payroll', 'direct'
                 'reject_reason' => $item->reject_reason,
                 'approved_by_name' => $item->approvedBy ? $item->approvedBy->name : null,
-                'approved_at' => $item->approved_at ? Carbon::parse($item->approved_at)->format('Y-m-d H:i') : null,
-                'created_at' => $item->created_at ? $item->created_at->format('Y-m-d H:i:s') : null,
+                'approved_at' => $item->approved_at ? Carbon::parse($item->approved_at)->format('Y-m-d H:i:s') : null,
+                'created_at' => Carbon::parse($item->created_at ?? now())->format('Y-m-d H:i:s'),
+                'updated_at' => Carbon::parse($item->updated_at ?? $item->created_at ?? now())->format('Y-m-d H:i:s'),
             ];
         });
 

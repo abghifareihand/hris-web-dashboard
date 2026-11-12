@@ -111,9 +111,7 @@ const submit = () => {
                                     Hak Akses Cabang
                                 </h3>
                                 <p class="text-xs text-slate-500 mt-0.5">
-                                    Pilih cabang yang dapat diisi oleh jabatan
-                                    ini. Jika dikosongkan, berlaku untuk semua
-                                    cabang.
+                                    Pilih cabang yang dapat diakses oleh jabatan ini. Jika dikosongkan, tidak ada akses ke cabang mana pun.
                                 </p>
                             </div>
                             <button
@@ -167,8 +165,7 @@ const submit = () => {
                                     Hak Akses Divisi
                                 </h3>
                                 <p class="text-xs text-slate-500 mt-0.5">
-                                    Pilih divisi kerja terkait jabatan ini. Jika
-                                    dikosongkan, berlaku untuk semua divisi.
+                                    Pilih divisi kerja yang dapat diakses oleh jabatan ini. Jika dikosongkan, tidak ada akses ke divisi mana pun.
                                 </p>
                             </div>
                             <button

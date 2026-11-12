@@ -32,14 +32,21 @@ class LeaveController extends Controller
         }
 
         if ($request->boolean('all')) {
+            $categories = $query->get()->map(function ($cat) {
+                return $this->formatCategory($cat);
+            });
+
             return response()->json([
                 'status' => true,
                 'message' => 'Daftar semua kategori cuti berhasil diambil.',
-                'data' => $query->get(),
+                'data' => $categories,
             ]);
         }
 
         $categories = $query->paginate($this->getPerPage($request));
+        $categories->getCollection()->transform(function ($cat) {
+            return $this->formatCategory($cat);
+        });
 
         return $this->paginatedResponse($categories, 'Data kategori cuti berhasil diambil.');
     }
@@ -122,7 +129,7 @@ class LeaveController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Detail kategori cuti berhasil diambil.',
-            'data' => $category,
+            'data' => $this->formatCategory($category),
         ]);
     }
 
@@ -446,7 +453,8 @@ class LeaveController extends Controller
                 'status' => $req->status,
                 'remaining_balance' => $remainingBalance,
                 'attachment_url' => $req->attachment ? asset('storage/' . $req->attachment) : null,
-                'created_at' => $req->created_at,
+                'created_at' => Carbon::parse($req->created_at ?? now())->format('Y-m-d H:i:s'),
+                'updated_at' => Carbon::parse($req->updated_at ?? $req->created_at ?? now())->format('Y-m-d H:i:s'),
                 'employee' => $req->employee ? [
                     'id' => $req->employee->id,
                     'name' => $req->employee->name,
@@ -660,5 +668,20 @@ class LeaveController extends Controller
             'status' => true,
             'message' => 'Pengajuan cuti berhasil dihapus.'
         ]);
+    }
+
+    /**
+     * Format leave category for API response.
+     */
+    private function formatCategory(LeaveCategory $category): array
+    {
+        return [
+            'id' => $category->id,
+            'company_id' => $category->company_id,
+            'name' => $category->name,
+            'default_quota' => (int) $category->default_quota,
+            'created_at' => Carbon::parse($category->created_at ?? now())->format('Y-m-d H:i:s'),
+            'updated_at' => Carbon::parse($category->updated_at ?? $category->created_at ?? now())->format('Y-m-d H:i:s'),
+        ];
     }
 }

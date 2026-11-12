@@ -104,7 +104,8 @@ class LeaveController extends Controller
                 'reason' => $req->reason,
                 'reject_reason' => $req->reject_reason,
                 'attachment_url' => $req->attachment ? asset('storage/' . $req->attachment) : null,
-                'created_at' => $req->created_at,
+                'created_at' => Carbon::parse($req->created_at ?? now())->format('Y-m-d H:i:s'),
+                'updated_at' => Carbon::parse($req->updated_at ?? $req->created_at ?? now())->format('Y-m-d H:i:s'),
             ];
         });
 

@@ -232,7 +232,7 @@ class PendingEmployeeController extends Controller
                 'branch:id,name',
                 'division:id,name',
                 'position:id,name',
-                'user:id,name,email,avatar'
+                'user:id,name,email,phone,gender,birth_date,address,avatar'
             ]);
 
             return response()->json([
@@ -357,7 +357,8 @@ class PendingEmployeeController extends Controller
                 'id'   => $item->position->id,
                 'name' => $item->position->name,
             ] : null,
-            'created_at'           => $createdAt->toIso8601String(),
+            'created_at'           => Carbon::parse($item->created_at ?? now())->format('Y-m-d H:i:s'),
+            'updated_at'           => Carbon::parse($item->updated_at ?? $item->created_at ?? now())->format('Y-m-d H:i:s'),
             'created_at_formatted' => $createdAt->translatedFormat('d F Y, H:i'),
             'time_ago'             => $createdAt->diffForHumans(),
         ];

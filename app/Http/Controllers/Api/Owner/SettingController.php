@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AttendanceSetting;
 use App\Models\CompanyLoanSetting;
 use App\Models\CompanyPayrollSetting;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -340,7 +341,8 @@ class SettingController extends Controller
             'status_good' => $setting->status_good ?? 'Baik',
             'status_fair' => $setting->status_fair ?? 'Cukup',
             'status_poor' => $setting->status_poor ?? 'Kurang',
-            'updated_at' => $setting->updated_at ? $setting->updated_at->format('Y-m-d H:i') : null,
+            'created_at' => Carbon::parse($setting->created_at ?? now())->format('Y-m-d H:i:s'),
+            'updated_at' => Carbon::parse($setting->updated_at ?? $setting->created_at ?? now())->format('Y-m-d H:i:s'),
         ];
     }
 
@@ -364,7 +366,8 @@ class SettingController extends Controller
             'due_date_day_label' => $setting->due_date_day !== null
                 ? "Tanggal {$setting->due_date_day} setiap bulan"
                 : 'Tanggal 1 setiap bulan (Default)',
-            'updated_at' => $setting->updated_at ? $setting->updated_at->format('Y-m-d H:i') : null,
+            'created_at' => Carbon::parse($setting->created_at ?? now())->format('Y-m-d H:i:s'),
+            'updated_at' => Carbon::parse($setting->updated_at ?? $setting->created_at ?? now())->format('Y-m-d H:i:s'),
         ];
     }
 
@@ -387,7 +390,8 @@ class SettingController extends Controller
             'monthly_working_days' => (int) ($setting->monthly_working_days ?? 25),
             'weekly_working_days' => (int) ($setting->weekly_working_days ?? 6),
             'notes' => $setting->notes,
-            'updated_at' => $setting->updated_at ? $setting->updated_at->format('Y-m-d H:i') : null,
+            'created_at' => Carbon::parse($setting->created_at ?? now())->format('Y-m-d H:i:s'),
+            'updated_at' => Carbon::parse($setting->updated_at ?? $setting->created_at ?? now())->format('Y-m-d H:i:s'),
         ];
     }
 }

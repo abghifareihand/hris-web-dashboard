@@ -73,23 +73,32 @@ class Employee extends Model
         return $this->hasMany(Feedback::class);
     }
 
+    private function getUserAttributeValue(string $attribute)
+    {
+        if ($this->relationLoaded('user') && $this->user && $this->user->exists && !array_key_exists($attribute, $this->user->getAttributes())) {
+            $this->user->refresh();
+        }
+
+        return $this->user?->{$attribute};
+    }
+
     public function getPhoneAttribute()
     {
-        return $this->user?->phone;
+        return $this->getUserAttributeValue('phone');
     }
 
     public function getGenderAttribute()
     {
-        return $this->user?->gender;
+        return $this->getUserAttributeValue('gender');
     }
 
     public function getBirthDateAttribute()
     {
-        return $this->user?->birth_date;
+        return $this->getUserAttributeValue('birth_date');
     }
 
     public function getAddressAttribute()
     {
-        return $this->user?->address;
+        return $this->getUserAttributeValue('address');
     }
 }

@@ -47,8 +47,8 @@ class CompanyController extends Controller
                 'total_branches' => $company->branches()->count(),
                 'total_divisions' => $company->divisions()->count(),
                 'total_positions' => $company->positions()->count(),
-                'created_at' => $company->created_at ? Carbon::parse($company->created_at)->format('Y-m-d H:i') : null,
-                'updated_at' => $company->updated_at ? Carbon::parse($company->updated_at)->format('Y-m-d H:i') : null,
+                'created_at' => Carbon::parse($company->created_at ?? now())->format('Y-m-d H:i:s'),
+                'updated_at' => Carbon::parse($company->updated_at ?? $company->created_at ?? now())->format('Y-m-d H:i:s'),
             ],
         ]);
     }

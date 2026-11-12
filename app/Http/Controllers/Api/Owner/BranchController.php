@@ -289,8 +289,8 @@ class BranchController extends Controller
             'longitude' => (float) $branch->longitude,
             'address' => $branch->address,
             'employees_count' => (int) ($branch->employees_count ?? $branch->employees()->count()),
-            'created_at' => $branch->created_at ? Carbon::parse($branch->created_at)->format('Y-m-d H:i') : null,
-            'updated_at' => $branch->updated_at ? Carbon::parse($branch->updated_at)->format('Y-m-d H:i') : null,
+            'created_at' => Carbon::parse($branch->created_at ?? now())->format('Y-m-d H:i:s'),
+            'updated_at' => Carbon::parse($branch->updated_at ?? $branch->created_at ?? now())->format('Y-m-d H:i:s'),
         ];
     }
 }

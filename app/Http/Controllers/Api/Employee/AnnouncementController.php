@@ -67,7 +67,8 @@ class AnnouncementController extends Controller
                 'end_date' => $item->end_date ? Carbon::parse($item->end_date)->format('Y-m-d') : null,
                 'branch_name' => $item->branch ? $item->branch->name : 'Semua Cabang',
                 'division_name' => $item->division ? $item->division->name : 'Semua Divisi',
-                'created_at' => $item->created_at ? $item->created_at->format('Y-m-d H:i:s') : null,
+                'created_at' => Carbon::parse($item->created_at ?? now())->format('Y-m-d H:i:s'),
+                'updated_at' => Carbon::parse($item->updated_at ?? $item->created_at ?? now())->format('Y-m-d H:i:s'),
             ];
         });
 

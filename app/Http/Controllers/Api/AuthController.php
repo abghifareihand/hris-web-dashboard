@@ -7,6 +7,7 @@ use App\Mail\SendOtpMail;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -532,8 +533,8 @@ class AuthController extends Controller
                 'avatar' => $user->avatar,
                 'avatar_url' => $user->avatar ? asset('storage/' . $user->avatar) : null,
                 'has_company' => $user->has_company,
-                'created_at' => $user->created_at,
-                'updated_at' => $user->updated_at,
+                'created_at' => Carbon::parse($user->created_at ?? now())->format('Y-m-d H:i:s'),
+                'updated_at' => Carbon::parse($user->updated_at ?? $user->created_at ?? now())->format('Y-m-d H:i:s'),
             ],
         ]);
     }
@@ -673,8 +674,8 @@ class AuthController extends Controller
                 'avatar' => $user->avatar,
                 'avatar_url' => $user->avatar ? asset('storage/' . $user->avatar) : null,
                 'has_company' => $user->has_company,
-                'created_at' => $user->created_at,
-                'updated_at' => $user->updated_at,
+                'created_at' => Carbon::parse($user->created_at ?? now())->format('Y-m-d H:i:s'),
+                'updated_at' => Carbon::parse($user->updated_at ?? $user->created_at ?? now())->format('Y-m-d H:i:s'),
             ],
         ]);
     }

@@ -93,6 +93,25 @@ class PositionController extends Controller
             ->with('success', 'Jabatan berhasil ditambahkan.');
     }
 
+    public function show(Position $position)
+    {
+        $company = Auth::user()->company;
+        abort_if($position->company_id !== $company->id, 403);
+
+        $position->load([
+            'branches:id,company_id,name',
+            'divisions:id,company_id,name',
+            'employees' => function ($q) {
+                $q->select('id', 'company_id', 'position_id', 'user_id', 'name', 'email', 'nip', 'branch_id', 'division_id')
+                  ->with(['branch:id,name', 'division:id,name', 'user:id,avatar']);
+            }
+        ])->loadCount('employees');
+
+        return Inertia::render('Owner/Management/Company/Positions/Show', [
+            'position' => $position,
+        ]);
+    }
+
     public function edit(Position $position)
     {
         $company = Auth::user()->company;

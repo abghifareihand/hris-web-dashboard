@@ -71,7 +71,8 @@ class AttendanceController extends Controller
                 'attendance_status' => $attendance->attendance_status,
                 'attendance_status_label' => $attendance->status_label,
                 'notes' => $attendance->notes,
-                'created_at' => $attendance->created_at ? $attendance->created_at->format('Y-m-d H:i:s') : null,
+                'created_at' => Carbon::parse($attendance->created_at ?? now())->format('Y-m-d H:i:s'),
+                'updated_at' => Carbon::parse($attendance->updated_at ?? $attendance->created_at ?? now())->format('Y-m-d H:i:s'),
             ];
         });
 

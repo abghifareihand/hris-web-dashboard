@@ -389,8 +389,8 @@ class AnnouncementController extends Controller
                 'id' => $announcement->division->id,
                 'name' => $announcement->division->name,
             ] : null,
-            'created_at' => $announcement->created_at ? Carbon::parse($announcement->created_at)->format('Y-m-d H:i') : null,
-            'updated_at' => $announcement->updated_at ? Carbon::parse($announcement->updated_at)->format('Y-m-d H:i') : null,
+            'created_at' => Carbon::parse($announcement->created_at ?? now())->format('Y-m-d H:i:s'),
+            'updated_at' => Carbon::parse($announcement->updated_at ?? $announcement->created_at ?? now())->format('Y-m-d H:i:s'),
         ];
     }
 }

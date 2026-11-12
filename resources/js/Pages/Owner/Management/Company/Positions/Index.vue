@@ -256,45 +256,38 @@ const executeDelete = () => {
                 >
                     <!-- Name -->
                     <td class="px-5 py-3.5">
-                        <div class="font-semibold text-slate-800">
+                        <Link
+                            :href="route('owner.management.company.positions.show', pos.id)"
+                            class="font-semibold text-slate-800 hover:text-emerald-600 transition"
+                        >
                             {{ pos.name }}
-                        </div>
+                        </Link>
                     </td>
 
                     <!-- Branches Access -->
-                    <td class="px-5 py-3.5">
-                        <div class="flex flex-wrap gap-1.5">
-                            <template v-if="pos.branches && pos.branches.length > 0">
-                                <span
-                                    v-for="b in pos.branches"
-                                    :key="b.id"
-                                    class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-sky-50 text-sky-700 border border-sky-200/70"
-                                >
-                                    {{ b.name }}
-                                </span>
-                            </template>
-                            <span v-else class="text-xs text-slate-400 italic">
-                                Semua Cabang / Tidak dibatasi
-                            </span>
-                        </div>
+                    <td class="px-5 py-3.5 whitespace-nowrap">
+                        <span
+                            v-if="pos.branches && pos.branches.length > 0"
+                            class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200/80"
+                        >
+                            {{ pos.branches.length }} Cabang
+                        </span>
+                        <span v-else class="text-xs text-slate-400 italic">
+                            Tidak ada akses
+                        </span>
                     </td>
 
                     <!-- Divisions Access -->
-                    <td class="px-5 py-3.5">
-                        <div class="flex flex-wrap gap-1.5">
-                            <template v-if="pos.divisions && pos.divisions.length > 0">
-                                <span
-                                    v-for="d in pos.divisions"
-                                    :key="d.id"
-                                    class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/70"
-                                >
-                                    {{ d.name }}
-                                </span>
-                            </template>
-                            <span v-else class="text-xs text-slate-400 italic">
-                                Semua Divisi / Tidak dibatasi
-                            </span>
-                        </div>
+                    <td class="px-5 py-3.5 whitespace-nowrap">
+                        <span
+                            v-if="pos.divisions && pos.divisions.length > 0"
+                            class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80"
+                        >
+                            {{ pos.divisions.length }} Divisi
+                        </span>
+                        <span v-else class="text-xs text-slate-400 italic">
+                            Tidak ada akses
+                        </span>
                     </td>
 
                     <!-- Total Karyawan -->
@@ -305,6 +298,31 @@ const executeDelete = () => {
                     <!-- Action -->
                     <td class="px-5 py-3.5 whitespace-nowrap text-right">
                         <div class="inline-flex items-center gap-1">
+                            <Link
+                                :href="route('owner.management.company.positions.show', pos.id)"
+                                class="p-1.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition"
+                                title="Lihat Detail & Hak Akses"
+                            >
+                                <svg
+                                    class="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                    />
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                    />
+                                </svg>
+                            </Link>
                             <Link
                                 :href="route('owner.management.company.positions.edit', pos.id)"
                                 class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"

@@ -310,8 +310,8 @@ class HolidayController extends Controller
                 'id' => $holiday->division->id,
                 'name' => $holiday->division->name,
             ] : null,
-            'created_at' => $holiday->created_at ? Carbon::parse($holiday->created_at)->format('Y-m-d H:i') : null,
-            'updated_at' => $holiday->updated_at ? Carbon::parse($holiday->updated_at)->format('Y-m-d H:i') : null,
+            'created_at' => Carbon::parse($holiday->created_at ?? now())->format('Y-m-d H:i:s'),
+            'updated_at' => Carbon::parse($holiday->updated_at ?? $holiday->created_at ?? now())->format('Y-m-d H:i:s'),
         ];
     }
 }

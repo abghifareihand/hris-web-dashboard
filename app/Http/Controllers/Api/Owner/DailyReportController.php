@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Owner;
 use App\Http\Controllers\Controller;
 use App\Models\DailyReport;
 use App\Models\DailyReportAttachment;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -71,7 +72,8 @@ class DailyReportController extends Controller
                 'date' => $report->date->format('Y-m-d'),
                 'description' => $report->description,
                 'name' => $report->user->employee->name ?? $report->user->name,
-                'created_at' => $report->created_at->format('Y-m-d H:i:s'),
+                'created_at' => Carbon::parse($report->created_at ?? now())->format('Y-m-d H:i:s'),
+                'updated_at' => Carbon::parse($report->updated_at ?? $report->created_at ?? now())->format('Y-m-d H:i:s'),
                 'attachments' => $report->attachments->map(function ($attachment) {
                     return [
                         'id' => $attachment->id,

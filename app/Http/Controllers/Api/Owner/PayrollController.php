@@ -79,12 +79,13 @@ class PayrollController extends Controller
                 'start_date' => Carbon::parse($payroll->start_date)->format('Y-m-d'),
                 'end_date' => Carbon::parse($payroll->end_date)->format('Y-m-d'),
                 'status' => $payroll->status,
-                'paid_at' => $payroll->paid_at ? Carbon::parse($payroll->paid_at)->format('Y-m-d H:i') : null,
+                'paid_at' => $payroll->paid_at ? Carbon::parse($payroll->paid_at)->format('Y-m-d H:i:s') : null,
                 'total_employees' => (int) $payroll->total_employees,
                 'total_amount' => (int) $payroll->total_amount,
                 'branch' => $payroll->branch?->name ?? 'Semua Cabang',
                 'division' => $payroll->division?->name ?? 'Semua Divisi',
-                'created_at' => $payroll->created_at ? Carbon::parse($payroll->created_at)->format('Y-m-d H:i') : null,
+                'created_at' => Carbon::parse($payroll->created_at ?? now())->format('Y-m-d H:i:s'),
+                'updated_at' => Carbon::parse($payroll->updated_at ?? $payroll->created_at ?? now())->format('Y-m-d H:i:s'),
                 'summary' => [
                     'total_net_salary' => (int) ($sum?->total_net_salary ?? 0),
                     'total_earnings' => (int) ($sum?->total_earnings ?? 0),
@@ -164,6 +165,8 @@ class PayrollController extends Controller
                 'has_loan' => $hasLoan,
                 'has_prorata' => $hasProrata,
                 'remarks' => $item->remarks,
+                'created_at' => Carbon::parse($item->created_at ?? now())->format('Y-m-d H:i:s'),
+                'updated_at' => Carbon::parse($item->updated_at ?? $item->created_at ?? now())->format('Y-m-d H:i:s'),
             ];
         });
 
@@ -223,7 +226,7 @@ class PayrollController extends Controller
                 'period_start' => Carbon::parse($payroll->start_date)->format('Y-m-d'),
                 'period_end' => Carbon::parse($payroll->end_date)->format('Y-m-d'),
                 'payment_status' => $payroll->status,
-                'paid_at' => $payroll->paid_at ? Carbon::parse($payroll->paid_at)->format('Y-m-d H:i') : null,
+                'paid_at' => $payroll->paid_at ? Carbon::parse($payroll->paid_at)->format('Y-m-d H:i:s') : null,
 
                 // Employee info
                 'employee' => [
@@ -280,6 +283,8 @@ class PayrollController extends Controller
 
                 'remarks' => $item->remarks,
                 'download_url' => route('api.owner.payrolls.download-item', ['id' => $payroll->id, 'itemId' => $item->id]),
+                'created_at' => Carbon::parse($item->created_at ?? now())->format('Y-m-d H:i:s'),
+                'updated_at' => Carbon::parse($item->updated_at ?? $item->created_at ?? now())->format('Y-m-d H:i:s'),
             ],
         ]);
     }
@@ -419,7 +424,9 @@ class PayrollController extends Controller
                 'id' => $payroll->id,
                 'code' => $payroll->code,
                 'status' => 'paid',
-                'paid_at' => $payroll->paid_at ? Carbon::parse($payroll->paid_at)->format('Y-m-d H:i') : null,
+                'paid_at' => $payroll->paid_at ? Carbon::parse($payroll->paid_at)->format('Y-m-d H:i:s') : null,
+                'created_at' => Carbon::parse($payroll->created_at ?? now())->format('Y-m-d H:i:s'),
+                'updated_at' => Carbon::parse($payroll->updated_at ?? $payroll->created_at ?? now())->format('Y-m-d H:i:s'),
             ],
         ]);
     }

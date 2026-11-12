@@ -156,6 +156,16 @@ class ScheduleController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate($this->getPerPage($request));
 
+        $swaps->getCollection()->transform(function ($swap) {
+            $data = $swap->toArray();
+            $data['created_at'] = Carbon::parse($swap->created_at ?? now())->format('Y-m-d H:i:s');
+            $data['updated_at'] = Carbon::parse($swap->updated_at ?? $swap->created_at ?? now())->format('Y-m-d H:i:s');
+            if (!empty($data['approved_at'])) {
+                $data['approved_at'] = Carbon::parse($data['approved_at'])->format('Y-m-d H:i:s');
+            }
+            return $data;
+        });
+
         return $this->paginatedResponse($swaps, 'Data tukar jadwal pribadi berhasil diambil.');
     }
 
@@ -281,6 +291,16 @@ class ScheduleController extends Controller
             })
             ->orderBy('created_at', 'desc')
             ->paginate($this->getPerPage($request));
+
+        $swaps->getCollection()->transform(function ($swap) {
+            $data = $swap->toArray();
+            $data['created_at'] = Carbon::parse($swap->created_at ?? now())->format('Y-m-d H:i:s');
+            $data['updated_at'] = Carbon::parse($swap->updated_at ?? $swap->created_at ?? now())->format('Y-m-d H:i:s');
+            if (!empty($data['approved_at'])) {
+                $data['approved_at'] = Carbon::parse($data['approved_at'])->format('Y-m-d H:i:s');
+            }
+            return $data;
+        });
 
         return $this->paginatedResponse($swaps, 'Data tukar jadwal tim berhasil diambil.');
     }
@@ -488,11 +508,18 @@ class ScheduleController extends Controller
             }
         }
 
+        $swapData = $swap->toArray();
+        $swapData['created_at'] = Carbon::parse($swap->created_at ?? now())->format('Y-m-d H:i:s');
+        $swapData['updated_at'] = Carbon::parse($swap->updated_at ?? $swap->created_at ?? now())->format('Y-m-d H:i:s');
+        if (!empty($swapData['approved_at'])) {
+            $swapData['approved_at'] = Carbon::parse($swapData['approved_at'])->format('Y-m-d H:i:s');
+        }
+
         return response()->json([
             'status' => true,
             'message' => 'Detail pertukaran jadwal personal berhasil diambil.',
             'data' => [
-                'swap' => $swap,
+                'swap' => $swapData,
                 'original_schedule' => $originalSchedule,
                 'target_schedule' => $targetSchedule
             ]
@@ -574,11 +601,18 @@ class ScheduleController extends Controller
             }
         }
 
+        $swapData = $swap->toArray();
+        $swapData['created_at'] = Carbon::parse($swap->created_at ?? now())->format('Y-m-d H:i:s');
+        $swapData['updated_at'] = Carbon::parse($swap->updated_at ?? $swap->created_at ?? now())->format('Y-m-d H:i:s');
+        if (!empty($swapData['approved_at'])) {
+            $swapData['approved_at'] = Carbon::parse($swapData['approved_at'])->format('Y-m-d H:i:s');
+        }
+
         return response()->json([
             'status' => true,
             'message' => 'Detail pertukaran jadwal tim berhasil diambil.',
             'data' => [
-                'swap' => $swap,
+                'swap' => $swapData,
                 'requestor_schedule' => $requestorSchedule,
                 'target_schedule' => $targetSchedule
             ]

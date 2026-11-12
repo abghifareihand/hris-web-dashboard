@@ -126,7 +126,7 @@ class NotificationController extends Controller
             'data'    => [
                 'id'           => $notification->id,
                 'is_read'      => true,
-                'read_at'      => Carbon::now()->toIso8601String(),
+                'read_at'      => Carbon::now()->format('Y-m-d H:i:s'),
                 'unread_count' => $unreadCount,
             ],
         ]);
@@ -221,8 +221,9 @@ class NotificationController extends Controller
             'entity_type'          => $data['entity_type'] ?? null,
             'link'                 => $data['link'] ?? null,
             'is_read'              => $readAt !== null,
-            'read_at'              => $readAt?->toIso8601String(),
-            'created_at'           => $createdAt->toIso8601String(),
+            'read_at'              => $readAt ? Carbon::parse($readAt)->format('Y-m-d H:i:s') : null,
+            'created_at'           => $createdAt->format('Y-m-d H:i:s'),
+            'updated_at'           => Carbon::parse($item->updated_at ?? $createdAt)->format('Y-m-d H:i:s'),
             'created_at_formatted' => $createdAt->translatedFormat('d M Y, H:i'),
             'time_ago'             => $createdAt->diffForHumans(),
         ];

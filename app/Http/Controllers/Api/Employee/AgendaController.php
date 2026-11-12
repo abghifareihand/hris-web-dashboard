@@ -44,7 +44,8 @@ class AgendaController extends Controller
                 'end_time' => Carbon::parse($agenda->end_time)->format('H:i'),
                 'notes' => $agenda->notes,
                 'is_priority' => $agenda->is_priority,
-                'created_at' => $agenda->created_at->format('Y-m-d H:i:s'),
+                'created_at' => Carbon::parse($agenda->created_at ?? now())->format('Y-m-d H:i:s'),
+                'updated_at' => Carbon::parse($agenda->updated_at ?? $agenda->created_at ?? now())->format('Y-m-d H:i:s'),
             ];
         });
 
@@ -135,6 +136,8 @@ class AgendaController extends Controller
                 'end_time' => Carbon::parse($agenda->end_time)->format('H:i'),
                 'notes' => $agenda->notes,
                 'is_priority' => $agenda->is_priority,
+                'created_at' => Carbon::parse($agenda->created_at ?? now())->format('Y-m-d H:i:s'),
+                'updated_at' => Carbon::parse($agenda->updated_at ?? $agenda->created_at ?? now())->format('Y-m-d H:i:s'),
             ]
         ]);
     }

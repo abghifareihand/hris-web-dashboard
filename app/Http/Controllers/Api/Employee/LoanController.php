@@ -56,7 +56,8 @@ class LoanController extends Controller
                 'total_installments_count' => $totalCount,
                 'description' => $loan->description,
                 'status' => $loan->status, // 'pending', 'approved', 'rejected', 'paid'
-                'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
+                'created_at' => Carbon::parse($loan->created_at ?? now())->format('Y-m-d H:i:s'),
+                'updated_at' => Carbon::parse($loan->updated_at ?? $loan->created_at ?? now())->format('Y-m-d H:i:s'),
 
                 // Detailed installments schedule included directly
                 'installments' => $loan->installments->map(function ($inst, $index) {
@@ -66,7 +67,8 @@ class LoanController extends Controller
                         'due_date' => Carbon::parse($inst->due_date)->format('Y-m-d'),
                         'amount' => (int) $inst->amount,
                         'status' => $inst->status, // 'unpaid', 'paid'
-                        'updated_at' => $inst->updated_at->format('Y-m-d H:i:s'),
+                        'created_at' => Carbon::parse($inst->created_at ?? now())->format('Y-m-d H:i:s'),
+                        'updated_at' => Carbon::parse($inst->updated_at ?? $inst->created_at ?? now())->format('Y-m-d H:i:s'),
                     ];
                 })->values(),
             ];

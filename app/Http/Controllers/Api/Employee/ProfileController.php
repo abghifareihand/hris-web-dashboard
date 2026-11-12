@@ -47,6 +47,8 @@ class ProfileController extends Controller
                     'avatar' => $user->avatar,
                     'avatar_url' => $avatarUrl,
                     'role' => $user->role,
+                    'created_at' => Carbon::parse($user->created_at ?? now())->format('Y-m-d H:i:s'),
+                    'updated_at' => Carbon::parse($user->updated_at ?? $user->created_at ?? now())->format('Y-m-d H:i:s'),
                 ],
                 'employee' => [
                     'id' => $employee->id,
@@ -56,6 +58,8 @@ class ProfileController extends Controller
                     'joined_at' => $employee->joined_at ? Carbon::parse($employee->joined_at)->format('Y-m-d') : null,
                     'payroll_cycle' => $employee->payroll_cycle,
                     'is_active' => (bool) $employee->is_active,
+                    'created_at' => Carbon::parse($employee->created_at ?? now())->format('Y-m-d H:i:s'),
+                    'updated_at' => Carbon::parse($employee->updated_at ?? $employee->created_at ?? now())->format('Y-m-d H:i:s'),
                 ],
                 'company' => $company ? [
                     'id' => $company->id,

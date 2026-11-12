@@ -273,8 +273,8 @@ class PositionController extends Controller
                 return ['id' => $d->id, 'name' => $d->name];
             })->values()->all() : [],
             'division_ids' => $position->divisions ? $position->divisions->pluck('id')->all() : [],
-            'created_at' => $position->created_at ? Carbon::parse($position->created_at)->format('Y-m-d H:i') : null,
-            'updated_at' => $position->updated_at ? Carbon::parse($position->updated_at)->format('Y-m-d H:i') : null,
+            'created_at' => Carbon::parse($position->created_at ?? now())->format('Y-m-d H:i:s'),
+            'updated_at' => Carbon::parse($position->updated_at ?? $position->created_at ?? now())->format('Y-m-d H:i:s'),
         ];
     }
 }

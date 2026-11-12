@@ -64,7 +64,8 @@ class ThrController extends Controller
                 'net_amount' => (int) $item->net_amount,
 
                 'download_url' => route('api.employee.thr.download', $item->id),
-                'created_at' => $item->created_at ? $item->created_at->format('Y-m-d H:i:s') : null,
+                'created_at' => Carbon::parse($item->created_at ?? now())->format('Y-m-d H:i:s'),
+                'updated_at' => Carbon::parse($item->updated_at ?? $item->created_at ?? now())->format('Y-m-d H:i:s'),
             ];
         });
 
