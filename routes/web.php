@@ -81,6 +81,7 @@ Route::middleware('auth')->group(function () {
         // Notifications
         Route::prefix('notifications')->name('notifications.')->group(function () {
             Route::get('/', [NotificationController::class, 'index'])->name('index');
+            Route::get('/poll', [NotificationController::class, 'poll'])->name('poll');
             Route::get('/{id}/read', [NotificationController::class, 'read'])->name('read');
             Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('mark-all-read');
             Route::post('/read-all', [NotificationController::class, 'markAllAsRead'])->name('read-all');
@@ -260,13 +261,13 @@ Route::middleware('auth')->group(function () {
                 Route::post('/settings', [ThrSettingController::class, 'store'])->name('settings.store');
                 Route::get('/', [ThrController::class, 'index'])->name('index');
                 Route::get('/create', [ThrController::class, 'create'])->name('create');
-                Route::post('/preview', [ThrController::class, 'create'])->name('preview');
+                Route::match(['get', 'post'], '/preview', [ThrController::class, 'create'])->name('preview');
                 Route::post('/', [ThrController::class, 'store'])->name('store');
-                Route::get('/{id}', [ThrController::class, 'show'])->name('show');
-                Route::get('/{id}/slips', [ThrController::class, 'slip'])->name('slips');
-                Route::get('/{id}/slips/{itemId}', [ThrController::class, 'slipSingle'])->name('slip-single');
-                Route::post('/{id}/pay', [ThrController::class, 'pay'])->name('pay');
-                Route::delete('/{id}', [ThrController::class, 'destroy'])->name('destroy');
+                Route::get('/{id}', [ThrController::class, 'show'])->whereNumber('id')->name('show');
+                Route::get('/{id}/slips', [ThrController::class, 'slip'])->whereNumber('id')->name('slips');
+                Route::get('/{id}/slips/{itemId}', [ThrController::class, 'slipSingle'])->whereNumber('id')->whereNumber('itemId')->name('slip-single');
+                Route::post('/{id}/pay', [ThrController::class, 'pay'])->whereNumber('id')->name('pay');
+                Route::delete('/{id}', [ThrController::class, 'destroy'])->whereNumber('id')->name('destroy');
             });
         });
 

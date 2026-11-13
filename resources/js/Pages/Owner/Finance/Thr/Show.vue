@@ -229,6 +229,7 @@ const formatCurrency = (val) => {
                 <DataTable
                     :headers="[
                         'Karyawan',
+                        'Siklus Gaji',
                         'Masa Kerja',
                         'Basis Gaji',
                         'Skema THR',
@@ -255,6 +256,28 @@ const formatCurrency = (val) => {
                                         </div>
                                     </div>
                                 </div>
+                            </td>
+
+                            <!-- Siklus Gaji -->
+                            <td class="px-5 py-4 whitespace-nowrap">
+                                <span
+                                    v-if="item.employee?.payroll_cycle === 'daily'"
+                                    class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/80"
+                                >
+                                    Harian
+                                </span>
+                                <span
+                                    v-else-if="item.employee?.payroll_cycle === 'weekly'"
+                                    class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/80"
+                                >
+                                    Mingguan
+                                </span>
+                                <span
+                                    v-else
+                                    class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200/80"
+                                >
+                                    Bulanan
+                                </span>
                             </td>
 
                             <!-- Masa Kerja -->
@@ -311,7 +334,7 @@ const formatCurrency = (val) => {
                         <TableEmpty
                             title="Tidak ada karyawan ditemukan"
                             message="Tidak ada data rincian THR yang sesuai dengan kata kunci pencarian Anda."
-                            :colspan="6"
+                            :colspan="7"
                         />
                     </template>
                 </DataTable>

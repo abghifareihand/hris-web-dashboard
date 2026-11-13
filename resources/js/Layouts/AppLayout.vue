@@ -8,8 +8,31 @@ import AdminSidebar from '@/Layouts/Sidebars/AdminSidebar.vue';
 const page = usePage();
 const authUser = computed(() => page.props.auth?.user);
 const companyName = computed(() => authUser.value?.company?.name || authUser.value?.company?.name_company || '');
-const unreadNotificationsCount = computed(() => page.props.auth?.unreadNotificationsCount || 0);
-const recentNotifications = computed(() => page.props.auth?.recentNotifications || []);
+
+const dynamicUnreadCount = ref(page.props.auth?.unreadNotificationsCount ?? 0);
+const dynamicRecentNotifications = ref(page.props.auth?.recentNotifications ?? []);
+
+watch(
+    () => page.props.auth?.unreadNotificationsCount,
+    (val) => {
+        if (typeof val === 'number') {
+            dynamicUnreadCount.value = val;
+        }
+    }
+);
+
+watch(
+    () => page.props.auth?.recentNotifications,
+    (val) => {
+        if (Array.isArray(val)) {
+            dynamicRecentNotifications.value = val;
+        }
+    },
+    { deep: true }
+);
+
+const unreadNotificationsCount = computed(() => dynamicUnreadCount.value);
+const recentNotifications = computed(() => dynamicRecentNotifications.value);
 const appName = computed(() => page.props.appName || 'ADR HRIS');
 const flash = computed(() => page.props.flash || {});
 
@@ -342,7 +365,7 @@ const checkPendingApprovalsNotification = () => {
 };
 
 watch(
-    () => page.props.auth?.recentNotifications,
+    () => dynamicRecentNotifications.value,
     () => {
         checkPendingApprovalsNotification();
     },
@@ -352,6 +375,13 @@ watch(
 const markAllNotificationsRead = () => {
     router.post(route('owner.notifications.mark-all-read'), {}, {
         preserveScroll: true,
+        onSuccess: () => {
+            dynamicUnreadCount.value = 0;
+            dynamicRecentNotifications.value = dynamicRecentNotifications.value.map(n => ({
+                ...n,
+                read_at: n.read_at || new Date().toISOString()
+            }));
+        }
     });
 };
 
@@ -371,34 +401,58 @@ const handleGlobalKeydown = (event) => {
     }
 };
 
-const pollNotifications = () => {
+const pollNotifications = async () => {
     if (document.hidden || isPolling || authUser.value?.role !== 'owner') return;
     isPolling = true;
 
-    const onlyKeys = ['auth'];
-    const isDashboard = page.component === 'Owner/Dashboard/Index' || (typeof route === 'function' && route().current && route().current('owner.dashboard'));
-    if (isDashboard) {
-        onlyKeys.push(
-            'pendingApprovals',
-            'totalPendingApprovals',
-            'pendingLeavesCount',
-            'todayPresentCount',
-            'attendanceRate',
-            'recentClockIns'
-        );
+    try {
+        // 1. Silent fetch untuk notifikasi (tidak pernah mengganggu page state, input form, atau controller aktif)
+        if (typeof route === 'function') {
+            const pollUrl = route('owner.notifications.poll');
+            const res = await fetch(pollUrl, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (typeof data.unreadNotificationsCount === 'number') {
+                    dynamicUnreadCount.value = data.unreadNotificationsCount;
+                }
+                if (Array.isArray(data.recentNotifications)) {
+                    dynamicRecentNotifications.value = data.recentNotifications;
+                }
+            }
+        }
+    } catch {
+        // Silent error handling
     }
 
-    router.reload({
-        only: onlyKeys,
-        preserveScroll: true,
-        preserveState: true,
-        onError: () => {
-            isPolling = false;
-        },
-        onFinish: () => {
-            isPolling = false;
-        },
-    });
+    // 2. Hanya reload data dashboard jika user sedang membuka halaman Dashboard
+    const isDashboard = page.component === 'Owner/Dashboard/Index' || (typeof route === 'function' && route().current && route().current('owner.dashboard'));
+    if (isDashboard) {
+        router.reload({
+            only: [
+                'pendingApprovals',
+                'totalPendingApprovals',
+                'pendingLeavesCount',
+                'todayPresentCount',
+                'attendanceRate',
+                'recentClockIns'
+            ],
+            preserveScroll: true,
+            preserveState: true,
+            onError: () => {
+                isPolling = false;
+            },
+            onFinish: () => {
+                isPolling = false;
+            },
+        });
+    } else {
+        isPolling = false;
+    }
 };
 
 const handleVisibilityChange = () => {
@@ -416,8 +470,8 @@ onMounted(() => {
 
     if (authUser.value?.role === 'owner') {
         markExistingNotificationsAsSeen();
-        // Polling cepat setiap 8 detik (antara 5-10 detik)
-        pollInterval = setInterval(pollNotifications, 8000);
+        // Polling setiap 15 detik (aman di background tanpa mengganggu form/halaman lain)
+        pollInterval = setInterval(pollNotifications, 15000);
     }
 });
 

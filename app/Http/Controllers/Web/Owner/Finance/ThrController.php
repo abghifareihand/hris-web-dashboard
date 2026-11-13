@@ -7,6 +7,8 @@ use App\Models\Thr;
 use App\Models\ThrItem;
 use App\Models\Employee;
 use App\Models\Branch;
+use App\Models\CompanyThrSetting;
+use App\Models\CompanyPayrollSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -46,73 +48,68 @@ class ThrController extends Controller
             return redirect()->route('owner.finance.thr.settings.index')->with('error', 'Fitur THR dinonaktifkan di Pengaturan.');
         }
 
+        $payrollSetting = $company->payrollSetting()->firstOrCreate(
+            ['company_id' => $company->id],
+            [
+                'default_payroll_cycle' => 'monthly',
+                'monthly_working_days' => 25,
+                'weekly_working_days' => 6,
+            ]
+        );
+
+        $monthlyWorkingDays = (int) ($payrollSetting->monthly_working_days ?: 25);
+        $weeklyWorkingDays = (int) ($payrollSetting->weekly_working_days ?: 6);
+
         $branches = Branch::where('company_id', $company->id)->select('id', 'name')->get();
 
         $previewData = null;
         if ($request->filled('payment_date') && $request->filled('year')) {
-            $paymentDate = Carbon::parse($request->payment_date);
+            $paymentDate = $this->parseDateSafely($request->payment_date);
 
             $query = Employee::where('company_id', $company->id)
                 ->where('is_active', true)
                 ->whereNotNull('joined_at')
-                ->with(['division:id,name', 'branch:id,name']);
+                ->with(['division:id,name', 'position:id,name', 'branch:id,name']);
 
-            if ($request->filled('branch_id')) {
-                $query->where('branch_id', $request->branch_id);
+            $branchId = $request->filled('branch_id') && is_numeric($request->branch_id)
+                ? (int) $request->branch_id
+                : null;
+
+            if ($branchId) {
+                $query->where('branch_id', $branchId);
             }
 
             $employees = $query->get();
 
             $calculated = collect();
             foreach ($employees as $employee) {
-                $joinedAt = Carbon::parse($employee->joined_at);
-                $diffInDays = $joinedAt->diffInDays($paymentDate, false);
-                
-                if ($diffInDays < 0) {
-                    continue;
+                $calc = $this->calculateEmployeeThr(
+                    $employee,
+                    $paymentDate,
+                    $settings,
+                    $monthlyWorkingDays,
+                    $weeklyWorkingDays
+                );
+
+                if ($calc) {
+                    $calculated->push($calc);
                 }
-
-                $monthsTenure = (int) floor($joinedAt->diffInDays($paymentDate) / 30.436875);
-
-                if ($monthsTenure < $settings->min_months_tenure) {
-                    continue;
-                }
-
-                $basis = (float) $employee->basic_salary;
-                if ($settings->include_fixed_allowance) {
-                    $basis += (float) $employee->fixed_allowance;
-                }
-
-                if ($monthsTenure < $settings->full_thr_months_tenure) {
-                    $prorateMultiplier = round($monthsTenure / 12, 4);
-                    $thrAmount = round(($basis * $monthsTenure) / 12);
-                } else {
-                    $prorateMultiplier = 1.0;
-                    $thrAmount = $basis;
-                }
-
-                $calculated->push([
-                    'employee_id' => $employee->id,
-                    'name' => $employee->name,
-                    'nip' => $employee->nip,
-                    'division' => $employee->division ? $employee->division->name : '-',
-                    'branch' => $employee->branch ? $employee->branch->name : '-',
-                    'joined_at' => $joinedAt->format('Y-m-d'),
-                    'months_tenure' => $monthsTenure,
-                    'basis' => $basis,
-                    'prorate_multiplier' => $prorateMultiplier,
-                    'thr_amount' => $thrAmount,
-                ]);
             }
 
-            $previewData = $calculated;
+            $previewData = $calculated->values()->all();
         }
 
         return Inertia::render('Owner/Finance/Thr/Create', [
             'branches' => $branches,
             'settings' => $settings,
+            'payrollSetting' => $payrollSetting,
             'previewData' => $previewData,
-            'params' => $request->only(['holiday_name', 'year', 'payment_date', 'branch_id']),
+            'params' => [
+                'holiday_name' => $request->holiday_name ?: 'Hari Raya Idul Fitri',
+                'year' => $request->year ? (int) $request->year : (int) date('Y'),
+                'payment_date' => $request->payment_date ?: date('Y-m-d'),
+                'branch_id' => $request->filled('branch_id') && is_numeric($request->branch_id) ? (int) $request->branch_id : '',
+            ],
         ]);
     }
 
@@ -121,8 +118,8 @@ class ThrController extends Controller
         $request->validate([
             'holiday_name' => 'required|string|max:255',
             'year' => 'required|integer',
-            'payment_date' => 'required|date',
-            'branch_id' => 'nullable|exists:branches,id',
+            'payment_date' => 'required',
+            'branch_id' => 'nullable',
             'employee_ids' => 'required|array|min:1',
             'employee_ids.*' => 'exists:employees,id',
         ]);
@@ -142,10 +139,32 @@ class ThrController extends Controller
             return redirect()->route('owner.finance.thr.settings.index')->with('error', 'Fitur THR dinonaktifkan di Pengaturan.');
         }
 
-        $paymentDate = Carbon::parse($request->payment_date);
+        $payrollSetting = $company->payrollSetting()->firstOrCreate(
+            ['company_id' => $company->id],
+            [
+                'default_payroll_cycle' => 'monthly',
+                'monthly_working_days' => 25,
+                'weekly_working_days' => 6,
+            ]
+        );
+
+        $monthlyWorkingDays = (int) ($payrollSetting->monthly_working_days ?: 25);
+        $weeklyWorkingDays = (int) ($payrollSetting->weekly_working_days ?: 6);
+
+        $branchId = $request->filled('branch_id') && is_numeric($request->branch_id)
+            ? (int) $request->branch_id
+            : null;
+
+        if ($branchId && !Branch::where('company_id', $company->id)->where('id', $branchId)->exists()) {
+            return redirect()->back()->with('error', 'Cabang yang dipilih tidak valid.');
+        }
+
+        $paymentDate = $this->parseDateSafely($request->payment_date);
 
         $employees = Employee::where('company_id', $company->id)
             ->whereIn('id', $request->employee_ids)
+            ->where('is_active', true)
+            ->whereNotNull('joined_at')
             ->get();
 
         if ($employees->isEmpty()) {
@@ -157,10 +176,10 @@ class ThrController extends Controller
             $thr = Thr::create([
                 'company_id' => $company->id,
                 'code' => 'THR-' . strtoupper(Str::random(6)) . '-' . date('Ym'),
-                'year' => $request->year,
+                'year' => (int) $request->year,
                 'holiday_name' => $request->holiday_name,
                 'payment_date' => $paymentDate,
-                'branch_id' => $request->branch_id,
+                'branch_id' => $branchId,
                 'status' => 'process',
                 'total_employees' => 0,
                 'total_amount' => 0,
@@ -170,48 +189,36 @@ class ThrController extends Controller
             $totalAmount = 0;
 
             foreach ($employees as $employee) {
-                $joinedAt = Carbon::parse($employee->joined_at);
-                $diffInDays = $joinedAt->diffInDays($paymentDate, false);
-                
-                if ($diffInDays < 0) {
+                $calc = $this->calculateEmployeeThr(
+                    $employee,
+                    $paymentDate,
+                    $settings,
+                    $monthlyWorkingDays,
+                    $weeklyWorkingDays
+                );
+
+                if (!$calc) {
                     continue;
                 }
-
-                $monthsTenure = (int) floor($joinedAt->diffInDays($paymentDate) / 30.436875);
-
-                if ($monthsTenure < $settings->min_months_tenure) {
-                    continue;
-                }
-
-                $basis = (float) $employee->basic_salary;
-                if ($settings->include_fixed_allowance) {
-                    $basis += (float) $employee->fixed_allowance;
-                }
-
-                if ($monthsTenure < $settings->full_thr_months_tenure) {
-                    $prorateMultiplier = round($monthsTenure / 12, 4);
-                    $thrAmount = round(($basis * $monthsTenure) / 12);
-                } else {
-                    $prorateMultiplier = 1.0;
-                    $thrAmount = $basis;
-                }
-                
-                $taxAmount = 0;
-                $netAmount = $thrAmount - $taxAmount;
 
                 ThrItem::create([
                     'thr_id' => $thr->id,
                     'employee_id' => $employee->id,
-                    'tenure_months' => $monthsTenure,
-                    'basis_amount' => $basis,
-                    'prorate_multiplier' => $prorateMultiplier,
-                    'thr_amount' => $thrAmount,
-                    'tax_amount' => $taxAmount,
-                    'net_amount' => $netAmount,
+                    'tenure_months' => $calc['months_tenure'],
+                    'basis_amount' => $calc['basis'],
+                    'prorate_multiplier' => $calc['prorate_multiplier'],
+                    'thr_amount' => $calc['thr_amount'],
+                    'tax_amount' => $calc['tax_amount'],
+                    'net_amount' => $calc['net_amount'],
                 ]);
 
                 $totalEmployees++;
-                $totalAmount += $netAmount;
+                $totalAmount += $calc['net_amount'];
+            }
+
+            if ($totalEmployees === 0) {
+                DB::rollBack();
+                return redirect()->back()->with('error', 'Tidak ada karyawan yang memenuhi kriteria perhitungan THR.');
             }
 
             $thr->update([
@@ -234,7 +241,7 @@ class ThrController extends Controller
         $thr = Thr::where('company_id', $company->id)
             ->with([
                 'branch:id,name',
-                'items.employee:id,name,nip,branch_id,division_id,position_id',
+                'items.employee:id,name,nip,branch_id,division_id,position_id,payroll_cycle,basic_salary,fixed_allowance',
                 'items.employee.division:id,name',
                 'items.employee.position:id,name',
                 'items.employee.branch:id,name'
@@ -309,5 +316,111 @@ class ThrController extends Controller
         $thr->delete();
 
         return redirect()->route('owner.finance.thr.index')->with('success', 'Data THR berhasil dihapus.');
+    }
+
+    /**
+     * Calculate individual employee THR eligibility and amounts based on labor rules
+     */
+    private function calculateEmployeeThr(
+        Employee $employee,
+        Carbon $paymentDate,
+        CompanyThrSetting $settings,
+        int $monthlyWorkingDays,
+        int $weeklyWorkingDays
+    ): ?array {
+        if (!$employee->joined_at) {
+            return null;
+        }
+
+        $joinedAt = Carbon::parse($employee->joined_at);
+        if ($joinedAt->gt($paymentDate)) {
+            return null;
+        }
+
+        // Hitung masa kerja dalam bulan secara akurat
+        $monthsTenure = (int) $joinedAt->diffInMonths($paymentDate);
+
+        // Jika masa kerja kurang dari syarat minimal (default: 1 bulan) -> Tidak berhak THR
+        if ($monthsTenure < $settings->min_months_tenure) {
+            return null;
+        }
+
+        $cycle = $employee->payroll_cycle ?: 'monthly';
+        $rawSalary = (float) $employee->basic_salary;
+
+        // Upah 1 bulan ekuivalen untuk dasar perhitungan THR:
+        // 1. Bulanan: Gaji pokok per bulan
+        // 2. Harian: Upah harian * hari kerja bulanan (Permenaker No. 6/2016 Pasal 3 ayat 2)
+        // 3. Mingguan: (Upah mingguan / hari kerja mingguan) * hari kerja bulanan
+        if ($cycle === 'daily') {
+            $monthlyEquivalentSalary = $rawSalary * $monthlyWorkingDays;
+        } elseif ($cycle === 'weekly') {
+            $dailyRate = $weeklyWorkingDays > 0 ? ($rawSalary / $weeklyWorkingDays) : ($rawSalary / 6);
+            $monthlyEquivalentSalary = $dailyRate * $monthlyWorkingDays;
+        } else {
+            $monthlyEquivalentSalary = $rawSalary;
+        }
+
+        $basis = $monthlyEquivalentSalary;
+        if ($settings->include_fixed_allowance) {
+            $basis += (float) ($employee->fixed_allowance ?? 0);
+        }
+
+        // Perhitungan hak THR: Penuh (1x Gaji) atau Prorata (Masa Kerja / 12)
+        if ($monthsTenure < $settings->full_thr_months_tenure) {
+            $prorateMultiplier = round($monthsTenure / 12, 2);
+            $thrAmount = round(($basis * $monthsTenure) / 12);
+        } else {
+            $prorateMultiplier = 1.0;
+            $thrAmount = round($basis);
+        }
+
+        $taxAmount = 0; // PPh21 THR disiapkan 0 untuk MVP
+        $netAmount = max(0, $thrAmount - $taxAmount);
+
+        return [
+            'employee_id' => $employee->id,
+            'name' => $employee->name,
+            'nip' => $employee->nip,
+            'division' => $employee->division ? $employee->division->name : '-',
+            'position' => $employee->position ? $employee->position->name : '-',
+            'branch' => $employee->branch ? $employee->branch->name : '-',
+            'branch_id' => $employee->branch_id,
+            'payroll_cycle' => $cycle,
+            'raw_basic_salary' => $rawSalary,
+            'fixed_allowance' => (float) ($employee->fixed_allowance ?? 0),
+            'joined_at' => $joinedAt->format('Y-m-d'),
+            'months_tenure' => $monthsTenure,
+            'basis' => (int) round($basis),
+            'prorate_multiplier' => (float) $prorateMultiplier,
+            'thr_amount' => (int) round($thrAmount),
+            'tax_amount' => (int) round($taxAmount),
+            'net_amount' => (int) round($netAmount),
+        ];
+    }
+
+    private function parseDateSafely($date): Carbon
+    {
+        if (!$date) {
+            return Carbon::now();
+        }
+
+        $dateStr = trim((string) $date);
+
+        try {
+            if (str_contains($dateStr, '/')) {
+                $parts = explode('/', $dateStr);
+                if (count($parts) === 3 && strlen($parts[2]) === 4) {
+                    // dd/mm/yyyy
+                    return Carbon::createFromFormat('d/m/Y', $dateStr)->startOfDay();
+                } elseif (count($parts) === 3 && strlen($parts[0]) === 4) {
+                    // yyyy/mm/dd
+                    return Carbon::createFromFormat('Y/m/d', $dateStr)->startOfDay();
+                }
+            }
+            return Carbon::parse($dateStr)->startOfDay();
+        } catch (\Throwable $e) {
+            return Carbon::now()->startOfDay();
+        }
     }
 }

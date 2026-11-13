@@ -1,8 +1,10 @@
 <script setup>
+import { ref } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import Button from '@/Components/UI/Button.vue'
 import Badge from '@/Components/UI/Badge.vue'
+import Modal from '@/Components/UI/Modal.vue'
 import DataTable from '@/Components/Table/DataTable.vue'
 import TableEmpty from '@/Components/Table/TableEmpty.vue'
 import TablePagination from '@/Components/Table/TablePagination.vue'
@@ -11,10 +13,27 @@ const props = defineProps({
     thrs: Object,
 })
 
-const handleDelete = (id) => {
-    if (confirm('Apakah Anda yakin ingin menghapus data perhitungan THR ini?')) {
-        router.delete(route('owner.finance.thr.destroy', id))
-    }
+// Modal Konfirmasi Hapus
+const isDeleteModalOpen = ref(false)
+const thrToDelete = ref(null)
+const isDeleting = ref(false)
+
+const openDeleteModal = (item) => {
+    thrToDelete.value = item
+    isDeleteModalOpen.value = true
+}
+
+const executeDelete = () => {
+    if (!thrToDelete.value) return
+    isDeleting.value = true
+    router.delete(route('owner.finance.thr.destroy', thrToDelete.value.id), {
+        preserveScroll: true,
+        onFinish: () => {
+            isDeleting.value = false
+            isDeleteModalOpen.value = false
+            thrToDelete.value = null
+        },
+    })
 }
 
 const formatDate = (dateStr) => {
@@ -150,7 +169,7 @@ const formatCurrency = (val) => {
                                     type="button"
                                     class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition inline-flex items-center justify-center cursor-pointer"
                                     title="Hapus Draft THR"
-                                    @click="handleDelete(item.id)"
+                                    @click="openDeleteModal(item)"
                                 >
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -172,5 +191,62 @@ const formatCurrency = (val) => {
             <!-- Table Pagination -->
             <TablePagination :pagination="thrs" />
         </div>
+
+        <!-- Modal Konfirmasi Hapus THR (Design System Sendiri) -->
+        <Modal
+            :show="isDeleteModalOpen"
+            maxWidth="sm"
+            @close="isDeleteModalOpen = false"
+        >
+            <div>
+                <div class="flex items-center gap-3.5 mb-3">
+                    <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">
+                            Hapus Data THR
+                        </h3>
+                        <p class="text-xs text-slate-500 font-mono">
+                            {{ thrToDelete?.code }}
+                        </p>
+                    </div>
+                </div>
+
+                <p class="text-sm text-slate-600">
+                    Apakah Anda yakin ingin menghapus data perhitungan THR
+                    <strong class="text-slate-900">{{ thrToDelete?.holiday_name }} ({{ thrToDelete?.year }})</strong>?
+                </p>
+
+                <div class="mt-3 bg-rose-50/80 border border-rose-200/80 rounded-xl p-3 text-xs text-rose-700 space-y-1">
+                    <p class="font-semibold">Perhatian:</p>
+                    <p>Tindakan ini tidak dapat dibatalkan. Seluruh rincian kalkulasi slip THR karyawan pada periode ini akan dihapus permanen.</p>
+                </div>
+            </div>
+
+            <template #footer>
+                <div class="flex items-center justify-end gap-2.5">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        :disabled="isDeleting"
+                        @click="isDeleteModalOpen = false"
+                    >
+                        Batal
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="danger"
+                        :loading="isDeleting"
+                        :disabled="isDeleting"
+                        @click="executeDelete"
+                    >
+                        Ya, Hapus Data
+                    </Button>
+                </div>
+            </template>
+        </Modal>
     </AppLayout>
 </template>
