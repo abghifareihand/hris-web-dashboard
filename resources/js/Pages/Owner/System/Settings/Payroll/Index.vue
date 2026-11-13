@@ -19,6 +19,24 @@ const form = useForm({
     notes: props.setting?.notes || '',
 });
 
+const cycleOptions = [
+    {
+        value: 'monthly',
+        title: 'Bulanan',
+        desc: 'Gaji tetap per bulan. Pemotongan absen dihitung proporsional berbasis hari kerja efektif.',
+    },
+    {
+        value: 'weekly',
+        title: 'Mingguan',
+        desc: 'Upah mingguan (standar 6 hari kerja). Pembayaran dilakukan rutin setiap pekan.',
+    },
+    {
+        value: 'daily',
+        title: 'Harian',
+        desc: 'Murni upah harian (Hari Masuk × Upah/Hari). Tanpa gaji pokok bulanan, tidak masuk tidak dibayar.',
+    },
+];
+
 const submit = () => {
     form.post(route('owner.finance.payrolls.settings.store'), {
         preserveScroll: true,
@@ -48,82 +66,49 @@ const submit = () => {
                     </p>
                 </div>
 
-                <!-- 3 Card Radio Options -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <!-- Bulanan -->
-                    <label
-                        class="relative flex flex-col p-4 rounded-xl border-2 cursor-pointer transition-all select-none"
-                        :class="form.default_payroll_cycle === 'monthly'
-                            ? 'border-emerald-600 bg-emerald-50/40 text-slate-900 shadow-xs ring-1 ring-emerald-600/20'
-                            : 'border-slate-200/90 hover:border-slate-300 bg-white text-slate-600'"
+                <!-- 3 Card Radio Options (Sama persis dengan gaya Mode Kamera Presensi) -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div
+                        v-for="opt in cycleOptions"
+                        :key="opt.value"
+                        @click="form.default_payroll_cycle = opt.value"
+                        class="relative p-4 rounded-xl border text-left cursor-pointer transition-all duration-150 flex flex-col justify-between select-none"
+                        :class="[
+                            form.default_payroll_cycle === opt.value
+                                ? 'border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-500/20 shadow-xs'
+                                : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50/50'
+                        ]"
                     >
-                        <input
-                            type="radio"
-                            value="monthly"
-                            v-model="form.default_payroll_cycle"
-                            class="sr-only"
-                        />
-                        <div class="flex items-center justify-between">
-                            <span class="text-sm font-bold text-slate-900">Bulanan</span>
-                            <span
-                                v-if="form.default_payroll_cycle === 'monthly'"
-                                class="w-2.5 h-2.5 rounded-full bg-emerald-600 ring-4 ring-emerald-100"
-                            ></span>
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <div
+                                    class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                                    :class="form.default_payroll_cycle === opt.value ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'"
+                                >
+                                    <!-- Monthly Icon (Calendar) -->
+                                    <svg v-if="opt.value === 'monthly'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <!-- Weekly Icon (Clock) -->
+                                    <svg v-else-if="opt.value === 'weekly'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <!-- Daily Icon (Sun) -->
+                                    <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                                    </svg>
+                                </div>
+                                <span
+                                    class="w-4 h-4 rounded-full border flex items-center justify-center shrink-0"
+                                    :class="form.default_payroll_cycle === opt.value ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300'"
+                                >
+                                    <span v-if="form.default_payroll_cycle === opt.value" class="w-1.5 h-1.5 rounded-full bg-white"></span>
+                                </span>
+                            </div>
+                            <div class="text-sm font-bold text-slate-800 leading-snug">{{ opt.title }}</div>
+                            <div class="text-xs text-slate-500 leading-normal">{{ opt.desc }}</div>
                         </div>
-                        <p class="text-xs text-slate-500 mt-2">
-                            Gaji tetap per bulan. Pemotongan absen dihitung proporsional berbasis hari kerja efektif.
-                        </p>
-                    </label>
-
-                    <!-- Mingguan -->
-                    <label
-                        class="relative flex flex-col p-4 rounded-xl border-2 cursor-pointer transition-all select-none"
-                        :class="form.default_payroll_cycle === 'weekly'
-                            ? 'border-emerald-600 bg-emerald-50/40 text-slate-900 shadow-xs ring-1 ring-emerald-600/20'
-                            : 'border-slate-200/90 hover:border-slate-300 bg-white text-slate-600'"
-                    >
-                        <input
-                            type="radio"
-                            value="weekly"
-                            v-model="form.default_payroll_cycle"
-                            class="sr-only"
-                        />
-                        <div class="flex items-center justify-between">
-                            <span class="text-sm font-bold text-slate-900">Mingguan</span>
-                            <span
-                                v-if="form.default_payroll_cycle === 'weekly'"
-                                class="w-2.5 h-2.5 rounded-full bg-emerald-600 ring-4 ring-emerald-100"
-                            ></span>
-                        </div>
-                        <p class="text-xs text-slate-500 mt-2">
-                            Upah mingguan (standar 6 hari kerja). Pembayaran dilakukan rutin setiap pekan.
-                        </p>
-                    </label>
-
-                    <!-- Harian -->
-                    <label
-                        class="relative flex flex-col p-4 rounded-xl border-2 cursor-pointer transition-all select-none"
-                        :class="form.default_payroll_cycle === 'daily'
-                            ? 'border-emerald-600 bg-emerald-50/40 text-slate-900 shadow-xs ring-1 ring-emerald-600/20'
-                            : 'border-slate-200/90 hover:border-slate-300 bg-white text-slate-600'"
-                    >
-                        <input
-                            type="radio"
-                            value="daily"
-                            v-model="form.default_payroll_cycle"
-                            class="sr-only"
-                        />
-                        <div class="flex items-center justify-between">
-                            <span class="text-sm font-bold text-slate-900">Harian</span>
-                            <span
-                                v-if="form.default_payroll_cycle === 'daily'"
-                                class="w-2.5 h-2.5 rounded-full bg-emerald-600 ring-4 ring-emerald-100"
-                            ></span>
-                        </div>
-                        <p class="text-xs text-slate-500 mt-2">
-                            Murni upah harian (Hari Masuk &times; Upah/Hari). Tanpa gaji pokok bulanan, tidak masuk tidak dibayar.
-                        </p>
-                    </label>
+                    </div>
                 </div>
             </div>
 

@@ -10,6 +10,18 @@ const props = defineProps({
         type: String,
         default: "text",
     },
+    min: {
+        type: [String, Number],
+        default: undefined,
+    },
+    max: {
+        type: [String, Number],
+        default: undefined,
+    },
+    step: {
+        type: [String, Number],
+        default: undefined,
+    },
     currency: {
         type: Boolean,
         default: false,
@@ -68,7 +80,7 @@ const props = defineProps({
     },
 });
 
-const emit = defineEmits(["update:modelValue", "clear", "click"]);
+const emit = defineEmits(["update:modelValue", "clear", "click", "blur"]);
 
 const clear = () => {
     emit("update:modelValue", isCurrency.value ? 0 : "");
@@ -147,8 +159,35 @@ const onInput = (event) => {
 
         emit("update:modelValue", numericValue);
     } else {
-        emit("update:modelValue", event.target.value);
+        let val = event.target.value;
+        if (props.type === "number" && val !== "") {
+            const num = Number(val);
+            if (props.max !== undefined && props.max !== null && props.max !== "") {
+                const maxNum = Number(props.max);
+                if (!isNaN(num) && !isNaN(maxNum) && num > maxNum) {
+                    val = String(props.max);
+                    event.target.value = val;
+                }
+            }
+        }
+        emit("update:modelValue", val);
     }
+};
+
+const onBlur = (event) => {
+    let val = event.target.value;
+    if (props.type === "number" && val !== "") {
+        const num = Number(val);
+        if (props.min !== undefined && props.min !== null && props.min !== "") {
+            const minNum = Number(props.min);
+            if (!isNaN(num) && !isNaN(minNum) && num < minNum) {
+                val = String(props.min);
+                event.target.value = val;
+                emit("update:modelValue", val);
+            }
+        }
+    }
+    emit("blur", event);
 };
 
 const onFocus = (event) => {
@@ -256,8 +295,12 @@ const onClick = (event) => {
                 :disabled="disabled"
                 :readonly="readonly"
                 :required="required"
+                :min="min"
+                :max="max"
+                :step="step"
                 @input="onInput"
                 @focus="onFocus"
+                @blur="onBlur"
                 @keydown="onKeyDown"
                 @click="onClick"
                 class="flex-1 w-full h-full px-3 py-2 text-[0.8125rem] text-slate-800 border-0 focus:outline-hidden focus:ring-0 bg-transparent min-w-0"
