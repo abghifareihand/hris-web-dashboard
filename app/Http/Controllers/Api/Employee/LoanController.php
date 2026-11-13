@@ -95,7 +95,7 @@ class LoanController extends Controller
 
         $basicSalary = (int) ($employee->basic_salary ?? 0);
         $maxPercentage = 35;
-        $maxMonthlyInstallment = (int) round($basicSalary * ($maxPercentage / 100));
+        $maxInstallmentPerCycle = (int) round($basicSalary * ($maxPercentage / 100));
 
         $cycle = $employee->payroll_cycle ?? 'monthly';
         $cycleUnit = match ($cycle) {
@@ -104,18 +104,23 @@ class LoanController extends Controller
             default => 'Bulan',
         };
 
-        $defaultTenors = match ($cycle) {
-            'daily' => [3, 5, 7, 10, 14, 21, 30],
-            'weekly' => [1, 2, 3, 4, 6, 8, 12],
-            default => [1, 2, 3, 4, 5, 6, 9, 12, 18, 24],
+        // Batas maksimal tenor per siklus dari pengaturan perusahaan
+        $maxTenor = match ($cycle) {
+            'daily' => ($loanSetting && $loanSetting->max_tenor_days) ? (int) $loanSetting->max_tenor_days : 14,
+            'weekly' => ($loanSetting && $loanSetting->max_tenor_weeks) ? (int) $loanSetting->max_tenor_weeks : 4,
+            default => ($loanSetting && $loanSetting->max_tenor_months) ? (int) $loanSetting->max_tenor_months : 12,
         };
 
-        if ($cycle === 'monthly' && $loanSetting && $loanSetting->max_tenor_months) {
-            $filteredTenors = array_values(array_filter($defaultTenors, fn($t) => $t <= $loanSetting->max_tenor_months));
-            $tenorOptions = !empty($filteredTenors) ? $filteredTenors : [(int) $loanSetting->max_tenor_months];
-        } else {
-            $tenorOptions = $defaultTenors;
-        }
+        // Buat opsi tenor berurutan rapi: [1, 2, 3, ... $maxTenor]
+        $maxTenor = max(1, min(60, $maxTenor));
+        $tenorOptions = range(1, $maxTenor);
+
+        // Batas maksimal nominal pinjaman per siklus
+        $maxLoanAmount = match ($cycle) {
+            'daily' => $loanSetting?->max_loan_amount_daily ?? $loanSetting?->max_loan_amount,
+            'weekly' => $loanSetting?->max_loan_amount_weekly ?? $loanSetting?->max_loan_amount,
+            default => $loanSetting?->max_loan_amount,
+        };
 
         return response()->json([
             'status' => true,
@@ -125,8 +130,10 @@ class LoanController extends Controller
                 'cycle_unit' => $cycleUnit,
                 'basic_salary' => $basicSalary,
                 'max_percentage' => $maxPercentage,
-                'max_installment_per_cycle' => $maxMonthlyInstallment,
-                'max_monthly_installment' => $maxMonthlyInstallment,
+                'max_loan_amount' => $maxLoanAmount !== null ? (int) $maxLoanAmount : null,
+                'max_installment_per_cycle' => $maxInstallmentPerCycle,
+                'max_monthly_installment' => $maxInstallmentPerCycle,
+                'max_tenor' => $maxTenor,
                 'tenor_options' => $tenorOptions,
             ],
         ]);
@@ -194,17 +201,29 @@ class LoanController extends Controller
 
         // Check against company loan settings if configured
         if ($loanSetting) {
-            if ($loanSetting->max_loan_amount && $amount > $loanSetting->max_loan_amount) {
+            $effectiveMaxLoanAmount = match ($cycle) {
+                'daily' => $loanSetting->max_loan_amount_daily ?? $loanSetting->max_loan_amount,
+                'weekly' => $loanSetting->max_loan_amount_weekly ?? $loanSetting->max_loan_amount,
+                default => $loanSetting->max_loan_amount,
+            };
+
+            if ($effectiveMaxLoanAmount && $amount > $effectiveMaxLoanAmount) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Nominal pinjaman melebihi batas maksimal perusahaan (Maksimal: Rp ' . number_format($loanSetting->max_loan_amount, 0, ',', '.') . ').'
+                    'message' => "Nominal pinjaman melebihi batas maksimal kebijakan perusahaan untuk karyawan {$cycleUnit}an (Maksimal: Rp " . number_format($effectiveMaxLoanAmount, 0, ',', '.') . ').'
                 ], 422);
             }
 
-            if ($cycle === 'monthly' && $loanSetting->max_tenor_months && $tenor > $loanSetting->max_tenor_months) {
+            $effectiveMaxTenor = match ($cycle) {
+                'daily' => $loanSetting->max_tenor_days,
+                'weekly' => $loanSetting->max_tenor_weeks,
+                default => $loanSetting->max_tenor_months,
+            };
+
+            if ($effectiveMaxTenor && $tenor > $effectiveMaxTenor) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Durasi tenor cicilan melebihi batas maksimal perusahaan (Maksimal: ' . $loanSetting->max_tenor_months . ' bulan).'
+                    'message' => "Durasi tenor cicilan melebihi batas maksimal kebijakan perusahaan (Maksimal: {$effectiveMaxTenor} {$cycleUnit})."
                 ], 422);
             }
         }

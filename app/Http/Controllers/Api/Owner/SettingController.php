@@ -154,11 +154,17 @@ class SettingController extends Controller
 
         $validator = Validator::make($request->all(), [
             'max_loan_amount' => 'nullable',
+            'max_loan_amount_weekly' => 'nullable',
+            'max_loan_amount_daily' => 'nullable',
             'max_tenor_months' => 'nullable|integer|min:1|max:60',
-            'due_date_day' => 'nullable|integer|min:1|max:30',
+            'max_tenor_weeks' => 'nullable|integer|min:1|max:52',
+            'max_tenor_days' => 'nullable|integer|min:1|max:90',
+            'due_date_day' => 'nullable|integer|min:1|max:31',
         ], [
-            'max_tenor_months.integer' => 'Batas tenor harus berupa angka (1 - 60 bulan).',
-            'due_date_day.integer' => 'Tanggal jatuh tempo harus berupa angka (1 - 30).',
+            'max_tenor_months.integer' => 'Batas tenor bulanan harus berupa angka (1 - 60 bulan).',
+            'max_tenor_weeks.integer' => 'Batas tenor mingguan harus berupa angka (1 - 52 minggu).',
+            'max_tenor_days.integer' => 'Batas tenor harian harus berupa angka (1 - 90 hari).',
+            'due_date_day.integer' => 'Tanggal jatuh tempo harus berupa angka (1 - 31).',
         ]);
 
         if ($validator->fails()) {
@@ -169,20 +175,30 @@ class SettingController extends Controller
             ], 422);
         }
 
-        $maxLoanAmount = null;
-        if ($request->filled('max_loan_amount')) {
-            $cleaned = preg_replace('/[^0-9]/', '', (string) $request->max_loan_amount);
-            $maxLoanAmount = $cleaned !== '' ? (int) $cleaned : null;
-        }
+        $cleanAmount = function ($val) {
+            if ($val === null || $val === '') return null;
+            $cleaned = preg_replace('/[^0-9]/', '', (string) $val);
+            return $cleaned !== '' ? (int) $cleaned : null;
+        };
+
+        $maxLoanAmount = $cleanAmount($request->input('max_loan_amount'));
+        $maxLoanAmountWeekly = $cleanAmount($request->input('max_loan_amount_weekly'));
+        $maxLoanAmountDaily = $cleanAmount($request->input('max_loan_amount_daily'));
 
         $maxTenorMonths = $request->filled('max_tenor_months') ? (int) $request->max_tenor_months : null;
+        $maxTenorWeeks = $request->filled('max_tenor_weeks') ? (int) $request->max_tenor_weeks : null;
+        $maxTenorDays = $request->filled('max_tenor_days') ? (int) $request->max_tenor_days : null;
         $dueDateDay = $request->filled('due_date_day') ? (int) $request->due_date_day : null;
 
         $setting = CompanyLoanSetting::updateOrCreate(
             ['company_id' => $company->id],
             [
                 'max_loan_amount' => $maxLoanAmount,
+                'max_loan_amount_weekly' => $maxLoanAmountWeekly,
+                'max_loan_amount_daily' => $maxLoanAmountDaily,
                 'max_tenor_months' => $maxTenorMonths,
+                'max_tenor_weeks' => $maxTenorWeeks,
+                'max_tenor_days' => $maxTenorDays,
                 'due_date_day' => $dueDateDay,
             ]
         );
@@ -297,7 +313,11 @@ class SettingController extends Controller
             ['company_id' => $companyId],
             [
                 'max_loan_amount' => null,
+                'max_loan_amount_weekly' => null,
+                'max_loan_amount_daily' => null,
                 'max_tenor_months' => null,
+                'max_tenor_weeks' => null,
+                'max_tenor_days' => null,
                 'due_date_day' => null,
             ]
         );
@@ -358,9 +378,25 @@ class SettingController extends Controller
             'max_loan_amount_formatted' => $setting->max_loan_amount !== null
                 ? 'Rp ' . number_format($setting->max_loan_amount, 0, ',', '.')
                 : 'Tidak Terbatas',
+            'max_loan_amount_weekly' => $setting->max_loan_amount_weekly !== null ? (int) $setting->max_loan_amount_weekly : null,
+            'max_loan_amount_weekly_formatted' => $setting->max_loan_amount_weekly !== null
+                ? 'Rp ' . number_format($setting->max_loan_amount_weekly, 0, ',', '.')
+                : 'Tidak Terbatas',
+            'max_loan_amount_daily' => $setting->max_loan_amount_daily !== null ? (int) $setting->max_loan_amount_daily : null,
+            'max_loan_amount_daily_formatted' => $setting->max_loan_amount_daily !== null
+                ? 'Rp ' . number_format($setting->max_loan_amount_daily, 0, ',', '.')
+                : 'Tidak Terbatas',
             'max_tenor_months' => $setting->max_tenor_months !== null ? (int) $setting->max_tenor_months : null,
             'max_tenor_months_label' => $setting->max_tenor_months !== null
                 ? "{$setting->max_tenor_months} Bulan"
+                : 'Tidak Terbatas',
+            'max_tenor_weeks' => $setting->max_tenor_weeks !== null ? (int) $setting->max_tenor_weeks : null,
+            'max_tenor_weeks_label' => $setting->max_tenor_weeks !== null
+                ? "{$setting->max_tenor_weeks} Minggu"
+                : 'Tidak Terbatas',
+            'max_tenor_days' => $setting->max_tenor_days !== null ? (int) $setting->max_tenor_days : null,
+            'max_tenor_days_label' => $setting->max_tenor_days !== null
+                ? "{$setting->max_tenor_days} Hari"
                 : 'Tidak Terbatas',
             'due_date_day' => $setting->due_date_day !== null ? (int) $setting->due_date_day : null,
             'due_date_day_label' => $setting->due_date_day !== null
