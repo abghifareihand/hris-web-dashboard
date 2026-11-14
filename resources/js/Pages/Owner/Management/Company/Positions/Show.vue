@@ -2,6 +2,7 @@
 import { Head, Link } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import Button from "@/Components/UI/Button.vue";
+import MenuPermissionsTable from "./Components/MenuPermissionsTable.vue";
 
 defineOptions({
     layout: AppLayout,
@@ -203,6 +204,14 @@ const props = defineProps({
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Hak Akses Menu (RBAC) -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 space-y-4">
+            <MenuPermissionsTable
+                :modelValue="position.permissions"
+                readonly
+            />
         </div>
 
         <!-- Daftar Karyawan Pemegang Jabatan -->

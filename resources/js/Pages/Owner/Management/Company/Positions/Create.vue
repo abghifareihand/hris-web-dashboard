@@ -4,6 +4,8 @@ import AppLayout from "@/Layouts/AppLayout.vue";
 import Button from "@/Components/UI/Button.vue";
 import Input from "@/Components/UI/Input.vue";
 import Checkbox from "@/Components/UI/Checkbox.vue";
+import MenuPermissionsTable from "./Components/MenuPermissionsTable.vue";
+import { createDefaultPermissions } from "@/data/positionPermissions";
 
 defineOptions({
     layout: AppLayout,
@@ -24,23 +26,8 @@ const form = useForm({
     name: "",
     branches: [],
     divisions: [],
+    permissions: createDefaultPermissions(),
 });
-
-const toggleSelectAllBranches = () => {
-    if (form.branches.length === props.branches.length) {
-        form.branches = [];
-    } else {
-        form.branches = props.branches.map((b) => b.id);
-    }
-};
-
-const toggleSelectAllDivisions = () => {
-    if (form.divisions.length === props.divisions.length) {
-        form.divisions = [];
-    } else {
-        form.divisions = props.divisions.map((d) => d.id);
-    }
-};
 
 const submit = () => {
     form.post(route("owner.management.company.positions.store"));
@@ -101,31 +88,15 @@ const submit = () => {
 
                     <!-- Hak Akses Cabang -->
                     <div class="pt-5 border-t border-slate-100">
-                        <div
-                            class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3"
-                        >
-                            <div>
-                                <h3
-                                    class="text-xs font-semibold text-slate-700"
-                                >
-                                    Hak Akses Cabang
-                                </h3>
-                                <p class="text-xs text-slate-500 mt-0.5">
-                                    Pilih cabang yang dapat diakses oleh jabatan ini. Jika dikosongkan, tidak ada akses ke cabang mana pun.
-                                </p>
-                            </div>
-                            <button
-                                v-if="branches.length > 0"
-                                type="button"
-                                @click="toggleSelectAllBranches"
-                                class="text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition cursor-pointer self-start sm:self-auto"
+                        <div class="mb-3">
+                            <h3
+                                class="text-xs font-semibold text-slate-700"
                             >
-                                {{
-                                    form.branches.length === branches.length
-                                        ? "Batal Pilih Semua"
-                                        : "Pilih Semua Cabang"
-                                }}
-                            </button>
+                                Hak Akses Cabang
+                            </h3>
+                            <p class="text-xs text-slate-500 mt-0.5">
+                                Pilih cabang yang dapat diakses oleh jabatan ini. Jika dikosongkan, tidak ada akses ke cabang mana pun.
+                            </p>
                         </div>
 
                         <div
@@ -155,31 +126,15 @@ const submit = () => {
 
                     <!-- Hak Akses Divisi -->
                     <div class="pt-5 border-t border-slate-100">
-                        <div
-                            class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3"
-                        >
-                            <div>
-                                <h3
-                                    class="text-xs font-semibold text-slate-700"
-                                >
-                                    Hak Akses Divisi
-                                </h3>
-                                <p class="text-xs text-slate-500 mt-0.5">
-                                    Pilih divisi kerja yang dapat diakses oleh jabatan ini. Jika dikosongkan, tidak ada akses ke divisi mana pun.
-                                </p>
-                            </div>
-                            <button
-                                v-if="divisions.length > 0"
-                                type="button"
-                                @click="toggleSelectAllDivisions"
-                                class="text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition cursor-pointer self-start sm:self-auto"
+                        <div class="mb-3">
+                            <h3
+                                class="text-xs font-semibold text-slate-700"
                             >
-                                {{
-                                    form.divisions.length === divisions.length
-                                        ? "Batal Pilih Semua"
-                                        : "Pilih Semua Divisi"
-                                }}
-                            </button>
+                                Hak Akses Divisi
+                            </h3>
+                            <p class="text-xs text-slate-500 mt-0.5">
+                                Pilih divisi kerja yang dapat diakses oleh jabatan ini. Jika dikosongkan, tidak ada akses ke divisi mana pun.
+                            </p>
                         </div>
 
                         <div
@@ -205,6 +160,14 @@ const submit = () => {
                         >
                             {{ form.errors.divisions }}
                         </p>
+                    </div>
+
+                    <!-- Hak Akses Menu -->
+                    <div class="pt-5 border-t border-slate-100">
+                        <MenuPermissionsTable
+                            v-model="form.permissions"
+                            :error="form.errors.permissions"
+                        />
                     </div>
                 </div>
 

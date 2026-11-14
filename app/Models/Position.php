@@ -14,6 +14,10 @@ class Position extends Model
 
     protected $guarded = ['id'];
 
+    protected $casts = [
+        'permissions' => 'array',
+    ];
+
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);

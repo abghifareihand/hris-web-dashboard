@@ -74,11 +74,13 @@ class PositionController extends Controller
             'branches.*' => 'exists:branches,id',
             'divisions' => 'nullable|array',
             'divisions.*' => 'exists:divisions,id',
+            'permissions' => 'nullable|array',
         ]);
 
         $position = Position::create([
             'company_id' => $company->id,
             'name' => $request->name,
+            'permissions' => $request->permissions,
         ]);
 
         if ($request->filled('branches')) {
@@ -139,10 +141,12 @@ class PositionController extends Controller
             'branches.*' => 'exists:branches,id',
             'divisions' => 'nullable|array',
             'divisions.*' => 'exists:divisions,id',
+            'permissions' => 'nullable|array',
         ]);
 
         $position->update([
             'name' => $request->name,
+            'permissions' => $request->permissions,
         ]);
 
         $position->branches()->sync($request->branches ?? []);
