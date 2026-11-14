@@ -16,8 +16,25 @@ const form = useForm({
     default_payroll_cycle: props.setting?.default_payroll_cycle || 'monthly',
     monthly_working_days: props.setting?.monthly_working_days ?? 25,
     weekly_working_days: props.setting?.weekly_working_days ?? 6,
+    is_late_penalty_active: props.setting?.is_late_penalty_active ?? true,
+    late_penalty_target: props.setting?.late_penalty_target || 'daily_allowance',
     notes: props.setting?.notes || '',
 });
+
+const lateTargetOptions = [
+    {
+        value: 'daily_allowance',
+        title: 'Potong Tunjangan Harian (Uang Makan / Transport)',
+        badge: 'Sesuai Masa Kerja',
+        desc: 'Tunjangan kehadiran harian pada hari karyawan terlambat otomatis hangus (Rp 0). Gaji pokok dan tunjangan tetap dijamin aman dan utuh.',
+    },
+    {
+        value: 'salary_deduction',
+        title: 'Potong Total Slip Gaji (Take Home Pay)',
+        badge: 'Cara Konvensional',
+        desc: 'Keterlambatan dihitung flat atau prorata per menit sesuai ketentuan di data karyawan, lalu dipotongkan langsung dari total penghasilan di slip gaji.',
+    },
+];
 
 const cycleOptions = [
     {
@@ -183,6 +200,134 @@ const submit = () => {
                             <div class="font-bold text-slate-900">3. Karyawan Harian</div>
                             <p>Murni dibayarkan sesuai kehadiran: <span class="font-mono text-emerald-700 font-medium">Hari Masuk &times; Upah Harian</span>. Tanpa gaji pokok bulanan.</p>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Kebijakan Denda Keterlambatan Absensi -->
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <div class="flex items-center gap-2.5">
+                            <h2 class="text-base font-bold text-slate-900">Kebijakan Denda Keterlambatan Absensi</h2>
+                            <span
+                                class="text-[11px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1"
+                                :class="form.is_late_penalty_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60' : 'bg-slate-100 text-slate-600 border border-slate-200'"
+                            >
+                                <span class="w-1.5 h-1.5 rounded-full" :class="form.is_late_penalty_active ? 'bg-emerald-600' : 'bg-slate-400'"></span>
+                                {{ form.is_late_penalty_active ? 'Denda Aktif' : 'Denda Nonaktif' }}
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-1">
+                            Atur kebijakan sanksi keterlambatan presensi. Anda dapat menonaktifkan denda atau mengalihkan potongan ke tunjangan kehadiran harian.
+                        </p>
+                    </div>
+
+                    <!-- Toggle Switch On / Off -->
+                    <div class="flex items-center gap-3 shrink-0 bg-slate-50 border border-slate-200/80 px-3 py-1.5 rounded-xl">
+                        <span class="text-xs font-semibold text-slate-700 select-none">
+                            {{ form.is_late_penalty_active ? 'Denda Diterapkan' : 'Denda Dimatikan' }}
+                        </span>
+                        <button
+                            type="button"
+                            @click="form.is_late_penalty_active = !form.is_late_penalty_active"
+                            :class="[
+                                'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500/20',
+                                form.is_late_penalty_active ? 'bg-emerald-600' : 'bg-slate-300'
+                            ]"
+                        >
+                            <span
+                                :class="[
+                                    'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out',
+                                    form.is_late_penalty_active ? 'translate-x-5' : 'translate-x-0'
+                                ]"
+                            />
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Banner Informasi Saat Denda Dinonaktifkan -->
+                <div v-if="!form.is_late_penalty_active" class="p-4 rounded-xl bg-amber-50/70 border border-amber-200/80 flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-amber-900">Pemotongan Denda Keterlambatan Sedang Dinonaktifkan</div>
+                        <p class="text-xs text-amber-700 leading-relaxed mt-0.5">
+                            Karyawan yang terlambat hadir tidak akan dikenakan denda atau pemotongan uang apa pun. Tunjangan harian dan gaji pokok tetap dicairkan 100%. Data menit keterlambatan tetap tercatat untuk evaluasi kedisiplinan.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Opsi Target Pemotongan Saat Denda Aktif -->
+                <div v-else class="space-y-4">
+                    <div class="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Komponen Upah yang Dipotong Saat Terlambat:
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div
+                            v-for="opt in lateTargetOptions"
+                            :key="opt.value"
+                            @click="form.late_penalty_target = opt.value"
+                            class="relative p-4 rounded-xl border text-left cursor-pointer transition-all duration-150 flex flex-col justify-between select-none"
+                            :class="[
+                                form.late_penalty_target === opt.value
+                                    ? 'border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-500/20 shadow-xs'
+                                    : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50/50'
+                            ]"
+                        >
+                            <div class="space-y-2.5">
+                                <div class="flex items-center justify-between">
+                                    <div
+                                        class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                                        :class="form.late_penalty_target === opt.value ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'"
+                                    >
+                                        <!-- Daily Allowance Icon (Coins / Pocket) -->
+                                        <svg v-if="opt.value === 'daily_allowance'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        <!-- Salary Deduction Icon (Cut / Receipt) -->
+                                        <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+                                        </svg>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span
+                                            v-if="opt.badge"
+                                            class="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                                            :class="form.late_penalty_target === opt.value ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'"
+                                        >
+                                            {{ opt.badge }}
+                                        </span>
+                                        <span
+                                            class="w-4 h-4 rounded-full border flex items-center justify-center shrink-0"
+                                            :class="form.late_penalty_target === opt.value ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300'"
+                                        >
+                                            <span v-if="form.late_penalty_target === opt.value" class="w-1.5 h-1.5 rounded-full bg-white"></span>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="text-sm font-bold text-slate-800 leading-snug">{{ opt.title }}</div>
+                                <div class="text-xs text-slate-500 leading-normal">{{ opt.desc }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Keterangan Alur Sesuai Masa Kerja -->
+                    <div v-if="form.late_penalty_target === 'daily_allowance'" class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            <span class="font-bold text-slate-800">Prinsip Pemotongan Tunjangan Harian:</span> Tunjangan harian karyawan (misal: uang makan/transport) yang berbeda sesuai masa kerja di data pegawai otomatis menjadi dasar denda. Karyawan yang telat di hari tersebut tidak menerima uang harian hari itu, sedangkan gaji pokok dan tunjangan lainnya tetap aman.
+                        </p>
+                    </div>
+
+                    <!-- Keterangan Alur Potong Total Slip Gaji -->
+                    <div v-else-if="form.late_penalty_target === 'salary_deduction'" class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            <span class="font-bold text-slate-800">Prinsip Pemotongan Slip Gaji:</span> Denda keterlambatan dihitung berdasarkan tarif sanksi (Flat per kejadian atau Prorata per jam) yang diatur pada data masing-masing pegawai, lalu otomatis dipotongkan langsung dari total gaji bersih (Take Home Pay) pada slip gaji.
+                        </p>
                     </div>
                 </div>
             </div>

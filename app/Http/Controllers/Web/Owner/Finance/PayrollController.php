@@ -301,6 +301,8 @@ class PayrollController extends Controller
                     'default_payroll_cycle' => 'monthly',
                     'monthly_working_days' => 25,
                     'weekly_working_days' => 6,
+                    'is_late_penalty_active' => true,
+                    'late_penalty_target' => 'daily_allowance',
                 ]
             );
 
@@ -353,20 +355,38 @@ class PayrollController extends Controller
                 $explicitAlphaDays = $attendances->where('attendance_status', 'alpha')->count();
                 $alphaDays = max($autoAlphaDays, $explicitAlphaDays);
                 
+                $presentDays = $attendances->whereNotIn('attendance_status', ['alpha', 'leave'])->count();
+                $lateDays = $attendances->whereNotIn('attendance_status', ['alpha', 'leave'])->where('late_minutes', '>', 0)->count();
+                $onTimeDays = max(0, $presentDays - $lateDays);
                 $totalLateMinutes = $attendances->sum('late_minutes');
-                
+
+                $isLatePenaltyActive = (bool) ($payrollSetting->is_late_penalty_active ?? true);
+                $latePenaltyTarget = $payrollSetting->late_penalty_target ?? 'daily_allowance';
+
                 $latePenaltyAmount = 0;
-                if ($totalLateMinutes > 0 && $emp->late_penalty_nominal > 0) {
-                    if ($emp->late_penalty_type === 'flat') {
-                        $lateDays = $attendances->where('late_minutes', '>', 0)->count();
-                        $latePenaltyAmount = $lateDays * $emp->late_penalty_nominal;
-                    } else {
-                        $latePenaltyAmount = round($totalLateMinutes * ($emp->late_penalty_nominal / 60));
+
+                if (!$isLatePenaltyActive) {
+                    // Denda dinonaktifkan: tunjangan harian cair penuh, denda ditiadakan
+                    $totalDailyAllowance = ($emp->daily_allowance ?? 0) * $presentDays;
+                    $latePenaltyAmount = 0;
+                } elseif ($latePenaltyTarget === 'daily_allowance') {
+                    // Sesuai Rekomendasi / Permintaan Klien:
+                    // Tunjangan harian hanya cair untuk hari yang hadir tepat waktu (hari terlambat hangus)
+                    $totalDailyAllowance = ($emp->daily_allowance ?? 0) * $onTimeDays;
+                    // Denda di pos potongan slip gaji dinolkan agar tidak ada pemotongan ganda & gaji pokok aman
+                    $latePenaltyAmount = 0;
+                } else {
+                    // Target Potong Slip Gaji (Cara Lama):
+                    // Tunjangan harian tetap utuh, denda dihitung terpisah memotong total slip gaji
+                    $totalDailyAllowance = ($emp->daily_allowance ?? 0) * $presentDays;
+                    if ($totalLateMinutes > 0 && $emp->late_penalty_nominal > 0) {
+                        if ($emp->late_penalty_type === 'flat') {
+                            $latePenaltyAmount = $lateDays * $emp->late_penalty_nominal;
+                        } else {
+                            $latePenaltyAmount = round($totalLateMinutes * ($emp->late_penalty_nominal / 60));
+                        }
                     }
                 }
-
-                $presentDays = $attendances->whereNotIn('attendance_status', ['alpha', 'leave'])->count();
-                $totalDailyAllowance = ($emp->daily_allowance ?? 0) * $presentDays;
 
                 // Kalkulasi Gaji Pokok & Potongan Ketidakhadiran (Alpha) sesuai siklus penggajian
                 $cycle = $emp->payroll_cycle ?: $payrollSetting->default_payroll_cycle ?: 'monthly';

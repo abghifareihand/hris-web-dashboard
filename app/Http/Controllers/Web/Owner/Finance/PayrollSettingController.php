@@ -22,6 +22,8 @@ class PayrollSettingController extends Controller
                 'default_payroll_cycle' => 'monthly',
                 'monthly_working_days' => 25,
                 'weekly_working_days' => 6,
+                'is_late_penalty_active' => true,
+                'late_penalty_target' => 'daily_allowance',
             ]
         );
 
@@ -41,6 +43,8 @@ class PayrollSettingController extends Controller
             'default_payroll_cycle' => 'required|in:monthly,weekly,daily',
             'monthly_working_days' => 'required|integer|min:1|max:31',
             'weekly_working_days' => 'required|integer|min:1|max:7',
+            'is_late_penalty_active' => 'required|boolean',
+            'late_penalty_target' => 'required|in:daily_allowance,salary_deduction',
             'notes' => 'nullable|string|max:500',
         ]);
 

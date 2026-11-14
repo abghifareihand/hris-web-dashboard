@@ -1,4 +1,5 @@
 <script setup>
+import { watch } from 'vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Button from '@/Components/UI/Button.vue';
@@ -20,6 +21,15 @@ const form = useForm({
     max_tenor_weeks: props.setting?.max_tenor_weeks ?? '',
     max_tenor_days: props.setting?.max_tenor_days ?? '',
     due_date_day: props.setting?.due_date_day ?? '',
+});
+
+// Proteksi input tanggal jatuh tempo bulanan (1 - 31)
+watch(() => form.due_date_day, (val) => {
+    if (val !== null && val !== undefined && val !== '') {
+        const num = Number(val);
+        if (num > 31) form.due_date_day = 31;
+        else if (num < 1) form.due_date_day = 1;
+    }
 });
 
 const submit = () => {
@@ -153,13 +163,10 @@ const submit = () => {
                 </div>
 
                 <!-- Info Hint -->
-                <div class="flex items-start gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 text-xs text-slate-600">
-                    <svg class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>
-                        <strong>Dinamis & Terintegrasi:</strong> Karyawan hanya akan melihat pilihan tenor sesuai jenis gajinya. Misalnya, karyawan bergaji mingguan hanya melihat pilihan minggu secara berurutan dan tidak bisa memilih tenor bulan.
-                    </span>
+                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <p class="text-xs text-slate-600 leading-relaxed">
+                        Karyawan hanya akan melihat pilihan tenor sesuai jenis gajinya. Misalnya, karyawan bergaji mingguan hanya melihat pilihan minggu secara berurutan dan tidak bisa memilih tenor bulan.
+                    </p>
                 </div>
             </div>
 

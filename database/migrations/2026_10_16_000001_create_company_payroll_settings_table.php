@@ -17,6 +17,8 @@ return new class extends Migration
             $table->enum('default_payroll_cycle', ['monthly', 'weekly', 'daily'])->default('monthly');
             $table->unsignedInteger('monthly_working_days')->default(25);
             $table->unsignedInteger('weekly_working_days')->default(6);
+            $table->boolean('is_late_penalty_active')->default(true);
+            $table->enum('late_penalty_target', ['daily_allowance', 'salary_deduction'])->default('daily_allowance');
             $table->text('notes')->nullable();
             $table->timestamps();
         });

@@ -249,6 +249,8 @@ class SettingController extends Controller
             'default_payroll_cycle' => 'required|in:monthly,weekly,daily',
             'monthly_working_days' => 'required|integer|min:1|max:31',
             'weekly_working_days' => 'required|integer|min:1|max:7',
+            'is_late_penalty_active' => 'nullable|boolean',
+            'late_penalty_target' => 'nullable|in:daily_allowance,salary_deduction',
             'notes' => 'nullable|string|max:500',
         ], [
             'default_payroll_cycle.required' => 'Siklus periode penggajian default wajib dipilih.',
@@ -274,6 +276,8 @@ class SettingController extends Controller
                 'default_payroll_cycle' => $request->default_payroll_cycle,
                 'monthly_working_days' => (int) $request->monthly_working_days,
                 'weekly_working_days' => (int) $request->weekly_working_days,
+                'is_late_penalty_active' => $request->has('is_late_penalty_active') ? $request->boolean('is_late_penalty_active') : true,
+                'late_penalty_target' => $request->input('late_penalty_target', 'daily_allowance'),
                 'notes' => $request->notes,
             ]
         );
@@ -334,6 +338,8 @@ class SettingController extends Controller
                 'default_payroll_cycle' => 'monthly',
                 'monthly_working_days' => 25,
                 'weekly_working_days' => 6,
+                'is_late_penalty_active' => true,
+                'late_penalty_target' => 'daily_allowance',
                 'notes' => null,
             ]
         );
@@ -425,6 +431,11 @@ class SettingController extends Controller
             'default_payroll_cycle_label' => $cycleLabels[$setting->default_payroll_cycle] ?? 'Bulanan',
             'monthly_working_days' => (int) ($setting->monthly_working_days ?? 25),
             'weekly_working_days' => (int) ($setting->weekly_working_days ?? 6),
+            'is_late_penalty_active' => (bool) ($setting->is_late_penalty_active ?? true),
+            'late_penalty_target' => $setting->late_penalty_target ?? 'daily_allowance',
+            'late_penalty_target_label' => ($setting->late_penalty_target === 'salary_deduction')
+                ? 'Potong Total Slip Gaji'
+                : 'Potong Tunjangan Harian',
             'notes' => $setting->notes,
             'created_at' => Carbon::parse($setting->created_at ?? now())->format('Y-m-d H:i:s'),
             'updated_at' => Carbon::parse($setting->updated_at ?? $setting->created_at ?? now())->format('Y-m-d H:i:s'),

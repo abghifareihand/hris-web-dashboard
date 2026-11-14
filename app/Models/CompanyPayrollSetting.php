@@ -15,12 +15,16 @@ class CompanyPayrollSetting extends Model
         'default_payroll_cycle',
         'monthly_working_days',
         'weekly_working_days',
+        'is_late_penalty_active',
+        'late_penalty_target',
         'notes',
     ];
 
     protected $casts = [
         'monthly_working_days' => 'integer',
         'weekly_working_days' => 'integer',
+        'is_late_penalty_active' => 'boolean',
+        'late_penalty_target' => 'string',
     ];
 
     public function company(): BelongsTo
