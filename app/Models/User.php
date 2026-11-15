@@ -117,6 +117,11 @@ class User extends Authenticatable
             return false;
         }
 
+        // Security guard: Non-owner/admin can NEVER have create, edit, or delete permissions on 'positions'
+        if ($menuKey === 'positions' && in_array($action, ['create', 'edit', 'delete'])) {
+            return false;
+        }
+
         $permissions = $this->employee->position?->permissions ?? Position::defaultPermissions();
 
         return !empty($permissions[$menuKey][$action]);
@@ -167,7 +172,14 @@ class User extends Authenticatable
             return ['*' => ['view' => true, 'create' => true, 'edit' => true, 'delete' => true]];
         }
 
-        return $this->employee?->position?->permissions ?? Position::defaultPermissions();
+        $perms = $this->employee?->position?->permissions ?? Position::defaultPermissions();
+        if (isset($perms['positions']) && is_array($perms['positions'])) {
+            $perms['positions']['create'] = false;
+            $perms['positions']['edit'] = false;
+            $perms['positions']['delete'] = false;
+        }
+
+        return $perms;
     }
 
     /**

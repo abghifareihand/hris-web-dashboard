@@ -71,9 +71,9 @@ const handleChange = (event) => {
         <span
             class="w-4 h-4 shrink-0 rounded-[4px] border flex items-center justify-center transition-colors select-none"
             :class="[
-                isChecked
-                    ? 'bg-emerald-600 border-emerald-600 text-white'
-                    : 'bg-white border-slate-300 group-hover:border-slate-400'
+                disabled
+                    ? (isChecked ? 'bg-emerald-600/60 border-emerald-600/60 text-white' : 'bg-slate-100 border-slate-200/90')
+                    : (isChecked ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-slate-300 group-hover:border-slate-400')
             ]"
         >
             <svg

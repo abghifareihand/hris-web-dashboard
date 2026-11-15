@@ -39,8 +39,8 @@ export const POSITION_PERMISSION_GROUPS = [
             {
                 key: 'positions',
                 title: 'Menu Jabatan',
-                desc: 'Hak akses untuk manajemen data jabatan',
-                disabled: { view: false, create: false, edit: false, delete: false },
+                desc: 'Hak akses untuk melihat data jabatan (Tambah, Ubah, & Hapus khusus Owner)',
+                disabled: { view: false, create: true, edit: true, delete: true },
             },
         ],
     },

@@ -298,12 +298,11 @@ const permissions = computed(() => {
                                     <td class="py-3 px-3 text-center align-middle">
                                         <div class="flex items-center justify-center">
                                             <Checkbox
-                                                v-if="!item.disabled.view"
                                                 :id="`show-perm-${item.key}-view`"
-                                                :modelValue="Boolean(permissions[item.key]?.view)"
+                                                :modelValue="!item.disabled.view && Boolean(permissions[item.key]?.view)"
                                                 :disabled="true"
+                                                :title="item.disabled.view ? 'Aksi Lihat tidak tersedia untuk menu ini' : ''"
                                             />
-                                            <span v-else class="text-slate-300 font-bold select-none">-</span>
                                         </div>
                                     </td>
 
@@ -311,12 +310,11 @@ const permissions = computed(() => {
                                     <td class="py-3 px-3 text-center align-middle">
                                         <div class="flex items-center justify-center">
                                             <Checkbox
-                                                v-if="!item.disabled.create"
                                                 :id="`show-perm-${item.key}-create`"
-                                                :modelValue="Boolean(permissions[item.key]?.create)"
+                                                :modelValue="!item.disabled.create && Boolean(permissions[item.key]?.create)"
                                                 :disabled="true"
+                                                :title="item.disabled.create ? 'Aksi Tambah tidak tersedia untuk menu ini' : ''"
                                             />
-                                            <span v-else class="text-slate-300 font-bold select-none">-</span>
                                         </div>
                                     </td>
 
@@ -324,12 +322,11 @@ const permissions = computed(() => {
                                     <td class="py-3 px-3 text-center align-middle">
                                         <div class="flex items-center justify-center">
                                             <Checkbox
-                                                v-if="!item.disabled.edit"
                                                 :id="`show-perm-${item.key}-edit`"
-                                                :modelValue="Boolean(permissions[item.key]?.edit)"
+                                                :modelValue="!item.disabled.edit && Boolean(permissions[item.key]?.edit)"
                                                 :disabled="true"
+                                                :title="item.disabled.edit ? 'Aksi Ubah tidak tersedia untuk menu ini' : ''"
                                             />
-                                            <span v-else class="text-slate-300 font-bold select-none">-</span>
                                         </div>
                                     </td>
 
@@ -337,12 +334,11 @@ const permissions = computed(() => {
                                     <td class="py-3 px-3 text-center align-middle">
                                         <div class="flex items-center justify-center">
                                             <Checkbox
-                                                v-if="!item.disabled.delete"
                                                 :id="`show-perm-${item.key}-delete`"
-                                                :modelValue="Boolean(permissions[item.key]?.delete)"
+                                                :modelValue="!item.disabled.delete && Boolean(permissions[item.key]?.delete)"
                                                 :disabled="true"
+                                                :title="item.disabled.delete ? 'Aksi Hapus tidak tersedia untuk menu ini' : ''"
                                             />
-                                            <span v-else class="text-slate-300 font-bold select-none">-</span>
                                         </div>
                                     </td>
                                 </tr>

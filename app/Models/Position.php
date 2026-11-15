@@ -19,6 +19,23 @@ class Position extends Model
     ];
 
     /**
+     * Mutator to ensure 'positions' mutations are never saved for any employee position.
+     */
+    public function setPermissionsAttribute($value): void
+    {
+        if (is_array($value)) {
+            if (isset($value['positions']) && is_array($value['positions'])) {
+                $value['positions']['create'] = false;
+                $value['positions']['edit'] = false;
+                $value['positions']['delete'] = false;
+            }
+            $this->attributes['permissions'] = json_encode($value);
+        } else {
+            $this->attributes['permissions'] = $value;
+        }
+    }
+
+    /**
      * Hak akses default bawaan sistem untuk jabatan baru (default kosong / false semua)
      */
     public static function defaultPermissions(): array

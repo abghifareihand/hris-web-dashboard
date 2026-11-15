@@ -300,11 +300,10 @@ const submit = () => {
                                                     class="flex items-center justify-center"
                                                 >
                                                     <Checkbox
-                                                        v-if="
-                                                            !item.disabled.view
-                                                        "
                                                         :id="`perm-${item.key}-view`"
+                                                        :disabled="Boolean(item.disabled.view)"
                                                         :modelValue="
+                                                            !item.disabled.view &&
                                                             Boolean(
                                                                 form
                                                                     .permissions[
@@ -320,12 +319,8 @@ const submit = () => {
                                                                     val,
                                                                 )
                                                         "
+                                                        :title="item.disabled.view ? 'Aksi Lihat tidak tersedia untuk menu ini' : ''"
                                                     />
-                                                    <span
-                                                        v-else
-                                                        class="text-slate-300 font-bold select-none"
-                                                        >-</span
-                                                    >
                                                 </div>
                                             </td>
 
@@ -337,12 +332,10 @@ const submit = () => {
                                                     class="flex items-center justify-center"
                                                 >
                                                     <Checkbox
-                                                        v-if="
-                                                            !item.disabled
-                                                                .create
-                                                        "
                                                         :id="`perm-${item.key}-create`"
+                                                        :disabled="Boolean(item.disabled.create)"
                                                         :modelValue="
+                                                            !item.disabled.create &&
                                                             Boolean(
                                                                 form
                                                                     .permissions[
@@ -358,12 +351,8 @@ const submit = () => {
                                                                     val,
                                                                 )
                                                         "
+                                                        :title="item.disabled.create ? 'Aksi Tambah tidak tersedia untuk menu ini' : ''"
                                                     />
-                                                    <span
-                                                        v-else
-                                                        class="text-slate-300 font-bold select-none"
-                                                        >-</span
-                                                    >
                                                 </div>
                                             </td>
 
@@ -375,11 +364,10 @@ const submit = () => {
                                                     class="flex items-center justify-center"
                                                 >
                                                     <Checkbox
-                                                        v-if="
-                                                            !item.disabled.edit
-                                                        "
                                                         :id="`perm-${item.key}-edit`"
+                                                        :disabled="Boolean(item.disabled.edit)"
                                                         :modelValue="
+                                                            !item.disabled.edit &&
                                                             Boolean(
                                                                 form
                                                                     .permissions[
@@ -395,12 +383,8 @@ const submit = () => {
                                                                     val,
                                                                 )
                                                         "
+                                                        :title="item.disabled.edit ? 'Aksi Ubah tidak tersedia untuk menu ini' : ''"
                                                     />
-                                                    <span
-                                                        v-else
-                                                        class="text-slate-300 font-bold select-none"
-                                                        >-</span
-                                                    >
                                                 </div>
                                             </td>
 
@@ -412,12 +396,10 @@ const submit = () => {
                                                     class="flex items-center justify-center"
                                                 >
                                                     <Checkbox
-                                                        v-if="
-                                                            !item.disabled
-                                                                .delete
-                                                        "
                                                         :id="`perm-${item.key}-delete`"
+                                                        :disabled="Boolean(item.disabled.delete)"
                                                         :modelValue="
+                                                            !item.disabled.delete &&
                                                             Boolean(
                                                                 form
                                                                     .permissions[
@@ -433,12 +415,8 @@ const submit = () => {
                                                                     val,
                                                                 )
                                                         "
+                                                        :title="item.disabled.delete ? 'Aksi Hapus tidak tersedia untuk menu ini' : ''"
                                                     />
-                                                    <span
-                                                        v-else
-                                                        class="text-slate-300 font-bold select-none"
-                                                        >-</span
-                                                    >
                                                 </div>
                                             </td>
                                         </tr>
