@@ -76,6 +76,101 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the company profile associated with the user.
+     * Owner -> owns the company (via user_id).
+     * Employee -> company of their employee profile.
+     */
+    public function getCompanyAttribute()
+    {
+        if ($this->role === 'owner') {
+            return $this->getRelationValue('company');
+        }
+
+        return $this->employee?->company;
+    }
+
+    public function isOwner(): bool
+    {
+        return $this->role === 'owner';
+    }
+
+    public function isEmployee(): bool
+    {
+        return $this->role === 'employee';
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    /**
+     * Check if user has permission for a specific menu and action.
+     */
+    public function hasPermission(string $menuKey, string $action = 'view'): bool
+    {
+        if ($this->isOwner() || $this->isAdmin()) {
+            return true;
+        }
+
+        if (!$this->isEmployee() || !$this->employee) {
+            return false;
+        }
+
+        $permissions = $this->employee->position?->permissions ?? Position::defaultPermissions();
+
+        return !empty($permissions[$menuKey][$action]);
+    }
+
+    /**
+     * Get allowed branch IDs for data scoping.
+     * Owner/Admin -> null (unrestricted).
+     * Employee -> array of IDs.
+     */
+    public function getAllowedBranchIds(): ?array
+    {
+        if ($this->isOwner() || $this->isAdmin()) {
+            return null;
+        }
+
+        if (!$this->isEmployee() || !$this->employee || !$this->employee->position) {
+            return [];
+        }
+
+        return $this->employee->position->branches()->pluck('branches.id')->all();
+    }
+
+    /**
+     * Get allowed division IDs for data scoping.
+     * Owner/Admin -> null (unrestricted).
+     * Employee -> array of IDs.
+     */
+    public function getAllowedDivisionIds(): ?array
+    {
+        if ($this->isOwner() || $this->isAdmin()) {
+            return null;
+        }
+
+        if (!$this->isEmployee() || !$this->employee || !$this->employee->position) {
+            return [];
+        }
+
+        return $this->employee->position->divisions()->pluck('divisions.id')->all();
+    }
+
+    /**
+     * Get effective permissions array for Inertia Vue.
+     */
+    public function getEffectivePermissions(): array
+    {
+        if ($this->isOwner() || $this->isAdmin()) {
+            return ['*' => ['view' => true, 'create' => true, 'edit' => true, 'delete' => true]];
+        }
+
+        return $this->employee?->position?->permissions ?? Position::defaultPermissions();
+    }
+
+    /**
      * Get the company profile associated with the user (Owner role).
      */
     public function company(): HasOne

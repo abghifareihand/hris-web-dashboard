@@ -1,8 +1,13 @@
 <script setup>
+import { computed } from "vue";
 import { Head, Link } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import Button from "@/Components/UI/Button.vue";
-import MenuPermissionsTable from "./Components/MenuPermissionsTable.vue";
+import Checkbox from "@/Components/UI/Checkbox.vue";
+import {
+    POSITION_MENU_PERMISSIONS,
+    normalizePermissions,
+} from "@/data/positionPermissions";
 
 defineOptions({
     layout: AppLayout,
@@ -13,6 +18,10 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+});
+
+const permissions = computed(() => {
+    return normalizePermissions(props.position.permissions);
 });
 </script>
 
@@ -206,12 +215,133 @@ const props = defineProps({
             </div>
         </div>
 
-        <!-- Hak Akses Menu (RBAC) -->
+        <!-- Hak Akses Menu - Read Only -->
         <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 space-y-4">
-            <MenuPermissionsTable
-                :modelValue="position.permissions"
-                readonly
-            />
+            <div class="mb-3">
+                <h3 class="text-xs font-semibold text-slate-700">
+                    Hak Akses Menu
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Daftar hak akses dan kewenangan menu yang aktif untuk jabatan ini.
+                </p>
+            </div>
+
+            <!-- Table Matrix Container -->
+            <div class="border border-slate-200/80 rounded-xl overflow-hidden shadow-2xs bg-white">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
+                                <th class="py-3 px-4 min-w-[280px]">
+                                    Menu & Deskripsi Hak Akses
+                                </th>
+                                <th class="py-3 px-3 text-center w-24">
+                                    View
+                                </th>
+                                <th class="py-3 px-3 text-center w-24">
+                                    Create
+                                </th>
+                                <th class="py-3 px-3 text-center w-24">
+                                    Edit
+                                </th>
+                                <th class="py-3 px-3 text-center w-24">
+                                    Delete
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-xs">
+                            <tr
+                                v-for="item in POSITION_MENU_PERMISSIONS"
+                                :key="item.key"
+                                class="hover:bg-slate-50/60 transition-colors"
+                            >
+                                <!-- Menu Title, Badge & Description -->
+                                <td class="py-3 px-4">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="font-semibold text-slate-800 leading-snug">
+                                            {{ item.title }}
+                                        </span>
+                                        <!-- Platform Badge -->
+                                        <span
+                                            v-if="item.platform === 'WEB & MOBILE'"
+                                            class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/80"
+                                        >
+                                            WEB & MOBILE
+                                        </span>
+                                        <span
+                                            v-else-if="item.platform === 'WEB'"
+                                            class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-sky-50 text-sky-700 border border-sky-200/80"
+                                        >
+                                            WEB
+                                        </span>
+                                        <span
+                                            v-else-if="item.platform === 'MOBILE'"
+                                            class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-50 text-purple-700 border border-purple-200/80"
+                                        >
+                                            MOBILE
+                                        </span>
+                                    </div>
+                                    <div class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                                        {{ item.desc }}
+                                    </div>
+                                </td>
+
+                                <!-- View Action -->
+                                <td class="py-3 px-3 text-center align-middle">
+                                    <div class="flex items-center justify-center">
+                                        <Checkbox
+                                            v-if="!item.disabled.view"
+                                            :id="`show-perm-${item.key}-view`"
+                                            :modelValue="Boolean(permissions[item.key]?.view)"
+                                            :disabled="true"
+                                        />
+                                        <span v-else class="text-slate-300 font-bold select-none">-</span>
+                                    </div>
+                                </td>
+
+                                <!-- Create Action -->
+                                <td class="py-3 px-3 text-center align-middle">
+                                    <div class="flex items-center justify-center">
+                                        <Checkbox
+                                            v-if="!item.disabled.create"
+                                            :id="`show-perm-${item.key}-create`"
+                                            :modelValue="Boolean(permissions[item.key]?.create)"
+                                            :disabled="true"
+                                        />
+                                        <span v-else class="text-slate-300 font-bold select-none">-</span>
+                                    </div>
+                                </td>
+
+                                <!-- Edit Action -->
+                                <td class="py-3 px-3 text-center align-middle">
+                                    <div class="flex items-center justify-center">
+                                        <Checkbox
+                                            v-if="!item.disabled.edit"
+                                            :id="`show-perm-${item.key}-edit`"
+                                            :modelValue="Boolean(permissions[item.key]?.edit)"
+                                            :disabled="true"
+                                        />
+                                        <span v-else class="text-slate-300 font-bold select-none">-</span>
+                                    </div>
+                                </td>
+
+                                <!-- Delete Action -->
+                                <td class="py-3 px-3 text-center align-middle">
+                                    <div class="flex items-center justify-center">
+                                        <Checkbox
+                                            v-if="!item.disabled.delete"
+                                            :id="`show-perm-${item.key}-delete`"
+                                            :modelValue="Boolean(permissions[item.key]?.delete)"
+                                            :disabled="true"
+                                        />
+                                        <span v-else class="text-slate-300 font-bold select-none">-</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
         <!-- Daftar Karyawan Pemegang Jabatan -->
@@ -282,4 +412,3 @@ const props = defineProps({
         </div>
     </div>
 </template>
-

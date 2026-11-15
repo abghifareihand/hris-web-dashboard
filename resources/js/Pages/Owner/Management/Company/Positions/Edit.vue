@@ -4,8 +4,10 @@ import AppLayout from "@/Layouts/AppLayout.vue";
 import Button from "@/Components/UI/Button.vue";
 import Input from "@/Components/UI/Input.vue";
 import Checkbox from "@/Components/UI/Checkbox.vue";
-import MenuPermissionsTable from "./Components/MenuPermissionsTable.vue";
-import { normalizePermissions } from "@/data/positionPermissions";
+import {
+    POSITION_MENU_PERMISSIONS,
+    normalizePermissions,
+} from "@/data/positionPermissions";
 
 defineOptions({
     layout: AppLayout,
@@ -33,9 +35,22 @@ const form = useForm({
     permissions: normalizePermissions(props.position.permissions),
 });
 
+// Update specific checkbox
+const updateAction = (menuKey, action, checked) => {
+    if (!form.permissions[menuKey]) {
+        form.permissions[menuKey] = {
+            view: false,
+            create: false,
+            edit: false,
+            delete: false,
+        };
+    }
+    form.permissions[menuKey][action] = checked;
+};
+
 const submit = () => {
     form.put(
-        route("owner.management.company.positions.update", props.position.id),
+        route("owner.management.company.positions.update", props.position.id)
     );
 };
 </script>
@@ -61,7 +76,9 @@ const submit = () => {
 
         <form @submit.prevent="submit" class="space-y-6">
             <!-- Main Card -->
-            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 space-y-6">
+            <div
+                class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 space-y-6"
+            >
                 <!-- Nama Jabatan -->
                 <div>
                     <Input
@@ -147,10 +164,138 @@ const submit = () => {
 
                 <!-- Hak Akses Menu -->
                 <div class="pt-5 border-t border-slate-100">
-                    <MenuPermissionsTable
-                        v-model="form.permissions"
-                        :error="form.errors.permissions"
-                    />
+                    <div class="mb-3">
+                        <h3 class="text-xs font-semibold text-slate-700">
+                            Hak Akses Menu
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-0.5">
+                            Pilih menu yang dapat diakses oleh jabatan ini. Jika dikosongkan, tidak ada akses ke menu mana pun.
+                        </p>
+                    </div>
+
+                    <!-- Table Matrix Container -->
+                    <div class="border border-slate-200/80 rounded-xl overflow-hidden shadow-2xs bg-white">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
+                                        <th class="py-3 px-4 min-w-[280px]">
+                                            Menu & Deskripsi Hak Akses
+                                        </th>
+                                        <th class="py-3 px-3 text-center w-24">
+                                            View
+                                        </th>
+                                        <th class="py-3 px-3 text-center w-24">
+                                            Create
+                                        </th>
+                                        <th class="py-3 px-3 text-center w-24">
+                                            Edit
+                                        </th>
+                                        <th class="py-3 px-3 text-center w-24">
+                                            Delete
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 text-xs">
+                                    <tr
+                                        v-for="item in POSITION_MENU_PERMISSIONS"
+                                        :key="item.key"
+                                        class="hover:bg-slate-50/60 transition-colors"
+                                    >
+                                        <!-- Menu Title, Badge & Description -->
+                                        <td class="py-3 px-4">
+                                            <div class="flex items-center gap-2 flex-wrap">
+                                                <span class="font-semibold text-slate-800 leading-snug">
+                                                    {{ item.title }}
+                                                </span>
+                                                <!-- Platform Badge -->
+                                                <span
+                                                    v-if="item.platform === 'WEB & MOBILE'"
+                                                    class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/80"
+                                                >
+                                                    WEB & MOBILE
+                                                </span>
+                                                <span
+                                                    v-else-if="item.platform === 'WEB'"
+                                                    class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-sky-50 text-sky-700 border border-sky-200/80"
+                                                >
+                                                    WEB
+                                                </span>
+                                                <span
+                                                    v-else-if="item.platform === 'MOBILE'"
+                                                    class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-50 text-purple-700 border border-purple-200/80"
+                                                >
+                                                    MOBILE
+                                                </span>
+                                            </div>
+                                            <div class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                                                {{ item.desc }}
+                                            </div>
+                                        </td>
+
+                                        <!-- View Action -->
+                                        <td class="py-3 px-3 text-center align-middle">
+                                            <div class="flex items-center justify-center">
+                                                <Checkbox
+                                                    v-if="!item.disabled.view"
+                                                    :id="`perm-${item.key}-view`"
+                                                    :modelValue="Boolean(form.permissions[item.key]?.view)"
+                                                    @update:modelValue="val => updateAction(item.key, 'view', val)"
+                                                />
+                                                <span v-else class="text-slate-300 font-bold select-none">-</span>
+                                            </div>
+                                        </td>
+
+                                        <!-- Create Action -->
+                                        <td class="py-3 px-3 text-center align-middle">
+                                            <div class="flex items-center justify-center">
+                                                <Checkbox
+                                                    v-if="!item.disabled.create"
+                                                    :id="`perm-${item.key}-create`"
+                                                    :modelValue="Boolean(form.permissions[item.key]?.create)"
+                                                    @update:modelValue="val => updateAction(item.key, 'create', val)"
+                                                />
+                                                <span v-else class="text-slate-300 font-bold select-none">-</span>
+                                            </div>
+                                        </td>
+
+                                        <!-- Edit Action -->
+                                        <td class="py-3 px-3 text-center align-middle">
+                                            <div class="flex items-center justify-center">
+                                                <Checkbox
+                                                    v-if="!item.disabled.edit"
+                                                    :id="`perm-${item.key}-edit`"
+                                                    :modelValue="Boolean(form.permissions[item.key]?.edit)"
+                                                    @update:modelValue="val => updateAction(item.key, 'edit', val)"
+                                                />
+                                                <span v-else class="text-slate-300 font-bold select-none">-</span>
+                                            </div>
+                                        </td>
+
+                                        <!-- Delete Action -->
+                                        <td class="py-3 px-3 text-center align-middle">
+                                            <div class="flex items-center justify-center">
+                                                <Checkbox
+                                                    v-if="!item.disabled.delete"
+                                                    :id="`perm-${item.key}-delete`"
+                                                    :modelValue="Boolean(form.permissions[item.key]?.delete)"
+                                                    @update:modelValue="val => updateAction(item.key, 'delete', val)"
+                                                />
+                                                <span v-else class="text-slate-300 font-bold select-none">-</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <p
+                        v-if="form.errors.permissions"
+                        class="text-xs text-rose-500 mt-1"
+                    >
+                        {{ form.errors.permissions }}
+                    </p>
                 </div>
             </div>
 
