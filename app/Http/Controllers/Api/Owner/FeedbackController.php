@@ -15,12 +15,12 @@ class FeedbackController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $company = $user->company;
+        $company = $user->getCompany();
 
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang dapat mengakses fitur ini.',
+                'message' => 'Perusahaan tidak ditemukan.',
             ], 403);
         }
 
@@ -65,12 +65,12 @@ class FeedbackController extends Controller
     public function show(Request $request, $id)
     {
         $user = $request->user();
-        $company = $user->company;
+        $company = $user->getCompany();
 
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang dapat mengakses fitur ini.',
+                'message' => 'Perusahaan tidak ditemukan.',
             ], 403);
         }
 
@@ -101,12 +101,12 @@ class FeedbackController extends Controller
     public function destroy(Request $request, $id)
     {
         $user = $request->user();
-        $company = $user->company;
+        $company = $user->getCompany();
 
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang dapat mengakses fitur ini.',
+                'message' => 'Perusahaan tidak ditemukan.',
             ], 403);
         }
 

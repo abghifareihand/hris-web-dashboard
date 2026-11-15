@@ -494,12 +494,18 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        if ($user->isEmployee()) {
+            $user->load(['employee.position', 'employee.branch', 'employee.division']);
+        } elseif ($user->isOwner()) {
+            $user->load('company');
+        }
+
         return response()->json([
             'status' => true,
             'message' => 'Login berhasil.',
             'access_token' => $token,
             'web_dashboard_url' => rtrim(config('app.url') ?: $request->root(), '/') . '/login',
-            'user' => $user,
+            'user' => $user->toArray(),
         ]);
     }
 
@@ -533,6 +539,9 @@ class AuthController extends Controller
                 'avatar' => $user->avatar,
                 'avatar_url' => $user->avatar ? asset('storage/' . $user->avatar) : null,
                 'has_company' => $user->has_company,
+                'permissions' => $user->getEffectivePermissions(),
+                'allowed_branches' => $user->getAllowedBranchIds(),
+                'allowed_divisions' => $user->getAllowedDivisionIds(),
                 'created_at' => Carbon::parse($user->created_at ?? now())->format('Y-m-d H:i:s'),
                 'updated_at' => Carbon::parse($user->updated_at ?? $user->created_at ?? now())->format('Y-m-d H:i:s'),
             ],
@@ -554,6 +563,9 @@ class AuthController extends Controller
             'status' => true,
             'message' => 'Profil company berhasil diambil.',
             'profile' => $user->load('company'),
+            'permissions' => $user->getEffectivePermissions(),
+            'allowed_branches' => $user->getAllowedBranchIds(),
+            'allowed_divisions' => $user->getAllowedDivisionIds(),
         ]);
     }
 
@@ -571,7 +583,10 @@ class AuthController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Profil employee berhasil diambil.',
-            'profile' => $user->load('employee.company'),
+            'profile' => $user->load(['employee.company', 'employee.position', 'employee.branch', 'employee.division']),
+            'permissions' => $user->getEffectivePermissions(),
+            'allowed_branches' => $user->getAllowedBranchIds(),
+            'allowed_divisions' => $user->getAllowedDivisionIds(),
         ]);
     }
 

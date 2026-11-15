@@ -21,11 +21,11 @@ class PayrollController extends Controller
      */
     public function index(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
@@ -104,11 +104,11 @@ class PayrollController extends Controller
      */
     public function items(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
@@ -178,11 +178,11 @@ class PayrollController extends Controller
      */
     public function showItem(Request $request, $id, $itemId)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
@@ -294,11 +294,11 @@ class PayrollController extends Controller
      */
     public function downloadItem(Request $request, $id, $itemId)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
@@ -345,11 +345,11 @@ class PayrollController extends Controller
      */
     public function markAsPaid(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
@@ -437,11 +437,11 @@ class PayrollController extends Controller
      */
     public function destroy(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 

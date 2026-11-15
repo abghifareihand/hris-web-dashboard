@@ -101,7 +101,7 @@ trait ScopesDataByPermission
         }
 
         // Multi-tenant isolation: Must belong to user's company
-        $companyId = $user->company->id ?? null;
+        $companyId = $user->getCompany()?->id ?? null;
         if (!$companyId || $employee->company_id !== $companyId) {
             return false;
         }
@@ -169,7 +169,7 @@ trait ScopesDataByPermission
     protected function getAllowedBranches(?int $companyId = null)
     {
         $user = Auth::user();
-        $cid = $companyId ?? ($user->company->id ?? null);
+        $cid = $companyId ?? ($user?->getCompany()?->id ?? null);
         $query = Branch::where('company_id', $cid)->orderBy('name');
 
         if ($user && !$user->isOwner() && !$user->isAdmin()) {
@@ -188,7 +188,7 @@ trait ScopesDataByPermission
     protected function getAllowedDivisions(?int $companyId = null)
     {
         $user = Auth::user();
-        $cid = $companyId ?? ($user->company->id ?? null);
+        $cid = $companyId ?? ($user?->getCompany()?->id ?? null);
         $query = Division::where('company_id', $cid)->orderBy('name');
 
         if ($user && !$user->isOwner() && !$user->isAdmin()) {

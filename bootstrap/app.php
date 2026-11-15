@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'permission' => \App\Http\Middleware\CheckWebPermission::class,
+            'api.permission' => \App\Http\Middleware\CheckApiPermission::class,
         ]);
 
         $middleware->redirectUsersTo(function (Request $request) {

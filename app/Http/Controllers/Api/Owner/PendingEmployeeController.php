@@ -29,11 +29,11 @@ class PendingEmployeeController extends Controller
      */
     public function index(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status'  => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
@@ -86,11 +86,11 @@ class PendingEmployeeController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status'  => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
@@ -119,11 +119,11 @@ class PendingEmployeeController extends Controller
      */
     public function approve(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status'  => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
@@ -266,11 +266,11 @@ class PendingEmployeeController extends Controller
      */
     public function reject(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status'  => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
@@ -298,11 +298,11 @@ class PendingEmployeeController extends Controller
      */
     public function destroy(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status'  => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 

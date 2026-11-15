@@ -183,6 +183,18 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the resolved company for this user (both Owner and Employee roles).
+     */
+    public function getCompany(): ?Company
+    {
+        if ($this->isOwner() || $this->isAdmin()) {
+            return $this->company;
+        }
+
+        return $this->employee?->company;
+    }
+
+    /**
      * Get the company profile associated with the user (Owner role).
      */
     public function company(): HasOne

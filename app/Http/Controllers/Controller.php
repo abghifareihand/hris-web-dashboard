@@ -9,6 +9,15 @@ abstract class Controller
     use ScopesDataByPermission;
 
     /**
+     * Get the authenticated user's company (resolves for both Owner and Employee).
+     */
+    protected function getCompany(?Request $request = null): ?\App\Models\Company
+    {
+        $user = $request ? $request->user() : \Illuminate\Support\Facades\Auth::user();
+        return $user?->getCompany();
+    }
+
+    /**
      * Get per_page limit from request
      */
     protected function getPerPage(Request $request, int $default = 10): int

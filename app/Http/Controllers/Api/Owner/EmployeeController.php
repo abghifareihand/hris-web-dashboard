@@ -26,12 +26,12 @@ class EmployeeController extends Controller
      */
     public function getEmployees(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
@@ -41,6 +41,8 @@ class EmployeeController extends Controller
             'branch:id,name',
             'user:id,name,email,phone,gender,birth_date,address,avatar'
         ])->where('company_id', $company->id);
+
+        $this->scopeBranchDivision($query);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -118,12 +120,12 @@ class EmployeeController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
 
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
@@ -141,6 +143,13 @@ class EmployeeController extends Controller
                 'status' => false,
                 'message' => 'Data karyawan tidak ditemukan.'
             ], 404);
+        }
+
+        if (!$this->canAccessEmployee($employee)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Anda tidak memiliki akses ke cabang/divisi karyawan ini.'
+            ], 403);
         }
 
         $avatarUrl = ($employee->user && $employee->user->avatar) 
@@ -232,12 +241,12 @@ class EmployeeController extends Controller
      */
     public function store(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
 
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
@@ -304,6 +313,19 @@ class EmployeeController extends Controller
                 'message' => $validator->errors()->first(),
                 'errors' => $validator->errors(),
             ], 422);
+        }
+
+        if ($request->filled('branch_id') && !$this->canAccessBranch($request->branch_id)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Anda tidak memiliki akses ke cabang yang dipilih.'
+            ], 403);
+        }
+        if ($request->filled('division_id') && !$this->canAccessDivision($request->division_id)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Anda tidak memiliki akses ke divisi yang dipilih.'
+            ], 403);
         }
 
         $newEmployee = DB::transaction(function () use ($request, $company) {
@@ -400,12 +422,12 @@ class EmployeeController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
 
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
@@ -416,6 +438,13 @@ class EmployeeController extends Controller
                 'status' => false,
                 'message' => 'Data karyawan tidak ditemukan.'
             ], 404);
+        }
+
+        if (!$this->canAccessEmployee($employee)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Anda tidak memiliki akses ke cabang/divisi karyawan ini.'
+            ], 403);
         }
 
         $user = $employee->user;
@@ -489,6 +518,19 @@ class EmployeeController extends Controller
                 'message' => $validator->errors()->first(),
                 'errors' => $validator->errors(),
             ], 422);
+        }
+
+        if ($request->filled('branch_id') && !$this->canAccessBranch($request->branch_id)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Anda tidak memiliki akses ke cabang yang dipilih.'
+            ], 403);
+        }
+        if ($request->filled('division_id') && !$this->canAccessDivision($request->division_id)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Anda tidak memiliki akses ke divisi yang dipilih.'
+            ], 403);
         }
 
         DB::transaction(function () use ($request, $employee, $user) {
@@ -595,12 +637,12 @@ class EmployeeController extends Controller
      */
     public function toggleStatus(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
 
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
@@ -611,6 +653,13 @@ class EmployeeController extends Controller
                 'status' => false,
                 'message' => 'Data karyawan tidak ditemukan.'
             ], 404);
+        }
+
+        if (!$this->canAccessEmployee($employee)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Anda tidak memiliki akses ke cabang/divisi karyawan ini.'
+            ], 403);
         }
 
         $newStatus = $request->has('is_active') 
@@ -636,12 +685,12 @@ class EmployeeController extends Controller
      */
     public function destroy(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
 
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
@@ -652,6 +701,13 @@ class EmployeeController extends Controller
                 'status' => false,
                 'message' => 'Data karyawan tidak ditemukan.'
             ], 404);
+        }
+
+        if (!$this->canAccessEmployee($employee)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Anda tidak memiliki akses ke cabang/divisi karyawan ini.'
+            ], 403);
         }
 
         DB::transaction(function () use ($employee) {
@@ -677,28 +733,26 @@ class EmployeeController extends Controller
      */
     public function getCompanyStructure(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
-        $company->load([
-            'branches:id,company_id,name',
-            'divisions:id,company_id,name',
-            'positions:id,company_id,name',
-        ]);
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
+        $positions = $company->positions()->get(['id', 'company_id', 'name']);
 
         return response()->json([
             'status' => true,
             'message' => 'Struktur perusahaan berhasil diambil.',
             'data' => [
-                'branches' => $company->branches,
-                'divisions' => $company->divisions,
-                'positions' => $company->positions,
+                'branches' => $branches,
+                'divisions' => $divisions,
+                'positions' => $positions,
             ]
         ]);
     }
