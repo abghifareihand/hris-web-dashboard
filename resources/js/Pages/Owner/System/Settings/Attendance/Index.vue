@@ -65,6 +65,22 @@ const submit = () => {
             </p>
         </div>
 
+        <!-- Read-Only Banner if user has only view permission -->
+        <div
+            v-if="!$can('system_settings', 'edit')"
+            class="p-4 bg-sky-50 border border-sky-200/80 rounded-2xl flex items-center gap-3 text-sky-900 shadow-2xs"
+        >
+            <div class="w-8 h-8 rounded-xl bg-sky-100 flex items-center justify-center shrink-0 text-sky-600">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div>
+                <span class="text-xs font-bold block">Mode Lihat Saja (Read-Only)</span>
+                <span class="text-xs text-sky-700">Anda hanya memiliki hak akses untuk melihat pengaturan absensi. Anda tidak dapat mengubah pengaturan ini.</span>
+            </div>
+        </div>
+
         <form @submit.prevent="submit" class="space-y-6">
             <!-- Parameter Aturan Presensi -->
             <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 space-y-6">
@@ -89,6 +105,7 @@ const submit = () => {
                             max="120"
                             suffix="Menit"
                             placeholder="10"
+                            :disabled="!$can('system_settings', 'edit')"
                             :error="form.errors.late_tolerance_minutes"
                             required
                         />
@@ -117,6 +134,7 @@ const submit = () => {
                             max="240"
                             suffix="Menit"
                             placeholder="60"
+                            :disabled="!$can('system_settings', 'edit')"
                             :error="form.errors.early_clock_in_minutes"
                             required
                         />
@@ -143,12 +161,13 @@ const submit = () => {
                         <div
                             v-for="opt in cameraOptions"
                             :key="opt.value"
-                            @click="form.camera_mode = opt.value"
-                            class="relative p-4 rounded-xl border text-left cursor-pointer transition-all duration-150 flex flex-col justify-between select-none"
+                            @click="$can('system_settings', 'edit') && (form.camera_mode = opt.value)"
+                            class="relative p-4 rounded-xl border text-left transition-all duration-150 flex flex-col justify-between select-none"
                             :class="[
                                 form.camera_mode === opt.value
                                     ? 'border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-500/20 shadow-xs'
-                                    : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50/50'
+                                    : 'border-slate-200 bg-white',
+                                $can('system_settings', 'edit') ? 'cursor-pointer hover:border-slate-300 hover:bg-slate-50/50' : 'cursor-default opacity-85'
                             ]"
                         >
                             <div class="space-y-2">
@@ -209,6 +228,7 @@ const submit = () => {
                         <Input
                             v-model="form.status_very_good"
                             placeholder="Sangat Baik"
+                            :disabled="!$can('system_settings', 'edit')"
                             :error="form.errors.status_very_good"
                             required
                         />
@@ -227,6 +247,7 @@ const submit = () => {
                         <Input
                             v-model="form.status_good"
                             placeholder="Baik"
+                            :disabled="!$can('system_settings', 'edit')"
                             :error="form.errors.status_good"
                             required
                         />
@@ -245,6 +266,7 @@ const submit = () => {
                         <Input
                             v-model="form.status_fair"
                             placeholder="Cukup"
+                            :disabled="!$can('system_settings', 'edit')"
                             :error="form.errors.status_fair"
                             required
                         />
@@ -263,6 +285,7 @@ const submit = () => {
                         <Input
                             v-model="form.status_poor"
                             placeholder="Kurang"
+                            :disabled="!$can('system_settings', 'edit')"
                             :error="form.errors.status_poor"
                             required
                         />
@@ -271,7 +294,7 @@ const submit = () => {
             </div>
 
             <!-- Bottom Save Bar -->
-            <div class="flex items-center justify-end gap-3 pt-2">
+            <div v-if="$can('system_settings', 'edit')" class="flex items-center justify-end gap-3 pt-2">
                 <Button
                     variant="primary"
                     type="submit"

@@ -5,7 +5,7 @@ import Button from "@/Components/UI/Button.vue";
 import Input from "@/Components/UI/Input.vue";
 import Checkbox from "@/Components/UI/Checkbox.vue";
 import {
-    POSITION_MENU_PERMISSIONS,
+    POSITION_PERMISSION_GROUPS,
     createDefaultPermissions,
 } from "@/data/positionPermissions";
 
@@ -30,6 +30,7 @@ const form = useForm({
     divisions: [],
     permissions: createDefaultPermissions(),
 });
+
 
 // Update specific checkbox
 const updateAction = (menuKey, action, checked) => {
@@ -79,7 +80,8 @@ const submit = () => {
                     Tambah Jabatan
                 </h1>
                 <p class="text-xs sm:text-sm text-slate-500 mt-1">
-                    Buat jabatan baru dan atur batasan akses cabang serta divisi kerja.
+                    Buat jabatan baru dan atur batasan akses cabang serta divisi
+                    kerja.
                 </p>
             </div>
         </div>
@@ -107,7 +109,7 @@ const submit = () => {
                             Hak Akses Cabang
                         </h3>
                         <p class="text-xs text-slate-500 mt-0.5">
-                            Pilih cabang yang dapat diakses oleh jabatan ini. Jika dikosongkan, tidak ada akses ke cabang mana pun.
+                            Pilih cabang yang dapat diakses oleh jabatan ini. Jika dikosongkan, pemegang jabatan ini tidak memiliki akses ke cabang mana pun (data akan kosong).
                         </p>
                     </div>
 
@@ -143,7 +145,7 @@ const submit = () => {
                             Hak Akses Divisi
                         </h3>
                         <p class="text-xs text-slate-500 mt-0.5">
-                            Pilih divisi kerja yang dapat diakses oleh jabatan ini. Jika dikosongkan, tidak ada akses ke divisi mana pun.
+                            Pilih divisi kerja yang dapat diakses oleh jabatan ini. Jika dikosongkan, pemegang jabatan ini tidak memiliki akses ke divisi mana pun (data akan kosong).
                         </p>
                     </div>
 
@@ -172,24 +174,29 @@ const submit = () => {
                     </p>
                 </div>
 
-                <!-- Hak Akses Menu -->
+                <!-- Hak Akses Menu (Grouped Table) -->
                 <div class="pt-5 border-t border-slate-100">
                     <div class="mb-3">
                         <h3 class="text-xs font-semibold text-slate-700">
                             Hak Akses Menu
                         </h3>
                         <p class="text-xs text-slate-500 mt-0.5">
-                            Pilih menu yang dapat diakses oleh jabatan ini. Jika dikosongkan, tidak ada akses ke menu mana pun.
+                            Pilih menu yang dapat diakses oleh jabatan ini. Jika
+                            dikosongkan, tidak ada akses ke menu mana pun.
                         </p>
                     </div>
 
                     <!-- Table Matrix Container -->
-                    <div class="border border-slate-200/80 rounded-xl overflow-hidden shadow-2xs bg-white">
+                    <div
+                        class="border border-slate-200/80 rounded-xl overflow-hidden shadow-2xs bg-white"
+                    >
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse">
                                 <thead>
-                                    <tr class="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
-                                        <th class="py-3 px-4 min-w-[280px]">
+                                    <tr
+                                        class="bg-slate-50/90 border-b border-slate-200 text-[11px] font-semibold text-slate-600 uppercase tracking-wider"
+                                    >
+                                        <th class="py-3 px-4 min-w-[320px]">
                                             Menu & Deskripsi Hak Akses
                                         </th>
                                         <th class="py-3 px-3 text-center w-24">
@@ -206,95 +213,236 @@ const submit = () => {
                                         </th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-slate-100 text-xs">
-                                    <tr
-                                        v-for="item in POSITION_MENU_PERMISSIONS"
-                                        :key="item.key"
-                                        class="hover:bg-slate-50/60 transition-colors"
+                                <tbody
+                                    class="divide-y divide-slate-100 text-xs"
+                                >
+                                    <template
+                                        v-for="group in POSITION_PERMISSION_GROUPS"
+                                        :key="group.category"
                                     >
-                                        <!-- Menu Title, Badge & Description -->
-                                        <td class="py-3 px-4">
-                                            <div class="flex items-center gap-2 flex-wrap">
-                                                <span class="font-semibold text-slate-800 leading-snug">
+                                        <!-- Category Group Header -->
+                                        <tr
+                                            class="bg-white border-y border-slate-200"
+                                        >
+                                            <td colspan="5" class="py-2.5 px-4">
+                                                <div
+                                                    class="flex items-center justify-between gap-3 flex-wrap"
+                                                >
+                                                    <div
+                                                        class="flex items-center gap-2"
+                                                    >
+                                                        <span
+                                                            class="font-bold text-[11px] text-slate-800 tracking-wider uppercase"
+                                                        >
+                                                            {{ group.category }}
+                                                        </span>
+                                                        <span
+                                                            class="text-[10px] text-slate-400 font-medium"
+                                                        >
+                                                            ({{
+                                                                group.menus
+                                                                    .length
+                                                            }}
+                                                            menu)
+                                                        </span>
+                                                    </div>
+                                                    <div
+                                                        class="flex items-center gap-2 text-[10px]"
+                                                    >
+                                                        <span
+                                                            class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-50 border border-slate-200 text-slate-600 font-medium shadow-2xs"
+                                                        >
+                                                            💻 Web:
+                                                            {{
+                                                                group.location
+                                                                    .web
+                                                            }}
+                                                        </span>
+                                                        <span
+                                                            class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-50 border border-slate-200 text-slate-600 font-medium shadow-2xs"
+                                                        >
+                                                            📱 Mobile:
+                                                            {{
+                                                                group.location
+                                                                    .mobile
+                                                            }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+
+                                        <!-- Group Menu Rows -->
+                                        <tr
+                                            v-for="item in group.menus"
+                                            :key="item.key"
+                                            class="hover:bg-slate-50/60 transition-colors"
+                                        >
+                                            <!-- Menu Title & Description -->
+                                            <td class="py-3 px-4">
+                                                <div
+                                                    class="font-semibold text-slate-800 leading-snug"
+                                                >
                                                     {{ item.title }}
-                                                </span>
-                                                <!-- Platform Badge -->
-                                                <span
-                                                    v-if="item.platform === 'WEB & MOBILE'"
-                                                    class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/80"
+                                                </div>
+                                                <div
+                                                    class="text-[11px] text-slate-500 mt-0.5 leading-relaxed"
                                                 >
-                                                    WEB & MOBILE
-                                                </span>
-                                                <span
-                                                    v-else-if="item.platform === 'WEB'"
-                                                    class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-sky-50 text-sky-700 border border-sky-200/80"
+                                                    {{ item.desc }}
+                                                </div>
+                                            </td>
+
+                                            <!-- View Action -->
+                                            <td
+                                                class="py-3 px-3 text-center align-middle"
+                                            >
+                                                <div
+                                                    class="flex items-center justify-center"
                                                 >
-                                                    WEB
-                                                </span>
-                                                <span
-                                                    v-else-if="item.platform === 'MOBILE'"
-                                                    class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-50 text-purple-700 border border-purple-200/80"
+                                                    <Checkbox
+                                                        v-if="
+                                                            !item.disabled.view
+                                                        "
+                                                        :id="`perm-${item.key}-view`"
+                                                        :modelValue="
+                                                            Boolean(
+                                                                form
+                                                                    .permissions[
+                                                                    item.key
+                                                                ]?.view,
+                                                            )
+                                                        "
+                                                        @update:modelValue="
+                                                            (val) =>
+                                                                updateAction(
+                                                                    item.key,
+                                                                    'view',
+                                                                    val,
+                                                                )
+                                                        "
+                                                    />
+                                                    <span
+                                                        v-else
+                                                        class="text-slate-300 font-bold select-none"
+                                                        >-</span
+                                                    >
+                                                </div>
+                                            </td>
+
+                                            <!-- Create Action -->
+                                            <td
+                                                class="py-3 px-3 text-center align-middle"
+                                            >
+                                                <div
+                                                    class="flex items-center justify-center"
                                                 >
-                                                    MOBILE
-                                                </span>
-                                            </div>
-                                            <div class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
-                                                {{ item.desc }}
-                                            </div>
-                                        </td>
+                                                    <Checkbox
+                                                        v-if="
+                                                            !item.disabled
+                                                                .create
+                                                        "
+                                                        :id="`perm-${item.key}-create`"
+                                                        :modelValue="
+                                                            Boolean(
+                                                                form
+                                                                    .permissions[
+                                                                    item.key
+                                                                ]?.create,
+                                                            )
+                                                        "
+                                                        @update:modelValue="
+                                                            (val) =>
+                                                                updateAction(
+                                                                    item.key,
+                                                                    'create',
+                                                                    val,
+                                                                )
+                                                        "
+                                                    />
+                                                    <span
+                                                        v-else
+                                                        class="text-slate-300 font-bold select-none"
+                                                        >-</span
+                                                    >
+                                                </div>
+                                            </td>
 
-                                        <!-- View Action -->
-                                        <td class="py-3 px-3 text-center align-middle">
-                                            <div class="flex items-center justify-center">
-                                                <Checkbox
-                                                    v-if="!item.disabled.view"
-                                                    :id="`perm-${item.key}-view`"
-                                                    :modelValue="Boolean(form.permissions[item.key]?.view)"
-                                                    @update:modelValue="val => updateAction(item.key, 'view', val)"
-                                                />
-                                                <span v-else class="text-slate-300 font-bold select-none">-</span>
-                                            </div>
-                                        </td>
+                                            <!-- Edit Action -->
+                                            <td
+                                                class="py-3 px-3 text-center align-middle"
+                                            >
+                                                <div
+                                                    class="flex items-center justify-center"
+                                                >
+                                                    <Checkbox
+                                                        v-if="
+                                                            !item.disabled.edit
+                                                        "
+                                                        :id="`perm-${item.key}-edit`"
+                                                        :modelValue="
+                                                            Boolean(
+                                                                form
+                                                                    .permissions[
+                                                                    item.key
+                                                                ]?.edit,
+                                                            )
+                                                        "
+                                                        @update:modelValue="
+                                                            (val) =>
+                                                                updateAction(
+                                                                    item.key,
+                                                                    'edit',
+                                                                    val,
+                                                                )
+                                                        "
+                                                    />
+                                                    <span
+                                                        v-else
+                                                        class="text-slate-300 font-bold select-none"
+                                                        >-</span
+                                                    >
+                                                </div>
+                                            </td>
 
-                                        <!-- Create Action -->
-                                        <td class="py-3 px-3 text-center align-middle">
-                                            <div class="flex items-center justify-center">
-                                                <Checkbox
-                                                    v-if="!item.disabled.create"
-                                                    :id="`perm-${item.key}-create`"
-                                                    :modelValue="Boolean(form.permissions[item.key]?.create)"
-                                                    @update:modelValue="val => updateAction(item.key, 'create', val)"
-                                                />
-                                                <span v-else class="text-slate-300 font-bold select-none">-</span>
-                                            </div>
-                                        </td>
-
-                                        <!-- Edit Action -->
-                                        <td class="py-3 px-3 text-center align-middle">
-                                            <div class="flex items-center justify-center">
-                                                <Checkbox
-                                                    v-if="!item.disabled.edit"
-                                                    :id="`perm-${item.key}-edit`"
-                                                    :modelValue="Boolean(form.permissions[item.key]?.edit)"
-                                                    @update:modelValue="val => updateAction(item.key, 'edit', val)"
-                                                />
-                                                <span v-else class="text-slate-300 font-bold select-none">-</span>
-                                            </div>
-                                        </td>
-
-                                        <!-- Delete Action -->
-                                        <td class="py-3 px-3 text-center align-middle">
-                                            <div class="flex items-center justify-center">
-                                                <Checkbox
-                                                    v-if="!item.disabled.delete"
-                                                    :id="`perm-${item.key}-delete`"
-                                                    :modelValue="Boolean(form.permissions[item.key]?.delete)"
-                                                    @update:modelValue="val => updateAction(item.key, 'delete', val)"
-                                                />
-                                                <span v-else class="text-slate-300 font-bold select-none">-</span>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                            <!-- Delete Action -->
+                                            <td
+                                                class="py-3 px-3 text-center align-middle"
+                                            >
+                                                <div
+                                                    class="flex items-center justify-center"
+                                                >
+                                                    <Checkbox
+                                                        v-if="
+                                                            !item.disabled
+                                                                .delete
+                                                        "
+                                                        :id="`perm-${item.key}-delete`"
+                                                        :modelValue="
+                                                            Boolean(
+                                                                form
+                                                                    .permissions[
+                                                                    item.key
+                                                                ]?.delete,
+                                                            )
+                                                        "
+                                                        @update:modelValue="
+                                                            (val) =>
+                                                                updateAction(
+                                                                    item.key,
+                                                                    'delete',
+                                                                    val,
+                                                                )
+                                                        "
+                                                    />
+                                                    <span
+                                                        v-else
+                                                        class="text-slate-300 font-bold select-none"
+                                                        >-</span
+                                                    >
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>
                                 </tbody>
                             </table>
                         </div>

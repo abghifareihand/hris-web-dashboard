@@ -720,7 +720,7 @@ const logout = () => {
             @close="sidebarOpen = false"
         />
         <EmployeeSidebar
-            v-else-if="authUser?.role === 'employee'"
+            v-else-if="route().current('employee.*')"
             :sidebar-open="sidebarOpen"
             :desktop-sidebar-open="desktopSidebarOpen"
             :auth-user="authUser"

@@ -25,10 +25,51 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $company = auth()->user()->company;
+        $user = auth()->user();
+        $company = $user->company;
 
         if (!$company) {
             abort(403, 'Akses ditolak.');
+        }
+
+        $isOwner = $user->isOwner();
+
+        // Karyawan tidak memiliki dashboard eksekutif - arahkan langsung ke menu pertama yang diizinkan
+        if (!$isOwner) {
+            $priorityRoutes = [
+                'employee_data' => 'owner.management.employees.index',
+                'company_profile' => 'owner.management.company.profile.index',
+                'branches' => 'owner.management.company.branches.index',
+                'divisions' => 'owner.management.company.divisions.index',
+                'positions' => 'owner.management.company.positions.index',
+                'shifts' => 'owner.management.schedules.shifts.index',
+                'holidays' => 'owner.management.schedules.holidays.index',
+                'employee_schedules' => 'owner.management.schedules.work.index',
+                'swap_personal' => 'owner.management.schedules.swap-personal.index',
+                'swap_team' => 'owner.management.schedules.swap-team.index',
+                'leaves' => 'owner.management.leaves.index',
+                'leave_balances' => 'owner.management.leaves.balance.index',
+                'leave_categories' => 'owner.management.leaves.categories.index',
+                'overtimes' => 'owner.management.overtimes.index',
+                'reimbursements' => 'owner.finance.reimbursements.index',
+                'loans' => 'owner.finance.loans.index',
+                'payrolls' => 'owner.finance.payrolls.index',
+                'all_attendances' => 'owner.reports.attendances.index',
+                'all_daily_reports' => 'owner.reports.performances.daily.index',
+                'announcements' => 'owner.announcements.index',
+                'system_settings' => 'owner.management.attendance.settings.index',
+            ];
+
+            foreach ($priorityRoutes as $menuKey => $routeName) {
+                if ($user->hasPermission($menuKey, 'view')) {
+                    return redirect()->route($routeName);
+                }
+            }
+
+            // Jika belum ada hak akses menu apa pun
+            return Inertia::render('Owner/Dashboard/Index', [
+                'hasAnyWebPermission' => false,
+            ]);
         }
 
         $today = Carbon::today();
@@ -344,6 +385,7 @@ class DashboardController extends Controller
         $totalFeedbacksCount = Feedback::where('company_id', $company->id)->count();
 
         return Inertia::render('Owner/Dashboard/Index', [
+            'hasAnyWebPermission' => true,
             'totalEmployees' => $totalEmployees,
             'newEmployeesThisMonth' => $newEmployeesThisMonth,
             'todayPresentCount' => $todayPresentCount,

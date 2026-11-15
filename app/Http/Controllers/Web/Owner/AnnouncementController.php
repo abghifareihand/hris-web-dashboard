@@ -24,6 +24,20 @@ class AnnouncementController extends Controller
         $query = Announcement::with(['branch:id,name', 'division:id,name'])
             ->where('company_id', $company->id);
 
+        $allowedBranches = $this->getAllowedBranchIds();
+        if ($allowedBranches !== null) {
+            $query->where(function($q) use ($allowedBranches) {
+                $q->whereNull('branch_id')->orWhereIn('branch_id', $allowedBranches);
+            });
+        }
+
+        $allowedDivisions = $this->getAllowedDivisionIds();
+        if ($allowedDivisions !== null) {
+            $query->where(function($q) use ($allowedDivisions) {
+                $q->whereNull('division_id')->orWhereIn('division_id', $allowedDivisions);
+            });
+        }
+
         if ($request->filled('branch_id')) {
             if ($request->branch_id === 'all') {
                 $query->whereNull('branch_id');
@@ -74,8 +88,8 @@ class AnnouncementController extends Controller
             ->paginate($perPage)
             ->withQueryString();
 
-        $branches = Branch::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
-        $divisions = Division::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
 
         return Inertia::render('Owner/System/Announcements/Index', [
             'announcements' => $announcements,
@@ -106,8 +120,8 @@ class AnnouncementController extends Controller
         $company = $request->user()?->company ?? auth()->user()?->company;
         if (!$company) abort(403, 'Akses ditolak.');
 
-        $branches = Branch::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
-        $divisions = Division::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
 
         return Inertia::render('Owner/System/Announcements/Create', [
             'branches' => $branches,
@@ -122,6 +136,14 @@ class AnnouncementController extends Controller
     {
         $company = $request->user()?->company ?? auth()->user()?->company;
         if (!$company) abort(403, 'Akses ditolak.');
+
+        if ($request->filled('branch_id') && !$this->canAccessBranch($request->branch_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk cabang yang dipilih.');
+        }
+
+        if ($request->filled('division_id') && !$this->canAccessDivision($request->division_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk divisi yang dipilih.');
+        }
 
         $request->validate([
             'title' => 'required|string|max:255',
@@ -174,6 +196,13 @@ class AnnouncementController extends Controller
             ->where('company_id', $company->id)
             ->findOrFail($id);
 
+        if ($announcement->branch_id && !$this->canAccessBranch($announcement->branch_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk melihat pengumuman cabang ini.');
+        }
+        if ($announcement->division_id && !$this->canAccessDivision($announcement->division_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk melihat pengumuman divisi ini.');
+        }
+
         return Inertia::render('Owner/System/Announcements/Show', [
             'announcement' => $announcement,
         ]);
@@ -188,8 +217,16 @@ class AnnouncementController extends Controller
         if (!$company) abort(403, 'Akses ditolak.');
 
         $announcement = Announcement::where('company_id', $company->id)->findOrFail($id);
-        $branches = Branch::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
-        $divisions = Division::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
+
+        if ($announcement->branch_id && !$this->canAccessBranch($announcement->branch_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mengedit pengumuman cabang ini.');
+        }
+        if ($announcement->division_id && !$this->canAccessDivision($announcement->division_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mengedit pengumuman divisi ini.');
+        }
+
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
 
         return Inertia::render('Owner/System/Announcements/Edit', [
             'announcement' => $announcement,
@@ -207,6 +244,20 @@ class AnnouncementController extends Controller
         if (!$company) abort(403, 'Akses ditolak.');
 
         $announcement = Announcement::where('company_id', $company->id)->findOrFail($id);
+
+        if ($announcement->branch_id && !$this->canAccessBranch($announcement->branch_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mengedit pengumuman cabang ini.');
+        }
+        if ($announcement->division_id && !$this->canAccessDivision($announcement->division_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mengedit pengumuman divisi ini.');
+        }
+
+        if ($request->filled('branch_id') && !$this->canAccessBranch($request->branch_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk cabang yang dipilih.');
+        }
+        if ($request->filled('division_id') && !$this->canAccessDivision($request->division_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk divisi yang dipilih.');
+        }
 
         $request->validate([
             'title' => 'required|string|max:255',
@@ -263,6 +314,13 @@ class AnnouncementController extends Controller
         if (!$company) abort(403, 'Akses ditolak.');
 
         $announcement = Announcement::where('company_id', $company->id)->findOrFail($id);
+
+        if ($announcement->branch_id && !$this->canAccessBranch($announcement->branch_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menghapus pengumuman cabang ini.');
+        }
+        if ($announcement->division_id && !$this->canAccessDivision($announcement->division_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menghapus pengumuman divisi ini.');
+        }
 
         if ($announcement->image && Storage::disk('public')->exists($announcement->image)) {
             Storage::disk('public')->delete($announcement->image);

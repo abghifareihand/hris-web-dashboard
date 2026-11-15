@@ -80,7 +80,7 @@ const executeDelete = () => {
                     Kelola jenis-jenis cuti kerja (Tahunan, Sakit, Melahirkan, Khusus) dan kuota default tahunannya.
                 </p>
             </div>
-            <div class="flex items-center gap-3">
+            <div v-if="$can('leave_categories', 'create')" class="flex items-center gap-3">
                 <Link :href="route('owner.management.leaves.categories.create')">
                     <Button variant="primary">
                         <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -159,6 +159,7 @@ const executeDelete = () => {
                     <td class="px-5 py-3.5 text-right whitespace-nowrap">
                         <div class="inline-flex items-center justify-end gap-1">
                             <Link
+                                v-if="$can('leave_categories', 'edit')"
                                 :href="route('owner.management.leaves.categories.edit', cat.id)"
                                 class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
                                 title="Edit Kategori Cuti"
@@ -178,9 +179,10 @@ const executeDelete = () => {
                                 </svg>
                             </Link>
                             <button
+                                v-if="$can('leave_categories', 'delete')"
                                 type="button"
                                 @click="confirmDelete(cat)"
-                                class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                                class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
                                 title="Hapus Kategori Cuti"
                             >
                                 <svg

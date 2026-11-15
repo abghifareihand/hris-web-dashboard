@@ -60,13 +60,15 @@ class PayrollController extends Controller
             }
         }
 
+        $this->scopeBranchDivision($query);
+
         $employees = $query->orderBy('name', 'asc')->paginate(10)->withQueryString();
         
         $bpjsTk = $company->bpjsKetenagakerjaan()->firstOrCreate(['company_id' => $company->id]);
         $bpjsKes = $company->bpjsKesehatan()->firstOrCreate(['company_id' => $company->id]);
 
-        $branches = Branch::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
-        $divisions = Division::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
 
         return Inertia::render('Owner/Finance/Payrolls/Master/Index', [
             'employees' => $employees,
@@ -107,19 +109,25 @@ class PayrollController extends Controller
             $query->where('status', $request->input('status'));
         }
 
+        $this->scopeBranchDivision($query);
+
         $payrolls = $query->paginate(10)->withQueryString();
-        $branches = Branch::where('company_id', $company->id)->select('id', 'name')->get();
-        $divisions = Division::where('company_id', $company->id)->select('id', 'name')->get();
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
+
+        $statsQuery = Payroll::where('company_id', $company->id);
+        $this->scopeBranchDivision($statsQuery);
 
         $stats = [
-            'total_disbursed' => Payroll::where('company_id', $company->id)->where('status', 'paid')->sum('total_amount'),
-            'total_in_process' => Payroll::where('company_id', $company->id)->where('status', 'process')->sum('total_amount'),
-            'total_payrolls_count' => Payroll::where('company_id', $company->id)->count(),
+            'total_disbursed' => (clone $statsQuery)->where('status', 'paid')->sum('total_amount'),
+            'total_in_process' => (clone $statsQuery)->where('status', 'process')->sum('total_amount'),
+            'total_payrolls_count' => (clone $statsQuery)->count(),
         ];
 
-        $activeEmployees = Employee::where('company_id', $company->id)
-            ->where('is_active', true)
-            ->select('id', 'name', 'nip', 'basic_salary', 'branch_id', 'division_id', 'payroll_cycle')
+        $empQuery = Employee::where('company_id', $company->id)->where('is_active', true);
+        $this->scopeBranchDivision($empQuery);
+
+        $activeEmployees = $empQuery->select('id', 'name', 'nip', 'basic_salary', 'branch_id', 'division_id', 'payroll_cycle')
             ->get();
 
         $missingSalary = $activeEmployees->filter(fn($e) => empty($e->basic_salary) || $e->basic_salary <= 0);
@@ -175,6 +183,8 @@ class PayrollController extends Controller
             $query->where('status', $request->input('status'));
         }
 
+        $this->scopeBranchDivision($query);
+
         $payrolls = $query->get();
 
         $filename = 'Rekap-Penggajian-' . now()->format('Ymd-His') . '.xlsx';
@@ -185,9 +195,10 @@ class PayrollController extends Controller
     public function checkEmployees()
     {
         $company = auth()->user()->company;
-        $employees = Employee::where('company_id', $company->id)
-            ->where('is_active', true)
-            ->get();
+        $empQuery = Employee::where('company_id', $company->id)
+            ->where('is_active', true);
+        $this->scopeBranchDivision($empQuery);
+        $employees = $empQuery->get();
 
         $incomplete = [];
         $completeCount = 0;
@@ -220,6 +231,14 @@ class PayrollController extends Controller
             'branch_id' => 'nullable|exists:branches,id',
             'division_id' => 'nullable|exists:divisions,id',
         ]);
+
+        if ($request->filled('branch_id') && !$this->canAccessBranch($request->branch_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk cabang yang dipilih.');
+        }
+
+        if ($request->filled('division_id') && !$this->canAccessDivision($request->division_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk divisi yang dipilih.');
+        }
 
         $duplicateQuery = Payroll::where('company_id', $company->id)
             ->where('status', '!=', 'cancelled')
@@ -256,6 +275,8 @@ class PayrollController extends Controller
         if ($request->filled('division_id')) {
             $query->where('division_id', $request->division_id);
         }
+
+        $this->scopeBranchDivision($query);
         
         $allEmployees = $query->get();
         if ($allEmployees->isEmpty()) {
@@ -642,6 +663,18 @@ class PayrollController extends Controller
             return redirect()->route('owner.finance.payrolls.index')->with('error', 'Batch penggajian tidak ditemukan atau telah dihapus.');
         }
 
+        if ($payroll->branch_id && !$this->canAccessBranch($payroll->branch_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk melihat data cabang ini.');
+        }
+
+        if ($payroll->division_id && !$this->canAccessDivision($payroll->division_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk melihat data divisi ini.');
+        }
+
+        $payroll->setRelation('items', $payroll->items->filter(function ($item) {
+            return $this->canAccessEmployee($item->employee);
+        })->values());
+
         $unpaidLoanInstallments = LoanInstallment::whereHas('loan', function($q) use ($company) {
                 $q->where('company_id', $company->id)->where('status', 'approved');
             })
@@ -688,6 +721,10 @@ class PayrollController extends Controller
 
         if (!$item) {
             return redirect()->route('owner.finance.payrolls.show', $id)->with('error', 'Data rincian slip gaji tidak ditemukan atau telah dihapus.');
+        }
+
+        if (!$this->canAccessEmployee($item->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk melihat rincian slip gaji karyawan ini.');
         }
 
         $startDate = Carbon::parse($payroll->start_date);
@@ -803,6 +840,16 @@ class PayrollController extends Controller
             return redirect()->route('owner.finance.payrolls.index')->with('error', 'Batch penggajian tidak ditemukan atau telah dihapus.');
         }
 
+        if ($payroll->branch_id && !$this->canAccessBranch($payroll->branch_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mencetak slip cabang ini.');
+        }
+        if ($payroll->division_id && !$this->canAccessDivision($payroll->division_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mencetak slip divisi ini.');
+        }
+        $payroll->setRelation('items', $payroll->items->filter(function ($item) {
+            return $this->canAccessEmployee($item->employee);
+        })->values());
+
         $bpjsTk = $company->bpjsKetenagakerjaan()->firstOrCreate(['company_id' => $company->id]);
         $bpjsKes = $company->bpjsKesehatan()->firstOrCreate(['company_id' => $company->id]);
 
@@ -828,6 +875,16 @@ class PayrollController extends Controller
         if (!$payroll) {
             return redirect()->route('owner.finance.payrolls.index')->with('error', 'Batch penggajian tidak ditemukan atau telah dihapus.');
         }
+
+        if ($payroll->branch_id && !$this->canAccessBranch($payroll->branch_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mencetak slip cabang ini.');
+        }
+        if ($payroll->division_id && !$this->canAccessDivision($payroll->division_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mencetak slip divisi ini.');
+        }
+        $payroll->setRelation('items', $payroll->items->filter(function ($item) {
+            return $this->canAccessEmployee($item->employee);
+        })->values());
 
         $bpjsTk = $company->bpjsKetenagakerjaan()->firstOrCreate(['company_id' => $company->id]);
         $bpjsKes = $company->bpjsKesehatan()->firstOrCreate(['company_id' => $company->id]);
@@ -882,6 +939,16 @@ class PayrollController extends Controller
         if (!$payroll) {
             return redirect()->route('owner.finance.payrolls.index')->with('error', 'Batch penggajian tidak ditemukan atau telah dihapus.');
         }
+
+        if ($payroll->branch_id && !$this->canAccessBranch($payroll->branch_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mencetak slip cabang ini.');
+        }
+        if ($payroll->division_id && !$this->canAccessDivision($payroll->division_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mencetak slip divisi ini.');
+        }
+        $payroll->setRelation('items', $payroll->items->filter(function ($item) {
+            return $this->canAccessEmployee($item->employee);
+        })->values());
 
         $bpjsTk = $company->bpjsKetenagakerjaan()->firstOrCreate(['company_id' => $company->id]);
         $bpjsKes = $company->bpjsKesehatan()->firstOrCreate(['company_id' => $company->id]);
@@ -961,13 +1028,18 @@ class PayrollController extends Controller
             abort(404, 'Data slip gaji tidak ditemukan');
         }
 
+        $firstItem = $payroll->items->first();
+        if (!$this->canAccessEmployee($firstItem->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mencetak slip gaji karyawan ini.');
+        }
+
         $bpjsTk = $company->bpjsKetenagakerjaan()->firstOrCreate(['company_id' => $company->id]);
         $bpjsKes = $company->bpjsKesehatan()->firstOrCreate(['company_id' => $company->id]);
 
         $pdf = Pdf::loadView('pdf.payroll-slip', compact('payroll', 'company', 'bpjsTk', 'bpjsKes'));
         $pdf->setPaper('a4', 'portrait');
 
-        $employeeName = Str::slug($payroll->items->first()->employee?->name ?? 'karyawan');
+        $employeeName = Str::slug($firstItem->employee?->name ?? 'karyawan');
         return $pdf->stream('Slip-Gaji-'. $employeeName .'-'. $payroll->code .'.pdf');
     }
 
@@ -979,6 +1051,16 @@ class PayrollController extends Controller
         if (!$payroll) {
             return redirect()->route('owner.finance.payrolls.index')->with('error', 'Batch penggajian tidak ditemukan atau telah dihapus.');
         }
+
+        if ($payroll->branch_id && !$this->canAccessBranch($payroll->branch_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mengekspor data cabang ini.');
+        }
+        if ($payroll->division_id && !$this->canAccessDivision($payroll->division_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mengekspor data divisi ini.');
+        }
+        $payroll->setRelation('items', $payroll->items->filter(function ($item) {
+            return $this->canAccessEmployee($item->employee);
+        })->values());
 
         $period = Carbon::parse($payroll->start_date)->locale('id')->translatedFormat('F-Y');
         $filename = 'Bank-Transfer-' . Str::slug($payroll->code) . '-' . $period . '.xlsx';
@@ -998,6 +1080,16 @@ class PayrollController extends Controller
 
         if (!$payroll) {
             return redirect()->route('owner.finance.payrolls.index')->with('error', 'Batch penggajian tidak ditemukan atau telah dihapus.');
+        }
+
+        if ($payroll->branch_id && !$this->canAccessBranch($payroll->branch_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mengubah status batch cabang ini.');
+        }
+        if ($payroll->division_id && !$this->canAccessDivision($payroll->division_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mengubah status batch divisi ini.');
+        }
+        if ($payroll->branch_id === null && ($this->getAllowedBranchIds() !== null)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mengubah status batch seluruh perusahaan.');
         }
         
         $request->validate(['status' => 'required|in:process,paid,cancelled']);
@@ -1074,6 +1166,16 @@ class PayrollController extends Controller
             return redirect()->route('owner.finance.payrolls.index')->with('error', 'Batch penggajian tidak ditemukan atau telah dihapus.');
         }
 
+        if ($payroll->branch_id && !$this->canAccessBranch($payroll->branch_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mengubah data batch cabang ini.');
+        }
+        if ($payroll->division_id && !$this->canAccessDivision($payroll->division_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mengubah data batch divisi ini.');
+        }
+        if ($payroll->branch_id === null && ($this->getAllowedBranchIds() !== null)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mengubah data batch seluruh perusahaan.');
+        }
+
         if ($payroll->status === 'paid') {
             return redirect()->back()->with('error', 'Tidak dapat mengubah data penyesuaian karena status penggajian sudah PAID.');
         }
@@ -1121,6 +1223,16 @@ class PayrollController extends Controller
 
         if (!$payroll) {
             return redirect()->route('owner.finance.payrolls.index')->with('error', 'Data penggajian tidak ditemukan atau telah dihapus.');
+        }
+
+        if ($payroll->branch_id && !$this->canAccessBranch($payroll->branch_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menghapus data cabang ini.');
+        }
+        if ($payroll->division_id && !$this->canAccessDivision($payroll->division_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menghapus data divisi ini.');
+        }
+        if ($payroll->branch_id === null && ($this->getAllowedBranchIds() !== null)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menghapus batch penggajian seluruh perusahaan.');
         }
 
         if ($payroll->status === 'paid') {

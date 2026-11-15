@@ -142,8 +142,8 @@ class ScheduleController extends Controller
             ->paginate($request->input('per_page', 10))
             ->withQueryString();
 
-        $branches = Branch::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
-        $divisions = Division::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
 
         return Inertia::render('Owner/Management/Schedules/Holidays/Index', [
             'holidays' => $holidays,
@@ -162,8 +162,8 @@ class ScheduleController extends Controller
     public function createHolidays()
     {
         $company = auth()->user()->company;
-        $branches = Branch::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
-        $divisions = Division::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
 
         return Inertia::render('Owner/Management/Schedules/Holidays/Create', [
             'branches' => $branches,
@@ -203,8 +203,8 @@ class ScheduleController extends Controller
     {
         $company = auth()->user()->company;
         $holiday = Holiday::where('company_id', $company->id)->findOrFail($id);
-        $branches = Branch::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
-        $divisions = Division::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
 
         return Inertia::render('Owner/Management/Schedules/Holidays/Edit', [
             'holiday' => $holiday,
@@ -256,9 +256,9 @@ class ScheduleController extends Controller
     {
         $company = auth()->user()->company;
         $shifts = Shift::where('company_id', $company->id)->orderBy('name')->get();
-        $branches = Branch::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
-        $divisions = Division::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
-        $employees = Employee::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
+        $employees = $this->scopeBranchDivision(Employee::where('company_id', $company->id))->orderBy('name')->get(['id', 'name']);
 
         $defaultMonth = (int) date('n');
         $defaultYear = (int) date('Y');
@@ -290,6 +290,8 @@ class ScheduleController extends Controller
             })
             ->whereMonth('date', $month)
             ->whereYear('date', $year);
+
+        $this->scopeByEmployeeRelation($schedulesQuery);
 
         if ($request->filled('shift_id')) {
             if ($request->shift_id === 'day_off') {
@@ -405,8 +407,8 @@ class ScheduleController extends Controller
     {
         $company = auth()->user()->company;
         $shifts = Shift::where('company_id', $company->id)->orderBy('name')->get();
-        $branches = Branch::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
-        $divisions = Division::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
         $holidays = Holiday::where('company_id', $company->id)->get(['id', 'name', 'start_date', 'end_date']);
         
         return Inertia::render('Owner/Management/Schedules/Work/Create', [
@@ -434,6 +436,8 @@ class ScheduleController extends Controller
         if ($request->filled('division_id')) {
             $query->where('division_id', $request->division_id);
         }
+
+        $this->scopeBranchDivision($query);
 
         $employees = $query->limit(100)->get(['id', 'name', 'branch_id', 'division_id']);
 
@@ -472,6 +476,13 @@ class ScheduleController extends Controller
 
         $company = auth()->user()->company;
         $employees = $request->employees;
+
+        foreach ($employees as $employeeId) {
+            $emp = Employee::find($employeeId);
+            if (!$this->canAccessEmployee($emp)) {
+                abort(403, 'Anda tidak memiliki hak akses untuk mengatur jadwal karyawan ini.');
+            }
+        }
 
         DB::transaction(function () use ($request, $company, $employees) {
             if ($request->mode === 'hari') {
@@ -566,13 +577,13 @@ class ScheduleController extends Controller
     public function editWork(WorkSchedule $schedule)
     {
         $company = auth()->user()->company;
-        if ($schedule->company_id !== $company->id) {
-            abort(403);
+        if ($schedule->company_id !== $company->id || !$this->canAccessEmployee($schedule->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mengubah jadwal karyawan ini.');
         }
 
         $schedule->load(['employee.position:id,name', 'employee.division:id,name', 'shift']);
         $shifts = Shift::where('company_id', $company->id)->orderBy('name')->get();
-        $branches = Branch::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
+        $branches = $this->getAllowedBranches($company->id);
 
         return Inertia::render('Owner/Management/Schedules/Work/Edit', [
             'schedule' => $schedule,
@@ -584,8 +595,8 @@ class ScheduleController extends Controller
     public function updateWork(Request $request, WorkSchedule $schedule)
     {
         $company = auth()->user()->company;
-        if ($schedule->company_id !== $company->id) {
-            abort(403);
+        if ($schedule->company_id !== $company->id || !$this->canAccessEmployee($schedule->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mengubah jadwal karyawan ini.');
         }
 
         $request->validate([
@@ -623,8 +634,8 @@ class ScheduleController extends Controller
     public function destroyWork(WorkSchedule $schedule)
     {
         $company = auth()->user()->company;
-        if ($schedule->company_id !== $company->id) {
-            abort(403);
+        if ($schedule->company_id !== $company->id || !$this->canAccessEmployee($schedule->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menghapus jadwal karyawan ini.');
         }
 
         $schedule->delete();
@@ -639,8 +650,8 @@ class ScheduleController extends Controller
     public function swapPersonal(Request $request)
     {
         $company = auth()->user()->company;
-        $branches = Branch::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
-        $divisions = Division::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
 
         $query = SwapPersonal::with([
             'employee.branch:id,name',
@@ -671,6 +682,8 @@ class ScheduleController extends Controller
                   ->orWhere('nip', 'like', '%' . $request->search . '%');
             });
         }
+
+        $this->scopeByEmployeeRelation($query);
 
         $sort = $request->input('sort', 'desc') === 'asc' ? 'asc' : 'desc';
         $swaps = $query->orderBy('created_at', $sort)
@@ -703,6 +716,10 @@ class ScheduleController extends Controller
         ->where('company_id', $company->id)
         ->findOrFail($id);
 
+        if (!$this->canAccessEmployee($swap->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk melihat permohonan ini.');
+        }
+
         $reqDate = Carbon::parse($swap->original_work_date)->format('Y-m-d');
         $tarDate = Carbon::parse($swap->target_work_date)->format('Y-m-d');
 
@@ -725,7 +742,11 @@ class ScheduleController extends Controller
 
     public function approveSwapPersonal($id)
     {
-        $swap = SwapPersonal::where('company_id', auth()->user()->company->id)->findOrFail($id);
+        $swap = SwapPersonal::with('employee')->where('company_id', auth()->user()->company->id)->findOrFail($id);
+
+        if (!$this->canAccessEmployee($swap->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menyetujui permohonan ini.');
+        }
         
         DB::transaction(function () use ($swap) {
             $swap->update(['status' => 'approved', 'approved_by' => auth()->id()]);
@@ -770,7 +791,12 @@ class ScheduleController extends Controller
 
     public function rejectSwapPersonal($id)
     {
-        $swap = SwapPersonal::where('company_id', auth()->user()->company->id)->findOrFail($id);
+        $swap = SwapPersonal::with('employee')->where('company_id', auth()->user()->company->id)->findOrFail($id);
+
+        if (!$this->canAccessEmployee($swap->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menolak permohonan ini.');
+        }
+
         $swap->update(['status' => 'rejected', 'approved_by' => auth()->id()]);
 
         return redirect()->back()
@@ -784,9 +810,13 @@ class ScheduleController extends Controller
             abort(403, 'Akses ditolak.');
         }
 
-        $swap = SwapPersonal::where('company_id', $company->id)->find($id);
+        $swap = SwapPersonal::with('employee')->where('company_id', $company->id)->find($id);
         if (!$swap) {
             return redirect()->back()->with('error', 'Data pertukaran jadwal personal tidak ditemukan.');
+        }
+
+        if (!$this->canAccessEmployee($swap->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menghapus permohonan ini.');
         }
 
         if ($swap->status === 'approved') {
@@ -813,8 +843,8 @@ class ScheduleController extends Controller
     public function swapTeam(Request $request)
     {
         $company = auth()->user()->company;
-        $branches = Branch::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
-        $divisions = Division::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
 
         $query = SwapTeam::with([
             'requestor.branch:id,name',
@@ -852,6 +882,8 @@ class ScheduleController extends Controller
             });
         }
 
+        $this->scopeByEmployeeRelation($query, 'requestor');
+
         $sort = $request->input('sort', 'desc') === 'asc' ? 'asc' : 'desc';
         $swaps = $query->orderBy('created_at', $sort)
             ->paginate($request->input('per_page', 10))
@@ -885,6 +917,10 @@ class ScheduleController extends Controller
         ])
         ->where('company_id', $company->id)
         ->findOrFail($id);
+
+        if (!$this->canAccessEmployee($swap->requestor)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk melihat permohonan ini.');
+        }
 
         $reqDate = Carbon::parse($swap->requestor_work_date)->format('Y-m-d');
         $tarDate = Carbon::parse($swap->target_work_date)->format('Y-m-d');
@@ -930,7 +966,11 @@ class ScheduleController extends Controller
 
     public function approveSwapTeam($id)
     {
-        $swap = SwapTeam::where('company_id', auth()->user()->company->id)->findOrFail($id);
+        $swap = SwapTeam::with('requestor')->where('company_id', auth()->user()->company->id)->findOrFail($id);
+
+        if (!$this->canAccessEmployee($swap->requestor)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menyetujui permohonan ini.');
+        }
         
         DB::transaction(function () use ($swap) {
             $swap->update(['status' => 'approved', 'approved_by' => auth()->id()]);
@@ -1008,7 +1048,12 @@ class ScheduleController extends Controller
 
     public function rejectSwapTeam($id)
     {
-        $swap = SwapTeam::where('company_id', auth()->user()->company->id)->findOrFail($id);
+        $swap = SwapTeam::with('requestor')->where('company_id', auth()->user()->company->id)->findOrFail($id);
+
+        if (!$this->canAccessEmployee($swap->requestor)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menolak permohonan ini.');
+        }
+
         $swap->update(['status' => 'rejected', 'approved_by' => auth()->id()]);
 
         return redirect()->back()
@@ -1022,9 +1067,13 @@ class ScheduleController extends Controller
             abort(403, 'Akses ditolak.');
         }
 
-        $swap = SwapTeam::where('company_id', $company->id)->find($id);
+        $swap = SwapTeam::with('requestor')->where('company_id', $company->id)->find($id);
         if (!$swap) {
             return redirect()->back()->with('error', 'Data pertukaran jadwal tim tidak ditemukan.');
+        }
+
+        if (!$this->canAccessEmployee($swap->requestor)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menghapus permohonan ini.');
         }
 
         if ($swap->status === 'approved') {

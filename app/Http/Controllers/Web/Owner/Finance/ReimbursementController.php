@@ -49,9 +49,11 @@ class ReimbursementController extends Controller
             });
         }
 
+        $this->scopeByEmployeeRelation($query);
+
         $pendingReimbursements = $query->latest('date')->paginate(10)->withQueryString();
-        $branches = Branch::where('company_id', $company->id)->select('id', 'name')->get();
-        $divisions = Division::where('company_id', $company->id)->select('id', 'name')->get();
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
 
         return Inertia::render('Owner/Finance/Reimbursements/Pending/Index', [
             'pendingReimbursements' => $pendingReimbursements,
@@ -108,15 +110,20 @@ class ReimbursementController extends Controller
             });
         }
 
+        $this->scopeByEmployeeRelation($query);
+
         $reimbursements = $query->latest('date')->paginate(10)->withQueryString();
-        $branches = Branch::where('company_id', $company->id)->select('id', 'name')->get();
-        $divisions = Division::where('company_id', $company->id)->select('id', 'name')->get();
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
+
+        $statsQuery = Reimbursement::where('company_id', $company->id);
+        $this->scopeByEmployeeRelation($statsQuery);
 
         $stats = [
-            'total_approved' => Reimbursement::where('company_id', $company->id)->where('status', 'approved')->sum('amount'),
-            'total_paid' => Reimbursement::where('company_id', $company->id)->where('status', 'paid')->sum('amount'),
-            'total_rejected' => Reimbursement::where('company_id', $company->id)->where('status', 'rejected')->count(),
-            'pending_count' => Reimbursement::where('company_id', $company->id)->where('status', 'pending')->count(),
+            'total_approved' => (clone $statsQuery)->where('status', 'approved')->sum('amount'),
+            'total_paid' => (clone $statsQuery)->where('status', 'paid')->sum('amount'),
+            'total_rejected' => (clone $statsQuery)->where('status', 'rejected')->count(),
+            'pending_count' => (clone $statsQuery)->where('status', 'pending')->count(),
         ];
 
         return Inertia::render('Owner/Finance/Reimbursements/Index', [
@@ -131,8 +138,8 @@ class ReimbursementController extends Controller
     public function create()
     {
         $company = Auth::user()->company;
-        $employees = Employee::where('company_id', $company->id)
-            ->where('is_active', true)
+        $employees = $this->scopeBranchDivision(Employee::where('company_id', $company->id)
+            ->where('is_active', true))
             ->select('id', 'name', 'nip')
             ->orderBy('name')
             ->get();
@@ -154,6 +161,11 @@ class ReimbursementController extends Controller
         ]);
 
         $company = Auth::user()->company;
+        $employee = Employee::where('company_id', $company->id)->findOrFail($request->employee_id);
+
+        if (!$this->canAccessEmployee($employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk karyawan ini.');
+        }
 
         $attachmentPath = null;
         if ($request->hasFile('attachment')) {
@@ -184,7 +196,11 @@ class ReimbursementController extends Controller
     public function approve(Request $request, $id)
     {
         $company = Auth::user()->company;
-        $reimbursement = Reimbursement::where('company_id', $company->id)->findOrFail($id);
+        $reimbursement = Reimbursement::with('employee')->where('company_id', $company->id)->findOrFail($id);
+
+        if (!$this->canAccessEmployee($reimbursement->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menyetujui klaim biaya karyawan ini.');
+        }
 
         if ($reimbursement->status !== 'pending') {
             return back()->with('error', 'Hanya pengajuan klaim berstatus pending yang dapat disetujui.');
@@ -216,7 +232,11 @@ class ReimbursementController extends Controller
         ]);
 
         $company = Auth::user()->company;
-        $reimbursement = Reimbursement::where('company_id', $company->id)->findOrFail($id);
+        $reimbursement = Reimbursement::with('employee')->where('company_id', $company->id)->findOrFail($id);
+
+        if (!$this->canAccessEmployee($reimbursement->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menolak klaim biaya karyawan ini.');
+        }
 
         if ($reimbursement->status !== 'pending') {
             return back()->with('error', 'Hanya pengajuan klaim berstatus pending yang dapat ditolak.');
@@ -235,7 +255,11 @@ class ReimbursementController extends Controller
     public function destroy($id)
     {
         $company = Auth::user()->company;
-        $reimbursement = Reimbursement::where('company_id', $company->id)->findOrFail($id);
+        $reimbursement = Reimbursement::with('employee')->where('company_id', $company->id)->findOrFail($id);
+
+        if (!$this->canAccessEmployee($reimbursement->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menghapus klaim biaya karyawan ini.');
+        }
 
         if ($reimbursement->status === 'paid' || !empty($reimbursement->payroll_item_id)) {
             return redirect()->back()->with('error', 'Klaim biaya yang sudah terhubung dengan penggajian atau sudah berstatus PAID tidak dapat dihapus.');

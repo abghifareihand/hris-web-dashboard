@@ -49,6 +49,22 @@ const toggleFixedAllowance = () => {
                 </div>
             </div>
 
+            <!-- Read-only Banner for View-Only Users -->
+            <div
+                v-if="!$can('payrolls', 'edit')"
+                class="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-3 shadow-xs"
+            >
+                <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                    <p class="text-sm font-semibold text-amber-900">Mode Pratinjau (Hanya Lihat)</p>
+                    <p class="text-xs text-amber-700 mt-0.5">
+                        Anda hanya memiliki hak akses untuk melihat konfigurasi THR ini. Hubungi pemilik akun (owner) atau administrator untuk melakukan perubahan data.
+                    </p>
+                </div>
+            </div>
+
             <!-- Form Pengaturan Kebijakan THR -->
             <form @submit.prevent="submit" class="space-y-5">
                 <!-- Settings Card -->
@@ -59,7 +75,7 @@ const toggleFixedAllowance = () => {
                             <h2 class="text-base font-bold text-slate-900">Konfigurasi Modul THR</h2>
                             <p class="text-xs text-slate-500 mt-0.5">Izinkan pembuatan kalkulasi dan distribusi THR bagi karyawan</p>
                         </div>
-                        <Checkbox v-model="form.is_active" label="Aktifkan Modul THR" />
+                        <Checkbox v-model="form.is_active" :disabled="!$can('payrolls', 'edit')" label="Aktifkan Modul THR" />
                     </div>
 
                     <!-- Card Body -->
@@ -74,7 +90,7 @@ const toggleFixedAllowance = () => {
                                 min="1"
                                 v-model="form.min_months_tenure"
                                 label="Syarat Minimal Masa Kerja (Bulan)"
-                                :disabled="!form.is_active"
+                                :disabled="!form.is_active || !$can('payrolls', 'edit')"
                                 placeholder="1"
                                 help="Standar Permenaker: Karyawan yang telah bekerja minimal 1 bulan terus-menerus berhak menerima THR secara prorata."
                                 :error="form.errors.min_months_tenure"
@@ -86,7 +102,7 @@ const toggleFixedAllowance = () => {
                                 min="1"
                                 v-model="form.full_thr_months_tenure"
                                 label="Masa Kerja untuk THR Penuh (Bulan)"
-                                :disabled="!form.is_active"
+                                :disabled="!form.is_active || !$can('payrolls', 'edit')"
                                 placeholder="12"
                                 help="Masa kerja 12 bulan atau lebih mendapatkan 1x upah sebulan penuh."
                                 :error="form.errors.full_thr_months_tenure"
@@ -96,16 +112,19 @@ const toggleFixedAllowance = () => {
 
                         <!-- Checkbox Sertakan Tunjangan Tetap (Di Sebelah Kiri) -->
                         <div
-                            class="p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer select-none"
-                            :class="form.include_fixed_allowance 
-                                ? 'bg-emerald-50/40 border-emerald-200/90 shadow-2xs' 
-                                : 'bg-slate-50/60 border-slate-200/80'"
-                            @click="toggleFixedAllowance"
+                            class="p-4 sm:p-5 rounded-2xl border transition-all select-none"
+                            :class="[
+                                form.include_fixed_allowance 
+                                    ? 'bg-emerald-50/40 border-emerald-200/90 shadow-2xs' 
+                                    : 'bg-slate-50/60 border-slate-200/80',
+                                $can('payrolls', 'edit') ? 'cursor-pointer' : 'cursor-default opacity-85'
+                            ]"
+                            @click="$can('payrolls', 'edit') && toggleFixedAllowance()"
                         >
                             <div class="flex items-start gap-3">
                                 <Checkbox
                                     v-model="form.include_fixed_allowance"
-                                    :disabled="!form.is_active"
+                                    :disabled="!form.is_active || !$can('payrolls', 'edit')"
                                     id="include_fixed_allowance"
                                     class="mt-0.5 shrink-0"
                                     @click.stop
@@ -142,7 +161,7 @@ const toggleFixedAllowance = () => {
                 </div>
 
                 <!-- Tombol Simpan Berada di Luar Card (Di Bawah) Sesuai BpjsTk.vue -->
-                <div class="flex items-center justify-end pt-1">
+                <div v-if="$can('payrolls', 'edit')" class="flex items-center justify-end pt-1">
                     <Button
                         variant="primary"
                         size="md"

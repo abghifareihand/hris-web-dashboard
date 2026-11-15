@@ -19,22 +19,11 @@ class Position extends Model
     ];
 
     /**
-     * Hak akses default bawaan sistem untuk staf biasa
+     * Hak akses default bawaan sistem untuk jabatan baru (default kosong / false semua)
      */
     public static function defaultPermissions(): array
     {
-        return [
-            'swap_personal' => ['view' => true, 'create' => true, 'edit' => false, 'delete' => true],
-            'swap_team' => ['view' => true, 'create' => true, 'edit' => false, 'delete' => true],
-            'leaves' => ['view' => true, 'create' => true, 'edit' => false, 'delete' => true],
-            'agenda' => ['view' => true, 'create' => true, 'edit' => true, 'delete' => true],
-            'overtimes' => ['view' => true, 'create' => true, 'edit' => false, 'delete' => true],
-            'reimbursements' => ['view' => true, 'create' => true, 'edit' => false, 'delete' => true],
-            'loans' => ['view' => true, 'create' => true, 'edit' => false, 'delete' => true],
-            'payslips' => ['view' => true, 'create' => false, 'edit' => false, 'delete' => false],
-            'feedbacks' => ['view' => true, 'create' => true, 'edit' => false, 'delete' => false],
-            'daily_reports' => ['view' => true, 'create' => true, 'edit' => true, 'delete' => true],
-        ];
+        return [];
     }
 
     public function company(): BelongsTo

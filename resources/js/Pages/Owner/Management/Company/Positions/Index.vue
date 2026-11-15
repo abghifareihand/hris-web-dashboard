@@ -126,7 +126,7 @@ const executeDelete = () => {
                     Kelola data jabatan struktural beserta batasan hak akses cabang dan divisi.
                 </p>
             </div>
-            <div class="flex items-center gap-3">
+            <div v-if="$can('positions', 'create')" class="flex items-center gap-3">
                 <Link :href="route('owner.management.company.positions.create')">
                     <Button variant="primary">
                         <svg
@@ -272,7 +272,10 @@ const executeDelete = () => {
                         >
                             {{ pos.branches.length }} Cabang
                         </span>
-                        <span v-else class="text-xs text-slate-400 italic">
+                        <span
+                            v-else
+                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200"
+                        >
                             Tidak ada akses
                         </span>
                     </td>
@@ -285,7 +288,10 @@ const executeDelete = () => {
                         >
                             {{ pos.divisions.length }} Divisi
                         </span>
-                        <span v-else class="text-xs text-slate-400 italic">
+                        <span
+                            v-else
+                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200"
+                        >
                             Tidak ada akses
                         </span>
                     </td>
@@ -324,6 +330,7 @@ const executeDelete = () => {
                                 </svg>
                             </Link>
                             <Link
+                                v-if="$can('positions', 'edit')"
                                 :href="route('owner.management.company.positions.edit', pos.id)"
                                 class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
                                 title="Edit Jabatan"
@@ -343,6 +350,7 @@ const executeDelete = () => {
                                 </svg>
                             </Link>
                             <button
+                                v-if="$can('positions', 'delete')"
                                 type="button"
                                 @click="confirmDelete(pos)"
                                 class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"

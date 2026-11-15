@@ -48,15 +48,10 @@ class PendingEmployeeController extends Controller
             $query->where('position_id', $request->input('position_id'));
         }
 
-        $branches = Branch::where('company_id', $company->id)
-            ->select('id', 'name')
-            ->orderBy('name')
-            ->get();
+        $this->scopeBranchDivision($query);
 
-        $divisions = Division::where('company_id', $company->id)
-            ->select('id', 'name')
-            ->orderBy('name')
-            ->get();
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
 
         $positions = Position::where('company_id', $company->id)
             ->select('id', 'name')
@@ -92,6 +87,10 @@ class PendingEmployeeController extends Controller
         $pending = PendingEmployee::where('company_id', $company->id)
             ->where('status', 'pending')
             ->findOrFail($id);
+
+        if (!$this->canAccessBranch($pending->branch_id) || !$this->canAccessDivision($pending->division_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk memproses calon karyawan ini.');
+        }
 
         if (User::where('email', $pending->email)->exists() || Employee::where('email', $pending->email)->exists()) {
             return redirect()->back()->with('error', 'Email pendaftar sudah terdaftar di sistem.');
@@ -160,6 +159,10 @@ class PendingEmployeeController extends Controller
             ->where('status', 'pending')
             ->findOrFail($id);
 
+        if (!$this->canAccessBranch($pending->branch_id) || !$this->canAccessDivision($pending->division_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk memproses calon karyawan ini.');
+        }
+
         $pending->delete();
 
         return redirect()->route('owner.management.employees.pending.index')
@@ -179,6 +182,10 @@ class PendingEmployeeController extends Controller
         if (!$pending) {
             return redirect()->route('owner.management.employees.pending.index')
                 ->with('error', 'Data calon karyawan tidak ditemukan.');
+        }
+
+        if (!$this->canAccessBranch($pending->branch_id) || !$this->canAccessDivision($pending->division_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menghapus calon karyawan ini.');
         }
 
         if ($pending->status === 'approved') {

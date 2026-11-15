@@ -437,7 +437,7 @@ const statusOptions = [
                     <!-- Actions -->
                     <td class="px-5 py-3.5 text-right whitespace-nowrap">
                         <div class="inline-flex items-center gap-1.5 justify-end">
-                            <template v-if="item.status === 'pending'">
+                            <template v-if="item.status === 'pending' && $can('swap_team', 'edit')">
                                 <button
                                     type="button"
                                     @click="openReject(item)"
@@ -476,7 +476,7 @@ const statusOptions = [
                                 </button>
                             </template>
 
-                            <template v-else-if="['cancelled', 'rejected'].includes(item.status)">
+                            <template v-else-if="['cancelled', 'rejected'].includes(item.status) && $can('swap_team', 'delete')">
                                 <button
                                     type="button"
                                     @click="openDelete(item)"

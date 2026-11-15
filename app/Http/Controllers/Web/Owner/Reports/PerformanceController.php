@@ -47,9 +47,9 @@ class PerformanceController extends Controller
             $endDate = $defaultEndDate;
         }
 
-        $branches = Branch::where('company_id', $company->id)->select('id', 'name')->get();
-        $divisions = Division::where('company_id', $company->id)->select('id', 'name')->get();
-        $employees = Employee::where('company_id', $company->id)->where('is_active', true)->select('id', 'name', 'nip')->orderBy('name')->get();
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
+        $employees = $this->scopeBranchDivision(Employee::where('company_id', $company->id)->where('is_active', true))->select('id', 'name', 'nip')->orderBy('name')->get();
 
         $query = $this->getDailyReportQuery($company, $request, $startDate, $endDate);
 
@@ -140,6 +140,10 @@ class PerformanceController extends Controller
             })
             ->findOrFail($id);
 
+        if (!$this->canAccessEmployee($report->user?->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk melihat laporan kerja harian karyawan ini.');
+        }
+
         return Inertia::render('Owner/Reports/Performances/Daily/Show', [
             'report' => $report,
         ]);
@@ -171,8 +175,8 @@ class PerformanceController extends Controller
             $endDate = $defaultEndDate;
         }
 
-        $branches = Branch::where('company_id', $company->id)->select('id', 'name')->get();
-        $divisions = Division::where('company_id', $company->id)->select('id', 'name')->get();
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
         $positions = Position::where('company_id', $company->id)->select('id', 'name')->get();
 
         $data = $this->calculatePerformanceData($company, $request, $startDate, $endDate, true);
@@ -331,6 +335,22 @@ class PerformanceController extends Controller
                 $q->where('company_id', $company->id);
             });
 
+        $user = auth()->user();
+        if ($user && !$user->isOwner() && !$user->isAdmin()) {
+            $allowedBranches = $user->getAllowedBranchIds();
+            if ($allowedBranches !== null) {
+                $query->whereHas('user.employee', function ($q) use ($allowedBranches) {
+                    $q->whereIn('branch_id', $allowedBranches);
+                });
+            }
+            $allowedDivisions = $user->getAllowedDivisionIds();
+            if ($allowedDivisions !== null) {
+                $query->whereHas('user.employee', function ($q) use ($allowedDivisions) {
+                    $q->whereIn('division_id', $allowedDivisions);
+                });
+            }
+        }
+
         if (!empty($startDate) && !empty($endDate)) {
             $query->whereBetween('date', [$startDate, $endDate]);
         } elseif (!empty($startDate)) {
@@ -395,6 +415,14 @@ class PerformanceController extends Controller
         }
 
         $branchQuery = Branch::where('company_id', $company->id);
+
+        $user = auth()->user();
+        if ($user && !$user->isOwner() && !$user->isAdmin()) {
+            $allowed = $user->getAllowedBranchIds();
+            if ($allowed !== null) {
+                $branchQuery->whereIn('id', $allowed);
+            }
+        }
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -564,6 +592,8 @@ class PerformanceController extends Controller
                   });
             });
         }
+
+        $this->scopeBranchDivision($empQuery);
 
         $allFilteredEmployees = (clone $empQuery)->get();
         $employeeIds = $allFilteredEmployees->pluck('id')->toArray();

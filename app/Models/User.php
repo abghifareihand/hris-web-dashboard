@@ -125,7 +125,7 @@ class User extends Authenticatable
     /**
      * Get allowed branch IDs for data scoping.
      * Owner/Admin -> null (unrestricted).
-     * Employee -> array of IDs.
+     * Employee -> array of IDs (empty array if no branches granted).
      */
     public function getAllowedBranchIds(): ?array
     {
@@ -143,7 +143,7 @@ class User extends Authenticatable
     /**
      * Get allowed division IDs for data scoping.
      * Owner/Admin -> null (unrestricted).
-     * Employee -> array of IDs.
+     * Employee -> array of IDs (empty array if no divisions granted).
      */
     public function getAllowedDivisionIds(): ?array
     {

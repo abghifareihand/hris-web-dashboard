@@ -3,8 +3,8 @@ import { usePage } from '@inertiajs/vue3';
 export function usePermission() {
     const page = usePage();
 
-    const isOwner = () => page.props.auth?.user?.role === 'owner';
-    const isEmployee = () => page.props.auth?.user?.role === 'employee';
+    const isOwner = () => page.props.auth?.user?.role === 'owner' || Boolean(page.props.auth?.is_owner);
+    const isEmployee = () => page.props.auth?.user?.role === 'employee' && !page.props.auth?.is_owner;
     const isAdmin = () => page.props.auth?.user?.role === 'admin';
 
     /**
@@ -12,7 +12,7 @@ export function usePermission() {
      * Owner & Super Admin otomatis bernilai true (unrestricted).
      * Employee mengecek matrix permissions jabatannya.
      * 
-     * @param {string} menuKey - Key menu sesuai konfigurasi (misal: 'employee_data', 'leaves')
+     * @param {string} menuKey - Key menu standar (misal: 'employee_data', 'leaves', 'payrolls')
      * @param {string} action - 'view' | 'create' | 'edit' | 'delete'
      * @returns {boolean}
      */
@@ -20,7 +20,7 @@ export function usePermission() {
         const user = page.props.auth?.user;
         if (!user) return false;
 
-        if (user.role === 'owner' || user.role === 'admin') {
+        if (user.role === 'owner' || user.role === 'admin' || page.props.auth?.is_owner) {
             return true;
         }
 

@@ -324,7 +324,7 @@ const getSalaryRatio = (amount, tenor, basicSalary) => {
 
                     <!-- Aksi -->
                     <td class="px-5 py-3.5 whitespace-nowrap text-right">
-                        <div class="inline-flex items-center justify-end gap-2">
+                        <div v-if="$can('loans', 'edit')" class="inline-flex items-center justify-end gap-2">
                             <button
                                 type="button"
                                 @click="openReject(item)"
@@ -362,6 +362,7 @@ const getSalaryRatio = (amount, tenor, basicSalary) => {
                                 <span>Setujui</span>
                             </button>
                         </div>
+                        <span v-else class="text-xs text-slate-400 italic">Hanya lihat</span>
                     </td>
                 </tr>
             </template>

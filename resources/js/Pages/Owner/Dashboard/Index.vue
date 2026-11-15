@@ -9,6 +9,7 @@ defineOptions({
 });
 
 const props = defineProps({
+    hasAnyWebPermission: { type: Boolean, default: true },
     totalEmployees: { type: Number, default: 0 },
     newEmployeesThisMonth: { type: Number, default: 0 },
     todayPresentCount: { type: Number, default: 0 },
@@ -36,6 +37,7 @@ const leaveCanvas = ref(null);
 const lateCanvas = ref(null);
 
 onMounted(() => {
+    if (!props.hasAnyWebPermission) return;
     // 1. Attendance Chart (Line)
     if (attendanceCanvas.value && props.chartData?.attendance) {
         new Chart(attendanceCanvas.value, {
@@ -208,7 +210,51 @@ onMounted(() => {
 <template>
     <Head title="Dashboard - HRIS Web App" />
 
-    <div class="space-y-6">
+    <!-- Informative Card for Employees with No Web Managerial Permissions (e.g. Magang / Staf Biasa) -->
+    <div v-if="!hasAnyWebPermission" class="py-10 max-w-2xl mx-auto">
+        <div class="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-8 sm:p-10 text-center">
+            <div class="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto mb-5 text-emerald-600 shadow-2xs">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+            </div>
+
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold mb-3">
+                <span>Informasi Akses Akun</span>
+            </div>
+
+            <h2 class="text-xl font-bold text-slate-900 tracking-tight">
+                Selamat Datang, {{ $page.props.auth?.user?.name }}
+            </h2>
+
+            <p class="text-sm text-slate-600 mt-2 max-w-lg mx-auto leading-relaxed">
+                Anda saat ini terdaftar dengan jabatan <span class="font-semibold text-slate-800">{{ $page.props.auth?.user?.employee?.position || 'Karyawan' }}</span> di <span class="font-semibold text-slate-800">{{ $page.props.auth?.user?.company?.name || 'Perusahaan' }}</span>.
+            </p>
+
+            <div class="my-6 p-4 rounded-2xl bg-slate-50 border border-slate-200/80 text-left text-xs text-slate-600 space-y-3">
+                <div class="flex items-start gap-2.5">
+                    <span class="text-base select-none">💻</span>
+                    <div>
+                        <strong class="text-slate-800">Web Dashboard:</strong> Digunakan untuk fungsi manajerial & operasional perusahaan (Data Karyawan, Cabang, Jadwal, Persetujuan, dan Laporan). Akun jabatan Anda saat ini tidak memiliki hak akses kelola di web.
+                    </div>
+                </div>
+                <div class="flex items-start gap-2.5">
+                    <span class="text-base select-none">📱</span>
+                    <div>
+                        <strong class="text-slate-800">Aplikasi Mobile:</strong> Silakan buka dan login di <strong>Aplikasi Mobile ADR HRIS</strong> pada smartphone Anda untuk melakukan Presensi Masuk/Pulang, Pengajuan Cuti, Izin, Lembur, dan Unduh Slip Gaji.
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-2 flex items-center justify-center gap-2 text-xs font-medium text-slate-500">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span>Akun Aktif • Gunakan Smartphone untuk Aktivitas Harian</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Managerial Dashboard Content -->
+    <div v-else class="space-y-6">
         <!-- Action Required Banner (Menunggu Persetujuan) -->
         <div
             v-if="totalPendingApprovals > 0"

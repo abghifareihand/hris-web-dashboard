@@ -173,7 +173,7 @@ const getAttachmentUrl = (path) => {
                     Kelola dan pantau seluruh riwayat penggantian biaya operasional karyawan.
                 </p>
             </div>
-            <div class="flex items-center gap-3">
+            <div v-if="$can('reimbursements', 'create')" class="flex items-center gap-3">
                 <Link :href="route('owner.finance.reimbursements.create')">
                     <Button variant="primary" size="md">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -459,7 +459,7 @@ const getAttachmentUrl = (path) => {
                             </button>
 
                             <button
-                                v-if="['rejected', 'cancelled'].includes(item.status) && !item.payroll_item_id"
+                                v-if="['rejected', 'cancelled'].includes(item.status) && !item.payroll_item_id && $can('reimbursements', 'delete')"
                                 type="button"
                                 @click="openDeleteModal(item.id)"
                                 class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"

@@ -50,9 +50,11 @@ class LoanController extends Controller
             });
         }
 
+        $this->scopeByEmployeeRelation($query);
+
         $pendingLoans = $query->latest('date')->paginate(10)->withQueryString();
-        $branches = Branch::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
-        $divisions = Division::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
 
         return Inertia::render('Owner/Finance/Loans/Pending/Index', [
             'pendingLoans' => $pendingLoans,
@@ -65,7 +67,11 @@ class LoanController extends Controller
     public function approve($id)
     {
         $company = Auth::user()->company;
-        $loan = Loan::where('company_id', $company->id)->findOrFail($id);
+        $loan = Loan::where('company_id', $company->id)->with('employee')->findOrFail($id);
+
+        if (!$this->canAccessEmployee($loan->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk memproses pinjaman karyawan ini.');
+        }
 
         $loan->status = 'approved';
         $loan->save();
@@ -78,7 +84,11 @@ class LoanController extends Controller
     public function reject(Request $request, $id)
     {
         $company = Auth::user()->company;
-        $loan = Loan::where('company_id', $company->id)->findOrFail($id);
+        $loan = Loan::where('company_id', $company->id)->with('employee')->findOrFail($id);
+
+        if (!$this->canAccessEmployee($loan->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk memproses pinjaman karyawan ini.');
+        }
 
         $loan->status = 'rejected';
         $loan->save();
@@ -134,14 +144,19 @@ class LoanController extends Controller
             $query->whereDate('date', '<=', $request->end_date);
         }
 
+        $this->scopeByEmployeeRelation($query);
+
         $loans = $query->latest('date')->paginate(10)->withQueryString();
-        $branches = Branch::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
-        $divisions = Division::where('company_id', $company->id)->select('id', 'name')->orderBy('name')->get();
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
+
+        $statsQuery = Loan::where('company_id', $company->id);
+        $this->scopeByEmployeeRelation($statsQuery);
 
         $stats = [
-            'total_active_loan' => Loan::where('company_id', $company->id)->where('status', 'approved')->sum('amount'),
-            'total_paid_loan' => Loan::where('company_id', $company->id)->where('status', 'paid')->sum('amount'),
-            'pending_count' => Loan::where('company_id', $company->id)->where('status', 'pending')->count(),
+            'total_active_loan' => (clone $statsQuery)->where('status', 'approved')->sum('amount'),
+            'total_paid_loan' => (clone $statsQuery)->where('status', 'paid')->sum('amount'),
+            'pending_count' => (clone $statsQuery)->where('status', 'pending')->count(),
         ];
 
         return Inertia::render('Owner/Finance/Loans/Index', [
@@ -156,8 +171,10 @@ class LoanController extends Controller
     public function create()
     {
         $company = Auth::user()->company;
-        $employees = Employee::where('company_id', $company->id)
-            ->where('is_active', true)
+        $empQuery = Employee::where('company_id', $company->id)
+            ->where('is_active', true);
+
+        $employees = $this->scopeBranchDivision($empQuery)
             ->select('id', 'name', 'nip', 'basic_salary', 'payroll_cycle')
             ->orderBy('name')
             ->get();
@@ -182,6 +199,10 @@ class LoanController extends Controller
 
         $company = Auth::user()->company;
         $employee = Employee::where('company_id', $company->id)->findOrFail($request->employee_id);
+
+        if (!$this->canAccessEmployee($employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk membuat pinjaman karyawan ini.');
+        }
 
         $cycle = $employee->payroll_cycle ?? 'monthly';
         $cycleUnit = match ($cycle) {
@@ -250,6 +271,10 @@ class LoanController extends Controller
             }
         ])->where('company_id', $company->id)->findOrFail($id);
 
+        if (!$this->canAccessEmployee($loan->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk melihat pinjaman karyawan ini.');
+        }
+
         return Inertia::render('Owner/Finance/Loans/Show', [
             'loan' => $loan,
         ]);
@@ -258,7 +283,11 @@ class LoanController extends Controller
     public function destroy($id)
     {
         $company = Auth::user()->company;
-        $loan = Loan::where('company_id', $company->id)->findOrFail($id);
+        $loan = Loan::where('company_id', $company->id)->with('employee')->findOrFail($id);
+
+        if (!$this->canAccessEmployee($loan->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menghapus pinjaman karyawan ini.');
+        }
 
         if ($loan->status === 'paid') {
             return redirect()->back()->with('error', 'Pinjaman yang sudah berstatus lunas tidak dapat dihapus.');
@@ -295,7 +324,11 @@ class LoanController extends Controller
     public function updateInstallment(Request $request, $id, $installmentId)
     {
         $company = Auth::user()->company;
-        $loan = Loan::where('company_id', $company->id)->findOrFail($id);
+        $loan = Loan::where('company_id', $company->id)->with('employee')->findOrFail($id);
+
+        if (!$this->canAccessEmployee($loan->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mengubah cicilan pinjaman karyawan ini.');
+        }
         
         $installment = LoanInstallment::where('loan_id', $loan->id)->findOrFail($installmentId);
         

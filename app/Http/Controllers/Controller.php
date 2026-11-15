@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 
 abstract class Controller
 {
+    use ScopesDataByPermission;
+
     /**
      * Get per_page limit from request
      */

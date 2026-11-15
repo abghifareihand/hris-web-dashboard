@@ -49,12 +49,14 @@ class OvertimeController extends Controller
             });
         }
 
+        $this->scopeByEmployeeRelation($query);
+
         $pendingOvertimes = $query->latest('date')
             ->paginate($request->input('per_page', 10))
             ->withQueryString();
 
-        $branches = Branch::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
-        $divisions = Division::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
 
         return Inertia::render('Owner/Management/Overtimes/Pending/Index', [
             'pendingOvertimes' => $pendingOvertimes,
@@ -116,12 +118,14 @@ class OvertimeController extends Controller
             });
         }
 
+        $this->scopeByEmployeeRelation($query);
+
         $overtimes = $query->latest('date')
             ->paginate($request->input('per_page', 10))
             ->withQueryString();
 
-        $branches = Branch::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
-        $divisions = Division::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
 
         return Inertia::render('Owner/Management/Overtimes/Index', [
             'overtimes' => $overtimes,
@@ -145,7 +149,11 @@ class OvertimeController extends Controller
             abort(403, 'Akses ditolak.');
         }
 
-        $overtime = Overtime::where('company_id', $company->id)->findOrFail($id);
+        $overtime = Overtime::with('employee')->where('company_id', $company->id)->findOrFail($id);
+
+        if (!$this->canAccessEmployee($overtime->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menyetujui lembur karyawan ini.');
+        }
 
         if ($overtime->status !== 'pending') {
             return redirect()->back()->with('error', 'Hanya pengajuan lembur yang berstatus pending yang dapat disetujui.');
@@ -171,7 +179,11 @@ class OvertimeController extends Controller
             'reject_reason' => 'required|string|max:500',
         ]);
 
-        $overtime = Overtime::where('company_id', $company->id)->findOrFail($id);
+        $overtime = Overtime::with('employee')->where('company_id', $company->id)->findOrFail($id);
+
+        if (!$this->canAccessEmployee($overtime->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menolak lembur karyawan ini.');
+        }
 
         $overtime->update([
             'status' => 'rejected',
@@ -190,9 +202,13 @@ class OvertimeController extends Controller
             abort(403, 'Akses ditolak.');
         }
 
-        $overtime = Overtime::where('company_id', $company->id)->find($id);
+        $overtime = Overtime::with('employee')->where('company_id', $company->id)->find($id);
         if (!$overtime) {
             return redirect()->back()->with('error', 'Data pengajuan lembur tidak ditemukan.');
+        }
+
+        if (!$this->canAccessEmployee($overtime->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menghapus lembur karyawan ini.');
         }
 
         if ($overtime->status === 'approved') {

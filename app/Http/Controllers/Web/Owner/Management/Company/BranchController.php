@@ -16,6 +16,11 @@ class BranchController extends Controller
         $company = Auth::user()->company;
         $query = Branch::where('company_id', $company->id)->withCount('employees');
 
+        $allowedBranches = $this->getAllowedBranchIds();
+        if ($allowedBranches !== null) {
+            $query->whereIn('id', $allowedBranches);
+        }
+
         if ($request->filled('search')) {
             $query->where(function($q) use ($request) {
                 $q->where('name', 'like', '%' . $request->search . '%')
@@ -84,6 +89,7 @@ class BranchController extends Controller
     public function show(Branch $branch)
     {
         abort_if($branch->company_id !== Auth::user()->company->id, 403);
+        abort_if(!$this->canAccessBranch($branch->id), 403);
         $branch->loadCount('employees');
 
         return Inertia::render('Owner/Management/Company/Branches/Show', [
@@ -94,6 +100,7 @@ class BranchController extends Controller
     public function edit(Branch $branch)
     {
         abort_if($branch->company_id !== Auth::user()->company->id, 403);
+        abort_if(!$this->canAccessBranch($branch->id), 403);
 
         return Inertia::render('Owner/Management/Company/Branches/Edit', [
             'branch' => $branch,
@@ -104,6 +111,7 @@ class BranchController extends Controller
     {
         $company = Auth::user()->company;
         abort_if($branch->company_id !== $company->id, 403);
+        abort_if(!$this->canAccessBranch($branch->id), 403);
 
         $request->validate([
             'name' => 'required|string|max:255',
@@ -139,6 +147,7 @@ class BranchController extends Controller
     public function destroy(Branch $branch)
     {
         abort_if($branch->company_id !== Auth::user()->company->id, 403);
+        abort_if(!$this->canAccessBranch($branch->id), 403);
         $branch->delete();
 
         return redirect()->route('owner.management.company.branches.index')
