@@ -58,7 +58,7 @@ class ApiRbacTest extends TestCase
             'name' => 'HR Manager',
             'permissions' => [
                 'leaves' => ['view' => true, 'create' => false, 'edit' => true, 'delete' => false],
-                'employee_data' => ['view' => true, 'create' => false, 'edit' => false, 'delete' => false],
+                'company_employees' => ['view' => true, 'create' => false, 'edit' => false, 'delete' => false],
             ],
         ]);
         $this->positionManager->branches()->attach($this->branchA->id);
@@ -124,7 +124,7 @@ class ApiRbacTest extends TestCase
 
     public function test_post_on_resource_id_is_detected_as_edit_not_create()
     {
-        Sanctum::actingAs($this->staffUser); // Staff only has employee_data: view=true, create=false, edit=false
+        Sanctum::actingAs($this->staffUser); // Staff only has company_employees: view=true, create=false, edit=false
 
         // POST /api/owner/employees/{id} is an UPDATE/EDIT action, not create
         $response = $this->postJson("/api/owner/employees/{$this->staffEmp->id}", [
@@ -213,6 +213,29 @@ class ApiRbacTest extends TestCase
         $this->assertFalse($userData['permissions']['leaves']['delete']);
     }
 
+    public function test_permissions_json_keys_are_strictly_ordered_view_create_edit_delete()
+    {
+        $this->assertCount(24, Position::CANONICAL_MENU_KEYS);
+        $this->assertContains('payslips', Position::CANONICAL_MENU_KEYS);
+        $this->assertContains('feedbacks', Position::CANONICAL_MENU_KEYS);
+        $this->assertContains('agendas', Position::CANONICAL_MENU_KEYS);
+        $this->assertContains('company_payrolls', Position::CANONICAL_MENU_KEYS);
+        $this->assertNotContains('leave_balances', Position::CANONICAL_MENU_KEYS);
+
+        Sanctum::actingAs($this->staffUser);
+
+        $response = $this->getJson('/api/auth/me');
+        $response->assertStatus(200);
+
+        $permissions = $response->json('user.permissions');
+        $this->assertNotEmpty($permissions);
+
+        foreach ($permissions as $menuKey => $actions) {
+            $keys = array_keys($actions);
+            $this->assertSame(['view', 'create', 'edit', 'delete'], $keys, "Menu [{$menuKey}] action keys must be ordered as view, create, edit, delete.");
+        }
+    }
+
     public function test_leave_approval_respects_branch_scoping()
     {
         // Setup employee in Branch B (Bandung)
@@ -255,5 +278,97 @@ class ApiRbacTest extends TestCase
             'status' => false,
             'message' => 'Anda tidak memiliki hak akses untuk karyawan ini.',
         ]);
+    }
+
+    public function test_payslips_permission_guards_employee_payrolls_endpoint()
+    {
+        Sanctum::actingAs($this->staffUser);
+
+        // Staff does NOT have payslips permission initially
+        $response = $this->getJson('/api/employee/payrolls');
+        $response->assertStatus(403);
+        $response->assertJson([
+            'status' => false,
+            'message' => 'Anda tidak memiliki izin melihat data untuk menu ini.',
+        ]);
+
+        // Grant payslips view permission
+        $this->positionManager->update([
+            'permissions' => array_merge($this->positionManager->permissions, [
+                'payslips' => ['view' => true, 'create' => false, 'edit' => false, 'delete' => false],
+            ]),
+        ]);
+        $this->staffUser->unsetRelation('employee');
+
+        $response = $this->getJson('/api/employee/payrolls');
+        $response->assertStatus(200);
+    }
+
+    public function test_feedbacks_permission_guards_employee_and_owner_endpoints()
+    {
+        Sanctum::actingAs($this->staffUser);
+
+        // Staff does NOT have feedbacks permission initially
+        $response = $this->postJson('/api/employee/feedbacks', [
+            'type' => 'saran',
+            'title' => 'Ruang Istirahat',
+            'content' => 'Mohon tambahkan dispenser air di lantai 2.',
+        ]);
+        $response->assertStatus(403);
+        $response->assertJson([
+            'status' => false,
+            'message' => 'Anda tidak memiliki izin menambah data untuk menu ini.',
+        ]);
+
+        // Owner feedbacks endpoint is also forbidden for staff
+        $response = $this->getJson('/api/owner/feedbacks');
+        $response->assertStatus(403);
+
+        // Grant feedbacks permission
+        $this->positionManager->update([
+            'permissions' => array_merge($this->positionManager->permissions, [
+                'feedbacks' => ['view' => true, 'create' => true, 'edit' => false, 'delete' => false],
+            ]),
+        ]);
+        $this->staffUser->unsetRelation('employee');
+
+        // Now employee can create feedback
+        $response = $this->postJson('/api/employee/feedbacks', [
+            'target' => 'company',
+            'criticism' => 'AC di lantai 2 kurang dingin.',
+            'suggestion' => 'Mohon segera diservis atau dibersihkan.',
+        ]);
+        $response->assertStatus(201);
+    }
+
+    public function test_agendas_permission_guards_employee_and_owner_endpoints()
+    {
+        Sanctum::actingAs($this->staffUser);
+
+        // Staff without agendas view cannot access /api/employee/agendas
+        $response = $this->getJson('/api/employee/agendas');
+        $response->assertStatus(403);
+
+        // Grant agendas view & create
+        $this->positionManager->update([
+            'permissions' => array_merge($this->positionManager->permissions, [
+                'agendas' => ['view' => true, 'create' => true, 'edit' => false, 'delete' => false],
+            ]),
+        ]);
+        $this->staffUser->unsetRelation('employee');
+
+        // Now employee can access agendas
+        $response = $this->getJson('/api/employee/agendas');
+        $response->assertStatus(200);
+
+        // Employee can create an agenda
+        $response = $this->postJson('/api/employee/agendas', [
+            'title' => 'Meeting Klien A',
+            'date' => now()->toDateString(),
+            'start_time' => '09:00',
+            'end_time' => '10:00',
+            'notes' => 'Diskusi proposal',
+        ]);
+        $response->assertStatus(201);
     }
 }

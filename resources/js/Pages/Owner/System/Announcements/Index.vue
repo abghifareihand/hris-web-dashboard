@@ -188,7 +188,7 @@ const formatDate = (dateStr) => {
                     Kelola dan siarkan informasi penting bagi seluruh karyawan perusahaan.
                 </p>
             </div>
-            <div v-if="$can('announcements', 'create')" class="flex items-center gap-3">
+            <div v-if="$can('company_announcements', 'create')" class="flex items-center gap-3">
                 <Link :href="route('owner.announcements.create')">
                     <Button variant="primary">
                         <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -368,7 +368,7 @@ const formatDate = (dateStr) => {
 
                             <!-- Edit -->
                             <Link
-                                v-if="$can('announcements', 'edit')"
+                                v-if="$can('company_announcements', 'edit')"
                                 :href="route('owner.announcements.edit', ann.id)"
                                 class="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition"
                                 title="Edit Pengumuman"
@@ -380,7 +380,7 @@ const formatDate = (dateStr) => {
 
                             <!-- Delete -->
                             <button
-                                v-if="$can('announcements', 'delete')"
+                                v-if="$can('company_announcements', 'delete')"
                                 type="button"
                                 @click="confirmDelete(ann)"
                                 class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"

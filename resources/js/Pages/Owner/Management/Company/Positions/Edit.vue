@@ -1,17 +1,23 @@
 <script setup>
+import { ref } from "vue";
 import { Head, Link, useForm } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import Button from "@/Components/UI/Button.vue";
 import Input from "@/Components/UI/Input.vue";
 import Checkbox from "@/Components/UI/Checkbox.vue";
 import {
-    POSITION_PERMISSION_GROUPS,
+    MOBILE_HOME_MENUS,
+    MOBILE_APPROVAL_MENUS,
+    MOBILE_COMPANY_MENUS,
+    WEB_MANAGERIAL_MENUS,
     normalizePermissions,
 } from "@/data/positionPermissions";
 
 defineOptions({
     layout: AppLayout,
 });
+
+const activePlatformTab = ref("mobile");
 
 const props = defineProps({
     position: {
@@ -35,8 +41,7 @@ const form = useForm({
     permissions: normalizePermissions(props.position.permissions),
 });
 
-
-// Update specific checkbox
+// Update specific checkbox action
 const updateAction = (menuKey, action, checked) => {
     if (!form.permissions[menuKey]) {
         form.permissions[menuKey] = {
@@ -67,8 +72,7 @@ const submit = () => {
                     Edit Jabatan
                 </h1>
                 <p class="text-xs sm:text-sm text-slate-500 mt-1">
-                    Perbarui data jabatan dan sesuaikan akses cabang maupun
-                    divisi terkait.
+                    Perbarui data jabatan dan sesuaikan akses cabang maupun divisi terkait.
                 </p>
             </div>
             <Link :href="route('owner.management.company.positions.index')">
@@ -78,9 +82,7 @@ const submit = () => {
 
         <form @submit.prevent="submit" class="space-y-6">
             <!-- Main Card -->
-            <div
-                class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 space-y-6"
-            >
+            <div class="bg-white rounded-xl border border-slate-200/80 shadow-xs p-6 space-y-6">
                 <!-- Nama Jabatan -->
                 <div>
                     <Input
@@ -120,10 +122,7 @@ const submit = () => {
                     <p v-else class="text-xs text-slate-400 italic">
                         Belum ada cabang terdaftar.
                     </p>
-                    <p
-                        v-if="form.errors.branches"
-                        class="text-xs text-rose-500 mt-1"
-                    >
+                    <p v-if="form.errors.branches" class="text-xs text-rose-500 mt-1">
                         {{ form.errors.branches }}
                     </p>
                 </div>
@@ -156,270 +155,365 @@ const submit = () => {
                     <p v-else class="text-xs text-slate-400 italic">
                         Belum ada divisi terdaftar.
                     </p>
-                    <p
-                        v-if="form.errors.divisions"
-                        class="text-xs text-rose-500 mt-1"
-                    >
+                    <p v-if="form.errors.divisions" class="text-xs text-rose-500 mt-1">
                         {{ form.errors.divisions }}
                     </p>
                 </div>
 
-                <!-- Hak Akses Menu (Grouped Table) -->
+                <!-- Hak Akses Menu (2-Tab Platform Architecture) -->
                 <div class="pt-5 border-t border-slate-100">
-                    <div class="mb-3">
+                    <div class="mb-4">
                         <h3 class="text-xs font-semibold text-slate-700">
-                            Hak Akses Menu
+                            Hak Akses Menu & Fitur
                         </h3>
                         <p class="text-xs text-slate-500 mt-0.5">
-                            Pilih menu yang dapat diakses oleh jabatan ini. Jika
-                            dikosongkan, tidak ada akses ke menu mana pun.
+                            Tentukan hak akses untuk aplikasi Mobile karyawan dan Web Dashboard manajerial secara terpisah dan terorganisir.
                         </p>
                     </div>
 
-                    <!-- Table Matrix Container -->
-                    <div
-                        class="border border-slate-200/80 rounded-xl overflow-hidden shadow-2xs bg-white"
-                    >
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse">
-                                <thead>
-                                    <tr
-                                        class="bg-slate-50/90 border-b border-slate-200 text-[11px] font-semibold text-slate-600 uppercase tracking-wider"
-                                    >
-                                        <th class="py-3 px-4 min-w-[320px]">
-                                            Menu & Deskripsi Hak Akses
-                                        </th>
-                                        <th class="py-3 px-3 text-center w-24">
-                                            View
-                                        </th>
-                                        <th class="py-3 px-3 text-center w-24">
-                                            Create
-                                        </th>
-                                        <th class="py-3 px-3 text-center w-24">
-                                            Edit
-                                        </th>
-                                        <th class="py-3 px-3 text-center w-24">
-                                            Delete
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody
-                                    class="divide-y divide-slate-100 text-xs"
-                                >
-                                    <template
-                                        v-for="group in POSITION_PERMISSION_GROUPS"
-                                        :key="group.category"
-                                    >
-                                        <!-- Category Group Header -->
-                                        <tr
-                                            class="bg-white border-y border-slate-200"
-                                        >
-                                            <td colspan="5" class="py-2.5 px-4">
-                                                <div
-                                                    class="flex items-center justify-between gap-3 flex-wrap"
-                                                >
-                                                    <div
-                                                        class="flex items-center gap-2"
-                                                    >
-                                                        <span
-                                                            class="font-bold text-[11px] text-slate-800 tracking-wider uppercase"
-                                                        >
-                                                            {{ group.category }}
-                                                        </span>
-                                                        <span
-                                                            class="text-[10px] text-slate-400 font-medium"
-                                                        >
-                                                            ({{
-                                                                group.menus
-                                                                    .length
-                                                            }}
-                                                            menu)
-                                                        </span>
-                                                    </div>
-                                                    <div
-                                                        class="flex items-center gap-2 text-[10px]"
-                                                    >
-                                                        <span
-                                                            class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-50 border border-slate-200 text-slate-600 font-medium shadow-2xs"
-                                                        >
-                                                            💻 Web:
-                                                            {{
-                                                                group.location
-                                                                    .web
-                                                            }}
-                                                        </span>
-                                                        <span
-                                                            class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-50 border border-slate-200 text-slate-600 font-medium shadow-2xs"
-                                                        >
-                                                            📱 Mobile:
-                                                            {{
-                                                                group.location
-                                                                    .mobile
-                                                            }}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                        </tr>
+                    <!-- Platform Switcher Tabs -->
+                    <div class="flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-lg w-fit border border-slate-200/80 mb-5">
+                        <button
+                            type="button"
+                            @click="activePlatformTab = 'mobile'"
+                            class="flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-medium transition-colors duration-150 outline-none focus:outline-none focus:ring-0 focus-visible:outline-none select-none border"
+                            :class="activePlatformTab === 'mobile' ? 'bg-white text-emerald-700 shadow-xs border-slate-200/80 font-bold' : 'text-slate-600 hover:text-slate-900 border-transparent'"
+                        >
+                            <span class="text-base leading-none">📱</span>
+                            <span>Mobile App Karyawan</span>
+                        </button>
+                        <button
+                            type="button"
+                            @click="activePlatformTab = 'web'"
+                            class="flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-medium transition-colors duration-150 outline-none focus:outline-none focus:ring-0 focus-visible:outline-none select-none border"
+                            :class="activePlatformTab === 'web' ? 'bg-white text-emerald-700 shadow-xs border-slate-200/80 font-bold' : 'text-slate-600 hover:text-slate-900 border-transparent'"
+                        >
+                            <span class="text-base leading-none">💻</span>
+                            <span>Web Dashboard Karyawan</span>
+                        </button>
+                    </div>
 
-                                        <!-- Group Menu Rows -->
-                                        <tr
-                                            v-for="item in group.menus"
-                                            :key="item.key"
-                                            class="hover:bg-slate-50/60 transition-colors"
-                                        >
-                                            <!-- Menu Title & Description -->
+                    <!-- ============================================================= -->
+                    <!-- TAB 1: 📱 MOBILE APP KARYAWAN -->
+                    <!-- ============================================================= -->
+                    <div v-show="activePlatformTab === 'mobile'" class="space-y-6">
+                        <!-- Sub-grup 1: Menu Home - Diri Sendiri (ESS) -->
+                        <div class="border border-slate-200/80 rounded-xl overflow-hidden shadow-2xs bg-white">
+                            <div class="bg-gradient-to-r from-slate-50 to-white px-5 py-3.5 border-b border-slate-200/80 flex items-center justify-between gap-3 flex-wrap">
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-bold text-xs text-slate-800 tracking-wide uppercase">
+                                            1. Menu Home — Fitur Karyawan (12 Menu)
+                                        </span>
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                            Grid Home Mobile
+                                        </span>
+                                    </div>
+                                    <p class="text-[11px] text-slate-500 mt-0.5">
+                                        Mengatur menu di halaman utama aplikasi karyawan untuk mengurus data pribadi karyawan itu sendiri.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-slate-50/70 border-b border-slate-200 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
+                                            <th class="py-3 px-4 min-w-[300px]">Menu Diri Sendiri & Fungsi</th>
+                                            <th class="py-3 px-3 text-center w-24">View</th>
+                                            <th class="py-3 px-3 text-center w-24">Create</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 text-xs">
+                                        <tr v-for="item in MOBILE_HOME_MENUS" :key="item.key" class="hover:bg-slate-50/60 transition-colors">
                                             <td class="py-3 px-4">
-                                                <div
-                                                    class="font-semibold text-slate-800 leading-snug"
-                                                >
+                                                <div class="font-semibold text-slate-800 leading-snug">
                                                     {{ item.title }}
                                                 </div>
-                                                <div
-                                                    class="text-[11px] text-slate-500 mt-0.5 leading-relaxed"
-                                                >
+                                                <div class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
                                                     {{ item.desc }}
                                                 </div>
                                             </td>
-
-                                            <!-- View Action -->
-                                            <td
-                                                class="py-3 px-3 text-center align-middle"
-                                            >
-                                                <div
-                                                    class="flex items-center justify-center"
-                                                >
+                                            <!-- View Checkbox -->
+                                            <td class="py-3 px-3 text-center align-middle">
+                                                <div class="flex items-center justify-center">
                                                     <Checkbox
-                                                        :id="`perm-${item.key}-view`"
-                                                        :disabled="Boolean(item.disabled.view)"
-                                                        :modelValue="
-                                                            !item.disabled.view &&
-                                                            Boolean(
-                                                                form
-                                                                    .permissions[
-                                                                    item.key
-                                                                ]?.view,
-                                                            )
-                                                        "
-                                                        @update:modelValue="
-                                                            (val) =>
-                                                                updateAction(
-                                                                    item.key,
-                                                                    'view',
-                                                                    val,
-                                                                )
-                                                        "
-                                                        :title="item.disabled.view ? 'Aksi Lihat tidak tersedia untuk menu ini' : ''"
+                                                        :id="`mobile-home-${item.key}-view`"
+                                                        :modelValue="Boolean(form.permissions[item.key]?.view)"
+                                                        @update:modelValue="(val) => updateAction(item.key, 'view', val)"
                                                     />
                                                 </div>
                                             </td>
-
-                                            <!-- Create Action -->
-                                            <td
-                                                class="py-3 px-3 text-center align-middle"
-                                            >
-                                                <div
-                                                    class="flex items-center justify-center"
-                                                >
+                                            <!-- Create Checkbox -->
+                                            <td class="py-3 px-3 text-center align-middle">
+                                                <div v-if="item.hasCreate" class="flex items-center justify-center">
                                                     <Checkbox
-                                                        :id="`perm-${item.key}-create`"
-                                                        :disabled="Boolean(item.disabled.create)"
-                                                        :modelValue="
-                                                            !item.disabled.create &&
-                                                            Boolean(
-                                                                form
-                                                                    .permissions[
-                                                                    item.key
-                                                                ]?.create,
-                                                            )
-                                                        "
-                                                        @update:modelValue="
-                                                            (val) =>
-                                                                updateAction(
-                                                                    item.key,
-                                                                    'create',
-                                                                    val,
-                                                                )
-                                                        "
-                                                        :title="item.disabled.create ? 'Aksi Tambah tidak tersedia untuk menu ini' : ''"
+                                                        :id="`mobile-home-${item.key}-create`"
+                                                        :modelValue="Boolean(form.permissions[item.key]?.create)"
+                                                        @update:modelValue="(val) => updateAction(item.key, 'create', val)"
+                                                    />
+                                                </div>
+                                                <div v-else class="text-slate-300 text-center text-xs">
+                                                    —
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Sub-grup 2: Menu Home - Persetujuan Pengajuan (Approval) -->
+                        <div class="border border-slate-200/80 rounded-xl overflow-hidden shadow-2xs bg-white">
+                            <div class="bg-gradient-to-r from-slate-50 to-white px-5 py-3.5 border-b border-slate-200/80 flex items-center justify-between gap-3 flex-wrap">
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-bold text-xs text-slate-800 tracking-wide uppercase">
+                                            2. Menu Home — Persetujuan Pengajuan (Approval)
+                                        </span>
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                            Persetujuan & Hapus
+                                        </span>
+                                    </div>
+                                    <p class="text-[11px] text-slate-500 mt-0.5">
+                                        Persetujuan, penolakan, atau penghapusan permohonan pengajuan staf / rekan kerja.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-slate-50/70 border-b border-slate-200 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
+                                            <th class="py-3 px-4 min-w-[300px]">Modul Persetujuan</th>
+                                            <th class="py-3 px-3 text-center w-24">Edit</th>
+                                            <th class="py-3 px-3 text-center w-24">Delete</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 text-xs">
+                                        <tr v-for="item in MOBILE_APPROVAL_MENUS" :key="item.key" class="hover:bg-slate-50/60 transition-colors">
+                                            <td class="py-3 px-4">
+                                                <div class="font-semibold text-slate-800 leading-snug">
+                                                    {{ item.title }}
+                                                </div>
+                                                <div class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                                                    {{ item.desc }}
+                                                </div>
+                                            </td>
+                                            <!-- Approval Edit Checkbox -->
+                                            <td class="py-3 px-3 text-center align-middle">
+                                                <div class="flex items-center justify-center">
+                                                    <Checkbox
+                                                        :id="`mobile-approval-${item.key}-edit`"
+                                                        :modelValue="Boolean(form.permissions[item.key]?.edit)"
+                                                        @update:modelValue="(val) => {
+                                                            updateAction(item.key, 'edit', val);
+                                                            if (val) updateAction(item.key, 'view', true);
+                                                        }"
                                                     />
                                                 </div>
                                             </td>
-
-                                            <!-- Edit Action -->
-                                            <td
-                                                class="py-3 px-3 text-center align-middle"
-                                            >
-                                                <div
-                                                    class="flex items-center justify-center"
-                                                >
+                                            <!-- Approval Delete Checkbox -->
+                                            <td class="py-3 px-3 text-center align-middle">
+                                                <div class="flex items-center justify-center">
                                                     <Checkbox
-                                                        :id="`perm-${item.key}-edit`"
-                                                        :disabled="Boolean(item.disabled.edit)"
-                                                        :modelValue="
-                                                            !item.disabled.edit &&
-                                                            Boolean(
-                                                                form
-                                                                    .permissions[
-                                                                    item.key
-                                                                ]?.edit,
-                                                            )
-                                                        "
-                                                        @update:modelValue="
-                                                            (val) =>
-                                                                updateAction(
-                                                                    item.key,
-                                                                    'edit',
-                                                                    val,
-                                                                )
-                                                        "
-                                                        :title="item.disabled.edit ? 'Aksi Ubah tidak tersedia untuk menu ini' : ''"
-                                                    />
-                                                </div>
-                                            </td>
-
-                                            <!-- Delete Action -->
-                                            <td
-                                                class="py-3 px-3 text-center align-middle"
-                                            >
-                                                <div
-                                                    class="flex items-center justify-center"
-                                                >
-                                                    <Checkbox
-                                                        :id="`perm-${item.key}-delete`"
-                                                        :disabled="Boolean(item.disabled.delete)"
-                                                        :modelValue="
-                                                            !item.disabled.delete &&
-                                                            Boolean(
-                                                                form
-                                                                    .permissions[
-                                                                    item.key
-                                                                ]?.delete,
-                                                            )
-                                                        "
-                                                        @update:modelValue="
-                                                            (val) =>
-                                                                updateAction(
-                                                                    item.key,
-                                                                    'delete',
-                                                                    val,
-                                                                )
-                                                        "
-                                                        :title="item.disabled.delete ? 'Aksi Hapus tidak tersedia untuk menu ini' : ''"
+                                                        :id="`mobile-approval-${item.key}-delete`"
+                                                        :modelValue="Boolean(form.permissions[item.key]?.delete)"
+                                                        @update:modelValue="(val) => {
+                                                            updateAction(item.key, 'delete', val);
+                                                            if (val) updateAction(item.key, 'view', true);
+                                                        }"
                                                     />
                                                 </div>
                                             </td>
                                         </tr>
-                                    </template>
-                                </tbody>
-                            </table>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Sub-grup 3: Tab Perusahaan Mobile -->
+                        <div class="border border-slate-200/80 rounded-xl overflow-hidden shadow-2xs bg-white">
+                            <div class="bg-gradient-to-r from-slate-50 to-white px-5 py-3.5 border-b border-slate-200/80 flex items-center justify-between gap-3 flex-wrap">
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-bold text-xs text-slate-800 tracking-wide uppercase">
+                                            3. Tab Perusahaan — 12 Menu Kantor di Mobile
+                                        </span>
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                                            Bottom Navbar Perusahaan
+                                        </span>
+                                    </div>
+                                    <p class="text-[11px] text-slate-500 mt-0.5">
+                                        Menu operasional kantor yang tampil pada tab 'Perusahaan' di bagian bawah aplikasi karyawan (akan hilang otomatis jika tidak ada yang dicentang).
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-slate-50/70 border-b border-slate-200 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
+                                            <th class="py-3 px-4 min-w-[280px]">Menu Tab Perusahaan</th>
+                                            <th class="py-3 px-3 text-center w-24">View</th>
+                                            <th class="py-3 px-3 text-center w-24">Create</th>
+                                            <th class="py-3 px-3 text-center w-24">Edit</th>
+                                            <th class="py-3 px-3 text-center w-24">Delete</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 text-xs">
+                                        <tr v-for="item in MOBILE_COMPANY_MENUS" :key="item.key" class="hover:bg-slate-50/60 transition-colors">
+                                            <td class="py-3 px-4">
+                                                <div class="font-semibold text-slate-800 leading-snug">
+                                                    {{ item.title }}
+                                                </div>
+                                                <div class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                                                    {{ item.desc }}
+                                                </div>
+                                            </td>
+                                            <!-- View Action -->
+                                            <td class="py-3 px-3 text-center align-middle">
+                                                <div v-if="!item.disabled?.view" class="flex items-center justify-center">
+                                                    <Checkbox
+                                                        :id="`mobile-company-${item.key}-view`"
+                                                        :modelValue="Boolean(form.permissions[item.key]?.view)"
+                                                        @update:modelValue="(val) => updateAction(item.key, 'view', val)"
+                                                    />
+                                                </div>
+                                                <div v-else class="text-slate-300 text-center text-xs">—</div>
+                                            </td>
+                                            <!-- Create Action -->
+                                            <td class="py-3 px-3 text-center align-middle">
+                                                <div v-if="!item.disabled?.create" class="flex items-center justify-center">
+                                                    <Checkbox
+                                                        :id="`mobile-company-${item.key}-create`"
+                                                        :modelValue="Boolean(form.permissions[item.key]?.create)"
+                                                        @update:modelValue="(val) => updateAction(item.key, 'create', val)"
+                                                    />
+                                                </div>
+                                                <div v-else class="text-slate-300 text-center text-xs">—</div>
+                                            </td>
+                                            <!-- Edit Action -->
+                                            <td class="py-3 px-3 text-center align-middle">
+                                                <div v-if="!item.disabled?.edit" class="flex items-center justify-center">
+                                                    <Checkbox
+                                                        :id="`mobile-company-${item.key}-edit`"
+                                                        :modelValue="Boolean(form.permissions[item.key]?.edit)"
+                                                        @update:modelValue="(val) => updateAction(item.key, 'edit', val)"
+                                                    />
+                                                </div>
+                                                <div v-else class="text-slate-300 text-center text-xs">—</div>
+                                            </td>
+                                            <!-- Delete Action -->
+                                            <td class="py-3 px-3 text-center align-middle">
+                                                <div v-if="!item.disabled?.delete" class="flex items-center justify-center">
+                                                    <Checkbox
+                                                        :id="`mobile-company-${item.key}-delete`"
+                                                        :modelValue="Boolean(form.permissions[item.key]?.delete)"
+                                                        @update:modelValue="(val) => updateAction(item.key, 'delete', val)"
+                                                    />
+                                                </div>
+                                                <div v-else class="text-slate-300 text-center text-xs">—</div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
 
-                    <p
-                        v-if="form.errors.permissions"
-                        class="text-xs text-rose-500 mt-1"
-                    >
+                    <!-- ============================================================= -->
+                    <!-- TAB 2: 💻 WEB DASHBOARD KARYAWAN -->
+                    <!-- ============================================================= -->
+                    <div v-show="activePlatformTab === 'web'" class="space-y-6">
+                        <div class="border border-slate-200/80 rounded-xl overflow-hidden shadow-2xs bg-white">
+                            <div class="bg-gradient-to-r from-slate-50 to-white px-5 py-3.5 border-b border-slate-200/80">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-xs text-slate-800 tracking-wide uppercase">
+                                        Hak Akses Web Dashboard (Khusus Manajerial Laptop/PC)
+                                    </span>
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                                        Sidebar Web
+                                    </span>
+                                </div>
+                                <p class="text-[11px] text-slate-500 mt-0.5">
+                                    Hak akses manajerial saat karyawan dengan jabatan ini login ke Web Dashboard di komputer. Murni untuk operasional perusahaan dan pengawasan tim (tidak ada menu diri sendiri).
+                                </p>
+                            </div>
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-slate-50/70 border-b border-slate-200 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
+                                            <th class="py-3 px-4 min-w-[320px]">Menu Manajerial Web</th>
+                                            <th class="py-3 px-3 text-center w-24">View</th>
+                                            <th class="py-3 px-3 text-center w-24">Create</th>
+                                            <th class="py-3 px-3 text-center w-24">Edit</th>
+                                            <th class="py-3 px-3 text-center w-24">Delete</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 text-xs">
+                                        <tr v-for="item in WEB_MANAGERIAL_MENUS" :key="item.key" class="hover:bg-slate-50/60 transition-colors">
+                                            <td class="py-3 px-4">
+                                                <div class="font-semibold text-slate-800 leading-snug">
+                                                    {{ item.title }}
+                                                </div>
+                                                <div class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                                                    {{ item.desc }}
+                                                </div>
+                                            </td>
+                                            <!-- View -->
+                                            <td class="py-3 px-3 text-center align-middle">
+                                                <div v-if="!item.disabled?.view" class="flex items-center justify-center">
+                                                    <Checkbox
+                                                        :id="`web-${item.key}-view`"
+                                                        :modelValue="Boolean(form.permissions[item.key]?.view)"
+                                                        @update:modelValue="(val) => updateAction(item.key, 'view', val)"
+                                                    />
+                                                </div>
+                                                <div v-else class="text-slate-300 text-center text-xs">—</div>
+                                            </td>
+                                            <!-- Create -->
+                                            <td class="py-3 px-3 text-center align-middle">
+                                                <div v-if="!item.disabled?.create" class="flex items-center justify-center">
+                                                    <Checkbox
+                                                        :id="`web-${item.key}-create`"
+                                                        :modelValue="Boolean(form.permissions[item.key]?.create)"
+                                                        @update:modelValue="(val) => updateAction(item.key, 'create', val)"
+                                                    />
+                                                </div>
+                                                <div v-else class="text-slate-300 text-center text-xs">—</div>
+                                            </td>
+                                            <!-- Edit -->
+                                            <td class="py-3 px-3 text-center align-middle">
+                                                <div v-if="!item.disabled?.edit" class="flex items-center justify-center">
+                                                    <Checkbox
+                                                        :id="`web-${item.key}-edit`"
+                                                        :modelValue="Boolean(form.permissions[item.key]?.edit)"
+                                                        @update:modelValue="(val) => updateAction(item.key, 'edit', val)"
+                                                    />
+                                                </div>
+                                                <div v-else class="text-slate-300 text-center text-xs">—</div>
+                                            </td>
+                                            <!-- Delete -->
+                                            <td class="py-3 px-3 text-center align-middle">
+                                                <div v-if="!item.disabled?.delete" class="flex items-center justify-center">
+                                                    <Checkbox
+                                                        :id="`web-${item.key}-delete`"
+                                                        :modelValue="Boolean(form.permissions[item.key]?.delete)"
+                                                        @update:modelValue="(val) => updateAction(item.key, 'delete', val)"
+                                                    />
+                                                </div>
+                                                <div v-else class="text-slate-300 text-center text-xs">—</div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p v-if="form.errors.permissions" class="text-xs text-rose-500 mt-2">
                         {{ form.errors.permissions }}
                     </p>
                 </div>
@@ -430,13 +524,8 @@ const submit = () => {
                 <Link :href="route('owner.management.company.positions.index')">
                     <Button variant="ghost" type="button">Batal</Button>
                 </Link>
-                <Button
-                    variant="primary"
-                    type="submit"
-                    :loading="form.processing"
-                    :disabled="form.processing"
-                >
-                    Simpan
+                <Button variant="primary" type="submit" :loading="form.processing">
+                    Simpan Perubahan
                 </Button>
             </div>
         </form>

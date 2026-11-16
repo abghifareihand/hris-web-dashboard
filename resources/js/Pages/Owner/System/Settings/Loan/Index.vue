@@ -53,7 +53,7 @@ const submit = () => {
 
         <!-- Read-only Banner for View-Only Users -->
         <div
-            v-if="!$can('system_settings', 'edit')"
+            v-if="!$can('company_settings', 'edit')"
             class="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-3 shadow-xs"
         >
             <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -87,7 +87,7 @@ const submit = () => {
                             v-model="form.max_loan_amount"
                             :currency="true"
                             placeholder="Contoh: 10.000.000"
-                            :disabled="!$can('system_settings', 'edit')"
+                            :disabled="!$can('company_settings', 'edit')"
                             :error="form.errors.max_loan_amount"
                         />
                     </div>
@@ -101,7 +101,7 @@ const submit = () => {
                             v-model="form.max_loan_amount_weekly"
                             :currency="true"
                             placeholder="Contoh: 2.000.000"
-                            :disabled="!$can('system_settings', 'edit')"
+                            :disabled="!$can('company_settings', 'edit')"
                             :error="form.errors.max_loan_amount_weekly"
                         />
                     </div>
@@ -115,7 +115,7 @@ const submit = () => {
                             v-model="form.max_loan_amount_daily"
                             :currency="true"
                             placeholder="Contoh: 500.000"
-                            :disabled="!$can('system_settings', 'edit')"
+                            :disabled="!$can('company_settings', 'edit')"
                             :error="form.errors.max_loan_amount_daily"
                         />
                     </div>
@@ -144,7 +144,7 @@ const submit = () => {
                             max="60"
                             suffix="Bulan"
                             placeholder="Contoh: 12"
-                            :disabled="!$can('system_settings', 'edit')"
+                            :disabled="!$can('company_settings', 'edit')"
                             :error="form.errors.max_tenor_months"
                         />
                     </div>
@@ -161,7 +161,7 @@ const submit = () => {
                             max="52"
                             suffix="Minggu"
                             placeholder="Contoh: 4"
-                            :disabled="!$can('system_settings', 'edit')"
+                            :disabled="!$can('company_settings', 'edit')"
                             :error="form.errors.max_tenor_weeks"
                         />
                     </div>
@@ -178,7 +178,7 @@ const submit = () => {
                             max="90"
                             suffix="Hari"
                             placeholder="Contoh: 14"
-                            :disabled="!$can('system_settings', 'edit')"
+                            :disabled="!$can('company_settings', 'edit')"
                             :error="form.errors.max_tenor_days"
                         />
                     </div>
@@ -214,7 +214,7 @@ const submit = () => {
                             max="31"
                             suffix="Setiap Bulan"
                             placeholder="Contoh: 25"
-                            :disabled="!$can('system_settings', 'edit')"
+                            :disabled="!$can('company_settings', 'edit')"
                             :error="form.errors.due_date_day"
                         />
                         <p class="text-xs text-slate-500 leading-relaxed">
@@ -241,7 +241,7 @@ const submit = () => {
             </div>
 
             <!-- Bottom Save Bar -->
-            <div v-if="$can('system_settings', 'edit')" class="flex items-center justify-end gap-3 pt-2">
+            <div v-if="$can('company_settings', 'edit')" class="flex items-center justify-end gap-3 pt-2">
                 <Button
                     variant="primary"
                     type="submit"

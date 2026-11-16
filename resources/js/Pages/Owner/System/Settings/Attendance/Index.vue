@@ -67,7 +67,7 @@ const submit = () => {
 
         <!-- Read-Only Banner if user has only view permission -->
         <div
-            v-if="!$can('system_settings', 'edit')"
+            v-if="!$can('company_settings', 'edit')"
             class="p-4 bg-sky-50 border border-sky-200/80 rounded-2xl flex items-center gap-3 text-sky-900 shadow-2xs"
         >
             <div class="w-8 h-8 rounded-xl bg-sky-100 flex items-center justify-center shrink-0 text-sky-600">
@@ -105,7 +105,7 @@ const submit = () => {
                             max="120"
                             suffix="Menit"
                             placeholder="10"
-                            :disabled="!$can('system_settings', 'edit')"
+                            :disabled="!$can('company_settings', 'edit')"
                             :error="form.errors.late_tolerance_minutes"
                             required
                         />
@@ -134,7 +134,7 @@ const submit = () => {
                             max="240"
                             suffix="Menit"
                             placeholder="60"
-                            :disabled="!$can('system_settings', 'edit')"
+                            :disabled="!$can('company_settings', 'edit')"
                             :error="form.errors.early_clock_in_minutes"
                             required
                         />
@@ -161,13 +161,13 @@ const submit = () => {
                         <div
                             v-for="opt in cameraOptions"
                             :key="opt.value"
-                            @click="$can('system_settings', 'edit') && (form.camera_mode = opt.value)"
+                            @click="$can('company_settings', 'edit') && (form.camera_mode = opt.value)"
                             class="relative p-4 rounded-xl border text-left transition-all duration-150 flex flex-col justify-between select-none"
                             :class="[
                                 form.camera_mode === opt.value
                                     ? 'border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-500/20 shadow-xs'
                                     : 'border-slate-200 bg-white',
-                                $can('system_settings', 'edit') ? 'cursor-pointer hover:border-slate-300 hover:bg-slate-50/50' : 'cursor-default opacity-85'
+                                $can('company_settings', 'edit') ? 'cursor-pointer hover:border-slate-300 hover:bg-slate-50/50' : 'cursor-default opacity-85'
                             ]"
                         >
                             <div class="space-y-2">
@@ -228,7 +228,7 @@ const submit = () => {
                         <Input
                             v-model="form.status_very_good"
                             placeholder="Sangat Baik"
-                            :disabled="!$can('system_settings', 'edit')"
+                            :disabled="!$can('company_settings', 'edit')"
                             :error="form.errors.status_very_good"
                             required
                         />
@@ -247,7 +247,7 @@ const submit = () => {
                         <Input
                             v-model="form.status_good"
                             placeholder="Baik"
-                            :disabled="!$can('system_settings', 'edit')"
+                            :disabled="!$can('company_settings', 'edit')"
                             :error="form.errors.status_good"
                             required
                         />
@@ -266,7 +266,7 @@ const submit = () => {
                         <Input
                             v-model="form.status_fair"
                             placeholder="Cukup"
-                            :disabled="!$can('system_settings', 'edit')"
+                            :disabled="!$can('company_settings', 'edit')"
                             :error="form.errors.status_fair"
                             required
                         />
@@ -285,7 +285,7 @@ const submit = () => {
                         <Input
                             v-model="form.status_poor"
                             placeholder="Kurang"
-                            :disabled="!$can('system_settings', 'edit')"
+                            :disabled="!$can('company_settings', 'edit')"
                             :error="form.errors.status_poor"
                             required
                         />
@@ -294,7 +294,7 @@ const submit = () => {
             </div>
 
             <!-- Bottom Save Bar -->
-            <div v-if="$can('system_settings', 'edit')" class="flex items-center justify-end gap-3 pt-2">
+            <div v-if="$can('company_settings', 'edit')" class="flex items-center justify-end gap-3 pt-2">
                 <Button
                     variant="primary"
                     type="submit"

@@ -157,7 +157,7 @@ const monthOptions = [
                     Kelola hari libur nasional atau cuti bersama khusus perusahaan.
                 </p>
             </div>
-            <div v-if="$can('holidays', 'create')" class="flex items-center gap-3">
+            <div v-if="$can('company_holidays', 'create')" class="flex items-center gap-3">
                 <Link :href="route('owner.management.schedules.holidays.create')">
                     <Button variant="primary">
                         <svg
@@ -344,7 +344,7 @@ const monthOptions = [
                     <td class="px-5 py-3.5 whitespace-nowrap text-right">
                         <div class="inline-flex items-center gap-1">
                             <Link
-                                v-if="$can('holidays', 'edit')"
+                                v-if="$can('company_holidays', 'edit')"
                                 :href="route('owner.management.schedules.holidays.edit', item.id)"
                                 class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
                                 title="Edit Hari Libur"
@@ -364,7 +364,7 @@ const monthOptions = [
                                 </svg>
                             </Link>
                             <button
-                                v-if="$can('holidays', 'delete')"
+                                v-if="$can('company_holidays', 'delete')"
                                 type="button"
                                 @click="confirmDelete(item)"
                                 class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"

@@ -395,7 +395,7 @@ const getJkmRate = (emp) => {
                         <!-- Aksi -->
                         <td class="px-4 py-3.5 whitespace-nowrap text-center">
                             <Link
-                                v-if="$can('employee_data', 'edit')"
+                                v-if="$can('company_employees', 'edit')"
                                 :href="route('owner.management.employees.edit', emp.id)"
                                 class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition inline-flex items-center justify-center"
                                 title="Edit Komponen Gaji"

@@ -30,26 +30,26 @@ const can = (menuKey, action = 'view') => {
 // Category visibility helpers
 const hasManajemenAccess = computed(() => {
     if (isOwner.value) return true;
-    return can('employee_data') ||
-        can('company_profile') || can('branches') || can('divisions') || can('positions') ||
-        can('shifts') || can('holidays') || can('employee_schedules') || can('swap_personal') || can('swap_team') ||
-        can('leaves') || can('leave_balances') || can('leave_categories') ||
+    return can('company_employees') ||
+        can('company_profile') || can('company_branches') || can('company_divisions') || can('company_positions') ||
+        can('company_shifts') || can('company_holidays') || can('company_schedules') || can('swap_schedules') ||
+        can('leaves') || can('company_leave_categories') ||
         can('overtimes');
 });
 
 const hasKeuanganAccess = computed(() => {
     if (isOwner.value) return true;
-    return can('reimbursements') || can('loans') || can('payrolls');
+    return can('reimbursements') || can('loans') || can('company_payrolls');
 });
 
 const hasLaporanAccess = computed(() => {
     if (isOwner.value) return true;
-    return can('all_attendances') || can('all_daily_reports');
+    return can('attendances') || can('daily_reports');
 });
 
 const hasSistemAccess = computed(() => {
     if (isOwner.value) return true;
-    return can('announcements') || can('system_settings');
+    return can('company_announcements') || can('feedbacks') || can('company_settings');
 });
 
 const navRef = ref(null);
@@ -173,7 +173,7 @@ const toggleAccordion = (key) => {
             </div>
 
             <!-- Karyawan -->
-            <div v-if="can('employee_data')">
+            <div v-if="can('company_employees')">
                 <button
                     type="button"
                     @click="toggleAccordion('karyawan')"
@@ -191,14 +191,14 @@ const toggleAccordion = (key) => {
                     </svg>
                 </button>
                 <div v-show="accordions.karyawan" class="mt-1 sidebar-submenu-light">
-                    <Link v-if="can('employee_data', 'edit') || can('employee_data', 'create')" :href="route('owner.management.employees.pending.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.employees.pending.*') }">Menunggu Persetujuan</Link>
+                    <Link v-if="can('company_employees', 'edit') || can('company_employees', 'create')" :href="route('owner.management.employees.pending.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.employees.pending.*') }">Menunggu Persetujuan</Link>
                     <Link :href="route('owner.management.employees.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.employees.index') }">Daftar Karyawan</Link>
-                    <Link v-if="can('employee_data', 'create')" :href="route('owner.management.employees.create')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.employees.create') }">Tambah Karyawan</Link>
+                    <Link v-if="can('company_employees', 'create')" :href="route('owner.management.employees.create')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.employees.create') }">Tambah Karyawan</Link>
                 </div>
             </div>
 
             <!-- Perusahaan -->
-            <div v-if="isOwner || can('company_profile') || can('branches') || can('divisions') || can('positions')">
+            <div v-if="isOwner || can('company_profile') || can('company_branches') || can('company_divisions') || can('company_positions')">
                 <button
                     type="button"
                     @click="toggleAccordion('perusahaan')"
@@ -217,14 +217,14 @@ const toggleAccordion = (key) => {
                 </button>
                 <div v-show="accordions.perusahaan" class="mt-1 sidebar-submenu-light">
                     <Link v-if="can('company_profile')" :href="route('owner.management.company.profile.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.company.profile.*') }">Informasi Perusahaan</Link>
-                    <Link v-if="can('branches')" :href="route('owner.management.company.branches.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.company.branches.*') }">Cabang</Link>
-                    <Link v-if="can('divisions')" :href="route('owner.management.company.divisions.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.company.divisions.*') }">Divisi</Link>
-                    <Link v-if="can('positions')" :href="route('owner.management.company.positions.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.company.positions.*') }">Jabatan</Link>
+                    <Link v-if="can('company_branches')" :href="route('owner.management.company.branches.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.company.branches.*') }">Cabang</Link>
+                    <Link v-if="can('company_divisions')" :href="route('owner.management.company.divisions.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.company.divisions.*') }">Divisi</Link>
+                    <Link v-if="can('company_positions')" :href="route('owner.management.company.positions.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.company.positions.*') }">Jabatan</Link>
                 </div>
             </div>
 
             <!-- Penjadwalan -->
-            <div v-if="isOwner || can('shifts') || can('holidays') || can('employee_schedules') || can('swap_personal') || can('swap_team')">
+            <div v-if="isOwner || can('company_shifts') || can('company_holidays') || can('company_schedules') || can('swap_schedules')">
                 <button
                     type="button"
                     @click="toggleAccordion('penjadwalan')"
@@ -242,17 +242,17 @@ const toggleAccordion = (key) => {
                     </svg>
                 </button>
                 <div v-show="accordions.penjadwalan" class="mt-1 sidebar-submenu-light">
-                    <Link v-if="can('shifts')" :href="route('owner.management.schedules.shifts.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.schedules.shifts.*') }">Shift Kerja</Link>
-                    <Link v-if="can('holidays')" :href="route('owner.management.schedules.holidays.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.schedules.holidays.*') }">Hari Libur</Link>
-                    <Link v-if="can('employee_schedules')" :href="route('owner.management.schedules.work.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.schedules.work.*') }">Jadwal Kerja</Link>
-                    <Link v-if="can('swap_personal')" :href="route('owner.management.schedules.swap-personal.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.schedules.swap-personal.*') }">Tukar Jadwal Pribadi</Link>
-                    <Link v-if="can('swap_team')" :href="route('owner.management.schedules.swap-team.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.schedules.swap-team.*') }">Tukar Jadwal Tim</Link>
+                    <Link v-if="can('company_shifts')" :href="route('owner.management.schedules.shifts.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.schedules.shifts.*') }">Shift Kerja</Link>
+                    <Link v-if="can('company_holidays')" :href="route('owner.management.schedules.holidays.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.schedules.holidays.*') }">Hari Libur</Link>
+                    <Link v-if="can('company_schedules')" :href="route('owner.management.schedules.work.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.schedules.work.*') }">Jadwal Kerja</Link>
+                    <Link v-if="can('swap_schedules')" :href="route('owner.management.schedules.swap-personal.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.schedules.swap-personal.*') }">Tukar Jadwal Pribadi</Link>
+                    <Link v-if="can('swap_schedules')" :href="route('owner.management.schedules.swap-team.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.schedules.swap-team.*') }">Tukar Jadwal Tim</Link>
                 </div>
             </div>
 
 
             <!-- Cuti & Izin -->
-            <div v-if="isOwner || can('leaves') || can('leave_balances') || can('leave_categories')">
+            <div v-if="isOwner || can('leaves') || can('company_leave_categories')">
                 <button
                     type="button"
                     @click="toggleAccordion('cuti')"
@@ -272,8 +272,8 @@ const toggleAccordion = (key) => {
                 <div v-show="accordions.cuti" class="mt-1 sidebar-submenu-light">
                     <Link v-if="can('leaves', 'edit')" :href="route('owner.management.leaves.pending.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.leaves.pending.*') }">Menunggu Persetujuan</Link>
                     <Link v-if="can('leaves')" :href="route('owner.management.leaves.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.leaves.index') }">Data Cuti</Link>
-                    <Link v-if="can('leave_balances')" :href="route('owner.management.leaves.balance.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.leaves.balance.*') }">Sisa Cuti</Link>
-                    <Link v-if="can('leave_categories')" :href="route('owner.management.leaves.categories.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.leaves.categories.*') }">Kategori Cuti</Link>
+                    <Link v-if="can('leaves')" :href="route('owner.management.leaves.balance.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.leaves.balance.*') }">Sisa Cuti</Link>
+                    <Link v-if="can('company_leave_categories')" :href="route('owner.management.leaves.categories.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.management.leaves.categories.*') }">Kategori Cuti</Link>
                 </div>
             </div>
 
@@ -355,7 +355,7 @@ const toggleAccordion = (key) => {
             </div>
 
             <!-- 3. Penggajian (Payrolls) -->
-            <div v-if="can('payrolls')">
+            <div v-if="can('company_payrolls')">
                 <button
                     type="button"
                     @click="toggleAccordion('penggajian')"
@@ -379,7 +379,7 @@ const toggleAccordion = (key) => {
             </div>
 
             <!-- 4. Pajak & BPJS (Taxes) -->
-            <div v-if="can('payrolls')">
+            <div v-if="can('company_payrolls')">
                 <button
                     type="button"
                     @click="toggleAccordion('pajak')"
@@ -404,7 +404,7 @@ const toggleAccordion = (key) => {
             </div>
 
             <!-- 5. THR -->
-            <div v-if="can('payrolls')">
+            <div v-if="can('company_payrolls')">
                 <button
                     type="button"
                     @click="toggleAccordion('thr')"
@@ -423,7 +423,7 @@ const toggleAccordion = (key) => {
                 </button>
                 <div v-show="accordions.thr" class="mt-1 sidebar-submenu-light">
                     <Link :href="route('owner.finance.thr.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.finance.thr.index') || route().current('owner.finance.thr.create') }">Data THR</Link>
-                    <Link v-if="can('system_settings')" :href="route('owner.finance.thr.settings.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.finance.thr.settings.*') }">Pengaturan</Link>
+                    <Link v-if="can('company_settings')" :href="route('owner.finance.thr.settings.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.finance.thr.settings.*') }">Pengaturan</Link>
                 </div>
             </div>
 
@@ -433,7 +433,7 @@ const toggleAccordion = (key) => {
             </div>
 
             <!-- Laporan Kehadiran -->
-            <div v-if="can('all_attendances')">
+            <div v-if="can('attendances')">
                 <button
                     type="button"
                     @click="toggleAccordion('laporanKehadiran')"
@@ -459,7 +459,7 @@ const toggleAccordion = (key) => {
             </div>
 
             <!-- Laporan Kinerja -->
-            <div v-if="can('all_daily_reports')">
+            <div v-if="can('daily_reports')">
                 <button
                     type="button"
                     @click="toggleAccordion('laporanKinerja')"
@@ -488,8 +488,8 @@ const toggleAccordion = (key) => {
                 <span class="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Sistem</span>
             </div>
 
-            <!-- Pengumuman -->
-            <div v-if="can('announcements')">
+            <!-- Pengumuman & Aspirasi -->
+            <div v-if="can('company_announcements') || can('feedbacks')">
                 <button
                     type="button"
                     @click="toggleAccordion('pengumuman')"
@@ -507,14 +507,14 @@ const toggleAccordion = (key) => {
                     </svg>
                 </button>
                 <div v-show="accordions.pengumuman" class="mt-1 sidebar-submenu-light">
-                    <Link :href="route('owner.announcements.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.announcements.index') }">Data Pengumuman</Link>
-                    <Link v-if="can('announcements', 'create')" :href="route('owner.announcements.create')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.announcements.create') }">Tambah Pengumuman</Link>
-                    <Link :href="route('owner.feedbacks.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.feedbacks.*') }">Kritik & Saran</Link>
+                    <Link v-if="can('company_announcements')" :href="route('owner.announcements.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.announcements.index') }">Data Pengumuman</Link>
+                    <Link v-if="can('company_announcements', 'create')" :href="route('owner.announcements.create')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.announcements.create') }">Tambah Pengumuman</Link>
+                    <Link v-if="can('feedbacks')" :href="route('owner.feedbacks.index')" class="sidebar-sublink-light" :class="{ 'active': route().current('owner.feedbacks.*') }">Kritik & Saran</Link>
                 </div>
             </div>
 
             <!-- Pengaturan -->
-            <div v-if="can('system_settings')">
+            <div v-if="can('company_settings')">
                 <button
                     type="button"
                     @click="toggleAccordion('pengaturan')"

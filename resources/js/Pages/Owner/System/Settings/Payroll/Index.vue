@@ -75,7 +75,7 @@ const submit = () => {
 
         <!-- Read-only Banner for View-Only Users -->
         <div
-            v-if="!$can('system_settings', 'edit')"
+            v-if="!$can('company_settings', 'edit')"
             class="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-3 shadow-xs"
         >
             <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -104,13 +104,13 @@ const submit = () => {
                     <div
                         v-for="opt in cycleOptions"
                         :key="opt.value"
-                        @click="$can('system_settings', 'edit') && (form.default_payroll_cycle = opt.value)"
+                        @click="$can('company_settings', 'edit') && (form.default_payroll_cycle = opt.value)"
                         class="relative p-4 rounded-xl border text-left transition-all duration-150 flex flex-col justify-between select-none"
                         :class="[
                             form.default_payroll_cycle === opt.value
                                 ? 'border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-500/20 shadow-xs'
                                 : 'border-slate-200 bg-white',
-                            $can('system_settings', 'edit') ? 'cursor-pointer hover:border-slate-300 hover:bg-slate-50/50' : 'cursor-default opacity-85'
+                            $can('company_settings', 'edit') ? 'cursor-pointer hover:border-slate-300 hover:bg-slate-50/50' : 'cursor-default opacity-85'
                         ]"
                     >
                         <div class="space-y-2">
@@ -168,7 +168,7 @@ const submit = () => {
                             max="31"
                             suffix="Hari Kerja"
                             placeholder="Contoh: 25"
-                            :disabled="!$can('system_settings', 'edit')"
+                            :disabled="!$can('company_settings', 'edit')"
                             :error="form.errors.monthly_working_days"
                         />
                         <p class="text-xs text-slate-500">
@@ -188,7 +188,7 @@ const submit = () => {
                             max="7"
                             suffix="Hari Kerja"
                             placeholder="Contoh: 6"
-                            :disabled="!$can('system_settings', 'edit')"
+                            :disabled="!$can('company_settings', 'edit')"
                             :error="form.errors.weekly_working_days"
                         />
                         <p class="text-xs text-slate-500">
@@ -249,11 +249,11 @@ const submit = () => {
                         </span>
                         <button
                             type="button"
-                            :disabled="!$can('system_settings', 'edit')"
-                            @click="$can('system_settings', 'edit') && (form.is_late_penalty_active = !form.is_late_penalty_active)"
+                            :disabled="!$can('company_settings', 'edit')"
+                            @click="$can('company_settings', 'edit') && (form.is_late_penalty_active = !form.is_late_penalty_active)"
                             :class="[
                                 'relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500/20',
-                                $can('system_settings', 'edit') ? 'cursor-pointer' : 'cursor-default opacity-80',
+                                $can('company_settings', 'edit') ? 'cursor-pointer' : 'cursor-default opacity-80',
                                 form.is_late_penalty_active ? 'bg-emerald-600' : 'bg-slate-300'
                             ]"
                         >
@@ -292,13 +292,13 @@ const submit = () => {
                         <div
                             v-for="opt in lateTargetOptions"
                             :key="opt.value"
-                            @click="$can('system_settings', 'edit') && (form.late_penalty_target = opt.value)"
+                            @click="$can('company_settings', 'edit') && (form.late_penalty_target = opt.value)"
                             class="relative p-4 rounded-xl border text-left transition-all duration-150 flex flex-col justify-between select-none"
                             :class="[
                                 form.late_penalty_target === opt.value
                                     ? 'border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-500/20 shadow-xs'
                                     : 'border-slate-200 bg-white',
-                                $can('system_settings', 'edit') ? 'cursor-pointer hover:border-slate-300 hover:bg-slate-50/50' : 'cursor-default opacity-85'
+                                $can('company_settings', 'edit') ? 'cursor-pointer hover:border-slate-300 hover:bg-slate-50/50' : 'cursor-default opacity-85'
                             ]"
                         >
                             <div class="space-y-2.5">
@@ -355,7 +355,7 @@ const submit = () => {
             </div>
 
             <!-- Bottom Save Bar -->
-            <div v-if="$can('system_settings', 'edit')" class="flex items-center justify-end gap-3 pt-2">
+            <div v-if="$can('company_settings', 'edit')" class="flex items-center justify-end gap-3 pt-2">
                 <Button
                     variant="primary"
                     type="submit"

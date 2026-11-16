@@ -146,7 +146,7 @@ const executeDelete = () => {
                     Kelola data karyawan perusahaan Anda.
                 </p>
             </div>
-            <div v-if="$can('employee_data', 'create')" class="flex items-center gap-3">
+            <div v-if="$can('company_employees', 'create')" class="flex items-center gap-3">
                 <Link :href="route('owner.management.employees.create')">
                     <Button variant="primary">
                         <svg
@@ -416,7 +416,7 @@ const executeDelete = () => {
                                 </svg>
                             </Link>
                             <Link
-                                v-if="$can('employee_data', 'edit')"
+                                v-if="$can('company_employees', 'edit')"
                                 :href="
                                     route(
                                         'owner.management.employees.edit',
@@ -441,7 +441,7 @@ const executeDelete = () => {
                                 </svg>
                             </Link>
                             <button
-                                v-if="$can('employee_data', 'delete')"
+                                v-if="$can('company_employees', 'delete')"
                                 type="button"
                                 @click="confirmDelete(employee)"
                                 class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"

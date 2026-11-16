@@ -98,8 +98,8 @@ Route::middleware('auth')->group(function () {
 
         // Management (Organization & Employees)
         Route::prefix('management')->name('management.')->group(function () {
-            // Employees Management (Protected by 'employee_data')
-            Route::middleware('permission:employee_data')->group(function () {
+            // Employees Management (Protected by 'company_employees')
+            Route::middleware('permission:company_employees')->group(function () {
                 Route::get('/employees/pending', [PendingEmployeeController::class, 'index'])->name('employees.pending.index');
                 Route::post('/employees/pending/{id}/approve', [PendingEmployeeController::class, 'approve'])->name('employees.pending.approve');
                 Route::post('/employees/pending/{id}/reject', [PendingEmployeeController::class, 'reject'])->name('employees.pending.reject');
@@ -114,13 +114,13 @@ Route::middleware('auth')->group(function () {
                     Route::match(['put', 'post'], '/profile', [CompanyProfileController::class, 'update'])->name('profile.update');
                 });
 
-                Route::resource('branches', BranchController::class)->middleware('permission:branches');
-                Route::resource('divisions', DivisionController::class)->except(['show'])->middleware('permission:divisions');
-                Route::resource('positions', PositionController::class)->middleware('permission:positions');
+                Route::resource('branches', BranchController::class)->middleware('permission:company_branches');
+                Route::resource('divisions', DivisionController::class)->except(['show'])->middleware('permission:company_divisions');
+                Route::resource('positions', PositionController::class)->middleware('permission:company_positions');
             });
 
             // Attendance Settings
-            Route::prefix('attendance')->name('attendance.')->middleware('permission:system_settings')->group(function () {
+            Route::prefix('attendance')->name('attendance.')->middleware('permission:company_settings')->group(function () {
                 Route::get('/settings', [AttendanceSettingController::class, 'index'])->name('settings.index');
                 Route::put('/settings', [AttendanceSettingController::class, 'update'])->name('settings.update');
                 Route::post('/settings/status', [AttendanceSettingController::class, 'updateStatus'])->name('settings.update-status');
@@ -129,7 +129,7 @@ Route::middleware('auth')->group(function () {
             // Schedules
             Route::prefix('schedules')->name('schedules.')->group(function () {
                 // Shifts
-                Route::middleware('permission:shifts')->group(function () {
+                Route::middleware('permission:company_shifts')->group(function () {
                     Route::get('/shifts', [ScheduleController::class, 'shifts'])->name('shifts.index');
                     Route::get('/shifts/create', [ScheduleController::class, 'createShifts'])->name('shifts.create');
                     Route::post('/shifts', [ScheduleController::class, 'storeShift'])->name('shifts.store');
@@ -139,7 +139,7 @@ Route::middleware('auth')->group(function () {
                 });
 
                 // Holidays
-                Route::middleware('permission:holidays')->group(function () {
+                Route::middleware('permission:company_holidays')->group(function () {
                     Route::get('/holidays', [ScheduleController::class, 'holidays'])->name('holidays.index');
                     Route::get('/holidays/create', [ScheduleController::class, 'createHolidays'])->name('holidays.create');
                     Route::post('/holidays', [ScheduleController::class, 'storeHoliday'])->name('holidays.store');
@@ -149,7 +149,7 @@ Route::middleware('auth')->group(function () {
                 });
 
                 // Work Schedules
-                Route::middleware('permission:employee_schedules')->group(function () {
+                Route::middleware('permission:company_schedules')->group(function () {
                     Route::get('/work', [ScheduleController::class, 'work'])->name('work.index');
                     Route::get('/work/create', [ScheduleController::class, 'createWork'])->name('work.create');
                     Route::post('/work/create', [ScheduleController::class, 'storeWork'])->name('work.store');
@@ -161,7 +161,7 @@ Route::middleware('auth')->group(function () {
                 });
 
                 // Swap Personal
-                Route::middleware('permission:swap_personal')->group(function () {
+                Route::middleware('permission:swap_schedules')->group(function () {
                     Route::get('/swap-personal', [ScheduleController::class, 'swapPersonal'])->name('swap-personal.index');
                     Route::get('/swap-personal/{id}', [ScheduleController::class, 'showSwapPersonal'])->name('swap-personal.show');
                     Route::post('/swap-personal/{id}/approve', [ScheduleController::class, 'approveSwapPersonal'])->name('swap-personal.approve');
@@ -170,7 +170,7 @@ Route::middleware('auth')->group(function () {
                 });
 
                 // Swap Team
-                Route::middleware('permission:swap_team')->group(function () {
+                Route::middleware('permission:swap_schedules')->group(function () {
                     Route::get('/swap-team', [ScheduleController::class, 'swapTeam'])->name('swap-team.index');
                     Route::get('/swap-team/{id}', [ScheduleController::class, 'showSwapTeam'])->name('swap-team.show');
                     Route::post('/swap-team/{id}/approve', [ScheduleController::class, 'approveSwapTeam'])->name('swap-team.approve');
@@ -187,15 +187,12 @@ Route::middleware('auth')->group(function () {
                     Route::post('/pending/{id}/reject', [LeaveController::class, 'reject'])->name('pending.reject');
                     Route::get('/', [LeaveController::class, 'index'])->name('index');
                     Route::delete('/{id}', [LeaveController::class, 'destroy'])->name('destroy');
-                });
-
-                Route::middleware('permission:leave_balances')->group(function () {
                     Route::get('/balance', [LeaveController::class, 'balance'])->name('balance.index');
                     Route::get('/balance/{id}/edit', [LeaveController::class, 'editBalance'])->name('balance.edit');
                     Route::put('/balance/{id}', [LeaveController::class, 'updateBalance'])->name('balance.update');
                 });
 
-                Route::middleware('permission:leave_categories')->group(function () {
+                Route::middleware('permission:company_leave_categories')->group(function () {
                     Route::get('/categories', [LeaveController::class, 'categories'])->name('categories.index');
                     Route::get('/categories/create', [LeaveController::class, 'createCategory'])->name('categories.create');
                     Route::post('/categories', [LeaveController::class, 'storeCategory'])->name('categories.store');
@@ -229,7 +226,7 @@ Route::middleware('auth')->group(function () {
 
             // Loans
             Route::prefix('loans')->name('loans.')->group(function () {
-                Route::middleware('permission:system_settings')->group(function () {
+                Route::middleware('permission:company_settings')->group(function () {
                     Route::get('/settings', [LoanSettingController::class, 'index'])->name('settings.index');
                     Route::post('/settings', [LoanSettingController::class, 'store'])->name('settings.store');
                 });
@@ -249,12 +246,12 @@ Route::middleware('auth')->group(function () {
 
             // Payrolls
             Route::prefix('payrolls')->name('payrolls.')->group(function () {
-                Route::middleware('permission:system_settings')->group(function () {
+                Route::middleware('permission:company_settings')->group(function () {
                     Route::get('/settings', [PayrollSettingController::class, 'index'])->name('settings.index');
                     Route::post('/settings', [PayrollSettingController::class, 'store'])->name('settings.store');
                 });
 
-                Route::middleware('permission:payrolls')->group(function () {
+                Route::middleware('permission:company_payrolls')->group(function () {
                     Route::get('/check-employees', [PayrollController::class, 'checkEmployees'])->name('check');
                     Route::get('/master', [PayrollController::class, 'master'])->name('master.index');
                     Route::get('/', [PayrollController::class, 'index'])->name('index');
@@ -274,8 +271,8 @@ Route::middleware('auth')->group(function () {
                 });
             });
 
-            // Taxes & BPJS (Protected by 'payrolls')
-            Route::prefix('taxes')->name('taxes.')->middleware('permission:payrolls')->group(function () {
+            // Taxes & BPJS (Protected by 'company_payrolls')
+            Route::prefix('taxes')->name('taxes.')->middleware('permission:company_payrolls')->group(function () {
                 Route::get('/pph21', [TaxController::class, 'pph21'])->name('pph21');
                 Route::get('/bpjs-tk', [TaxController::class, 'bpjsKetenagakerjaan'])->name('bpjs-tk');
                 Route::post('/bpjs-tk', [TaxController::class, 'updateBpjsKetenagakerjaan'])->name('bpjs-tk.update');
@@ -283,8 +280,8 @@ Route::middleware('auth')->group(function () {
                 Route::post('/bpjs-kes', [TaxController::class, 'updateBpjsKesehatan'])->name('bpjs-kes.update');
             });
 
-            // THR (Protected by 'payrolls')
-            Route::prefix('thr')->name('thr.')->middleware('permission:payrolls')->group(function () {
+            // THR (Protected by 'company_payrolls')
+            Route::prefix('thr')->name('thr.')->middleware('permission:company_payrolls')->group(function () {
                 Route::get('/settings', [ThrSettingController::class, 'index'])->name('settings.index');
                 Route::post('/settings', [ThrSettingController::class, 'store'])->name('settings.store');
                 Route::get('/', [ThrController::class, 'index'])->name('index');
@@ -301,8 +298,8 @@ Route::middleware('auth')->group(function () {
 
         // REPORTS
         Route::prefix('reports')->name('reports.')->group(function () {
-            // Attendances (Protected by 'all_attendances')
-            Route::middleware('permission:all_attendances')->group(function () {
+            // Attendances (Protected by 'attendances')
+            Route::middleware('permission:attendances')->group(function () {
                 Route::get('/attendances', [OwnerAttendanceReportController::class, 'index'])->name('attendances.index');
                 Route::get('/attendances/recap', [OwnerAttendanceReportController::class, 'recap'])->name('attendances.recap.index');
                 Route::get('/attendances/recap/export', [OwnerAttendanceReportController::class, 'recapExport'])->name('attendances.recap.export');
@@ -315,8 +312,8 @@ Route::middleware('auth')->group(function () {
                 Route::get('/attendances/{id}', [OwnerAttendanceReportController::class, 'show'])->whereNumber('id')->name('attendances.show');
             });
 
-            // Performances (Protected by 'all_daily_reports')
-            Route::middleware('permission:all_daily_reports')->group(function () {
+            // Performances (Protected by 'daily_reports')
+            Route::middleware('permission:daily_reports')->group(function () {
                 Route::get('/performances/daily', [OwnerPerformanceReportController::class, 'daily'])->name('performances.daily.index');
                 Route::get('/performances/daily/export', [OwnerPerformanceReportController::class, 'dailyExport'])->name('performances.daily.export');
                 Route::get('/performances/daily/{id}', [OwnerPerformanceReportController::class, 'dailyShow'])->whereNumber('id')->name('performances.daily.show');
@@ -327,11 +324,11 @@ Route::middleware('auth')->group(function () {
             });
         });
 
-        // Announcements (Protected by 'announcements')
-        Route::resource('announcements', OwnerAnnouncementController::class)->middleware('permission:announcements');
+        // Announcements (Protected by 'company_announcements')
+        Route::resource('announcements', OwnerAnnouncementController::class)->middleware('permission:company_announcements');
 
-        // Feedbacks (Kritik & Saran Karyawan - Protected by 'announcements')
-        Route::resource('feedbacks', OwnerFeedbackController::class)->only(['index', 'show', 'destroy'])->middleware('permission:announcements');
+        // Feedbacks (Kritik & Saran Karyawan - Protected by 'feedbacks')
+        Route::resource('feedbacks', OwnerFeedbackController::class)->only(['index', 'show', 'destroy'])->middleware('permission:feedbacks');
     });
 
     // =========================================================================

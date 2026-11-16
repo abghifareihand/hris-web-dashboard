@@ -149,7 +149,7 @@ const submit = () => {
 
             <!-- Read-only Banner for View-Only Users -->
             <div
-                v-if="!$can('payrolls', 'edit')"
+                v-if="!$can('company_payrolls', 'edit')"
                 class="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-3 shadow-xs"
             >
                 <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -230,7 +230,7 @@ const submit = () => {
                     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs">
                         <div class="px-6 py-4 border-b border-slate-100 rounded-t-2xl flex items-center justify-between">
                             <h2 class="text-base font-bold text-slate-900">JHT (Jaminan Hari Tua)</h2>
-                            <Checkbox v-model="form.jht_active" :disabled="!$can('payrolls', 'edit')" label="Aktif" />
+                            <Checkbox v-model="form.jht_active" :disabled="!$can('company_payrolls', 'edit')" label="Aktif" />
                         </div>
 
                         <div class="p-6">
@@ -245,7 +245,7 @@ const submit = () => {
                                         step="0.01"
                                         v-model="form.jht_company_percent"
                                         label="Perusahaan (%)"
-                                        :disabled="!form.jht_active || !$can('payrolls', 'edit')"
+                                        :disabled="!form.jht_active || !$can('company_payrolls', 'edit')"
                                         placeholder="3.7"
                                     />
                                     <Input
@@ -253,7 +253,7 @@ const submit = () => {
                                         step="0.01"
                                         v-model="form.jht_employee_percent"
                                         label="Karyawan (%)"
-                                        :disabled="!form.jht_active || !$can('payrolls', 'edit')"
+                                        :disabled="!form.jht_active || !$can('company_payrolls', 'edit')"
                                         placeholder="2"
                                     />
                                 </div>
@@ -269,7 +269,7 @@ const submit = () => {
                     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs">
                         <div class="px-6 py-4 border-b border-slate-100 rounded-t-2xl flex items-center justify-between">
                             <h2 class="text-base font-bold text-slate-900">JKK (Jaminan Kecelakaan Kerja)</h2>
-                            <Checkbox v-model="form.jkk_active" :disabled="!$can('payrolls', 'edit')" label="Aktif" />
+                            <Checkbox v-model="form.jkk_active" :disabled="!$can('company_payrolls', 'edit')" label="Aktif" />
                         </div>
 
                         <div class="p-6">
@@ -283,7 +283,7 @@ const submit = () => {
                                         v-model="form.jkk_risk_level"
                                         :options="jkkOptions"
                                         label="Tingkat Risiko"
-                                        :disabled="!form.jkk_active || !$can('payrolls', 'edit')"
+                                        :disabled="!form.jkk_active || !$can('company_payrolls', 'edit')"
                                         @change="onJkkChange"
                                     />
                                 </div>
@@ -321,7 +321,7 @@ const submit = () => {
                     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs">
                         <div class="px-6 py-4 border-b border-slate-100 rounded-t-2xl flex items-center justify-between">
                             <h2 class="text-base font-bold text-slate-900">JKM (Jaminan Kematian)</h2>
-                            <Checkbox v-model="form.jkm_active" :disabled="!$can('payrolls', 'edit')" label="Aktif" />
+                            <Checkbox v-model="form.jkm_active" :disabled="!$can('company_payrolls', 'edit')" label="Aktif" />
                         </div>
 
                         <div class="p-6">
@@ -336,7 +336,7 @@ const submit = () => {
                                         step="0.01"
                                         v-model="form.jkm_percent"
                                         label="Tarif Perusahaan (%)"
-                                        :disabled="!form.jkm_active || !$can('payrolls', 'edit')"
+                                        :disabled="!form.jkm_active || !$can('company_payrolls', 'edit')"
                                         placeholder="0.3"
                                         help="Seluruhnya ditanggung perusahaan"
                                     />
@@ -349,7 +349,7 @@ const submit = () => {
                     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs">
                         <div class="px-6 py-4 border-b border-slate-100 rounded-t-2xl flex items-center justify-between">
                             <h2 class="text-base font-bold text-slate-900">JP (Jaminan Pensiun)</h2>
-                            <Checkbox v-model="form.jp_active" :disabled="!$can('payrolls', 'edit')" label="Aktif" />
+                            <Checkbox v-model="form.jp_active" :disabled="!$can('company_payrolls', 'edit')" label="Aktif" />
                         </div>
 
                         <div class="p-6">
@@ -364,7 +364,7 @@ const submit = () => {
                                         step="0.01"
                                         v-model="form.jp_company_percent"
                                         label="Perusahaan (%)"
-                                        :disabled="!form.jp_active || !$can('payrolls', 'edit')"
+                                        :disabled="!form.jp_active || !$can('company_payrolls', 'edit')"
                                         placeholder="2"
                                     />
                                     <Input
@@ -372,7 +372,7 @@ const submit = () => {
                                         step="0.01"
                                         v-model="form.jp_employee_percent"
                                         label="Karyawan (%)"
-                                        :disabled="!form.jp_active || !$can('payrolls', 'edit')"
+                                        :disabled="!form.jp_active || !$can('company_payrolls', 'edit')"
                                         placeholder="1"
                                     />
                                 </div>
@@ -382,7 +382,7 @@ const submit = () => {
                                         currency
                                         v-model="form.jp_maximum_wage"
                                         label="Batas Maksimum Upah"
-                                        :disabled="!form.jp_active || !$can('payrolls', 'edit')"
+                                        :disabled="!form.jp_active || !$can('company_payrolls', 'edit')"
                                         placeholder="10.042.300"
                                         help="Upah di atas batas ini tetap dihitung berdasarkan batas maksimum"
                                     />
@@ -404,14 +404,14 @@ const submit = () => {
                                 type="text"
                                 v-model="form.effective_year"
                                 label="Tahun Efektif"
-                                :disabled="!$can('payrolls', 'edit')"
+                                :disabled="!$can('company_payrolls', 'edit')"
                                 placeholder="2026"
                             />
                             <Textarea
                                 v-model="form.notes"
                                 label="Catatan"
                                 :rows="3"
-                                :disabled="!$can('payrolls', 'edit')"
+                                :disabled="!$can('company_payrolls', 'edit')"
                                 placeholder="Konfigurasi BPJS Ketenagakerjaan..."
                             />
                         </div>
@@ -419,7 +419,7 @@ const submit = () => {
                 </div>
 
                 <!-- Tombol Simpan Berada di Luar Card (Di Bawah) Sesuai Permintaan User -->
-                <div v-if="$can('payrolls', 'edit')" class="flex items-center justify-end pt-1">
+                <div v-if="$can('company_payrolls', 'edit')" class="flex items-center justify-end pt-1">
                     <Button
                         variant="primary"
                         size="md"

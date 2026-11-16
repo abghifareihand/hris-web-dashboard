@@ -296,7 +296,7 @@ const getRemainingBadge = (quota, used) => {
                     <td class="px-5 py-3.5 text-right whitespace-nowrap">
                         <div class="inline-flex items-center justify-end">
                             <Link
-                                v-if="$can('leave_balances', 'edit')"
+                                v-if="$can('leaves', 'edit')"
                                 :href="route('owner.management.leaves.balance.edit', item.id)"
                                 class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
                                 title="Edit Kuota Cuti"

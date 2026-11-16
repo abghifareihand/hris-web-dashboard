@@ -335,7 +335,7 @@ const shiftOptions = computed(() => [
                     </button>
                 </div>
 
-                <Link v-if="$can('employee_schedules', 'create')" :href="route('owner.management.schedules.work.create')">
+                <Link v-if="$can('company_schedules', 'create')" :href="route('owner.management.schedules.work.create')">
                     <Button variant="primary">
                         <svg
                             class="w-4 h-4 mr-1.5"
@@ -633,7 +633,7 @@ const shiftOptions = computed(() => [
                         <td class="px-5 py-3.5 whitespace-nowrap text-right">
                             <div class="inline-flex items-center gap-1">
                                 <Link
-                                    v-if="$can('employee_schedules', 'edit')"
+                                    v-if="$can('company_schedules', 'edit')"
                                     :href="route('owner.management.schedules.work.edit', sched.id)"
                                     class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
                                     title="Edit Jadwal"
@@ -653,7 +653,7 @@ const shiftOptions = computed(() => [
                                     </svg>
                                 </Link>
                                 <button
-                                    v-if="$can('employee_schedules', 'delete')"
+                                    v-if="$can('company_schedules', 'delete')"
                                     type="button"
                                     @click="confirmDelete(sched)"
                                     class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
@@ -733,7 +733,7 @@ const shiftOptions = computed(() => [
                             </span>
                             <div class="inline-flex items-center gap-1">
                                 <Link
-                                    v-if="$can('employee_schedules', 'edit')"
+                                    v-if="$can('company_schedules', 'edit')"
                                     :href="route('owner.management.schedules.work.edit', item.id)"
                                     class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
                                     title="Edit Jadwal"
@@ -743,7 +743,7 @@ const shiftOptions = computed(() => [
                                     </svg>
                                 </Link>
                                 <button
-                                    v-if="$can('employee_schedules', 'delete')"
+                                    v-if="$can('company_schedules', 'delete')"
                                     type="button"
                                     @click="confirmDelete(item)"
                                     class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"

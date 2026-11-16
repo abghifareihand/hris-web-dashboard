@@ -33,8 +33,8 @@ Route::get('/companies/{id}/structures', [\App\Http\Controllers\Api\CompanyContr
 
 // API Owner Routes
 Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
-    // Shifts for Owner (Protected by 'shifts')
-    Route::middleware('api.permission:shifts')->group(function () {
+    // Shifts for Owner (Protected by 'company_shifts')
+    Route::middleware('api.permission:company_shifts')->group(function () {
         Route::get('/shifts', [\App\Http\Controllers\Api\Owner\ShiftController::class, 'index']);
         Route::post('/shifts', [\App\Http\Controllers\Api\Owner\ShiftController::class, 'store']);
         Route::get('/shifts/{id}', [\App\Http\Controllers\Api\Owner\ShiftController::class, 'show']);
@@ -42,16 +42,16 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
         Route::delete('/shifts/{id}', [\App\Http\Controllers\Api\Owner\ShiftController::class, 'destroy']);
     });
 
-    // Schedules for Owner (Protected by 'employee_schedules')
-    Route::middleware('api.permission:employee_schedules')->group(function () {
+    // Schedules for Owner (Protected by 'company_schedules')
+    Route::middleware('api.permission:company_schedules')->group(function () {
         Route::get('/schedules', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'getSchedules']);
         Route::post('/schedules/bulk-store', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'bulkStore']);
         Route::put('/schedules/{id}', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'update']);
         Route::delete('/schedules/{id}', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'destroy']);
     });
     
-    // Personal Swaps (Protected by 'swap_personal')
-    Route::middleware('api.permission:swap_personal')->group(function () {
+    // Personal Swaps (Protected by 'swap_schedules')
+    Route::middleware('api.permission:swap_schedules')->group(function () {
         Route::get('/schedule-swaps/personal', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'getPersonalSwaps']);
         Route::get('/schedule-swaps/personal/{id}', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'getPersonalSwapDetail']);
         Route::post('/schedule-swaps/personal/{id}/approve', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'approvePersonalSwap']);
@@ -59,8 +59,8 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
         Route::delete('/schedule-swaps/personal/{id}', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'destroyPersonalSwap']);
     });
     
-    // Team Swaps (Protected by 'swap_team')
-    Route::middleware('api.permission:swap_team')->group(function () {
+    // Team Swaps (Protected by 'swap_schedules')
+    Route::middleware('api.permission:swap_schedules')->group(function () {
         Route::get('/schedule-swaps/team', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'getTeamSwaps']);
         Route::get('/schedule-swaps/team/{id}', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'getTeamSwapDetail']);
         Route::post('/schedule-swaps/team/{id}/approve', [\App\Http\Controllers\Api\Owner\ScheduleController::class, 'approveTeamSwap']);
@@ -75,8 +75,8 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
         Route::post('/company/setup', [\App\Http\Controllers\Api\Owner\CompanyController::class, 'setup']);
     });
 
-    // Employees & Company Structure for Owner (Protected by 'employee_data')
-    Route::middleware('api.permission:employee_data')->group(function () {
+    // Employees & Company Structure for Owner (Protected by 'company_employees')
+    Route::middleware('api.permission:company_employees')->group(function () {
         Route::get('/employees', [\App\Http\Controllers\Api\Owner\EmployeeController::class, 'getEmployees']);
         Route::post('/employees', [\App\Http\Controllers\Api\Owner\EmployeeController::class, 'store']);
         Route::get('/employees/{id}', [\App\Http\Controllers\Api\Owner\EmployeeController::class, 'show']);
@@ -100,8 +100,8 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
         Route::delete('/employees/pending/{id}', [\App\Http\Controllers\Api\Owner\PendingEmployeeController::class, 'destroy']);
     });
 
-    // Branches for Owner (Protected by 'branches')
-    Route::middleware('api.permission:branches')->group(function () {
+    // Branches for Owner (Protected by 'company_branches')
+    Route::middleware('api.permission:company_branches')->group(function () {
         Route::get('/branches', [\App\Http\Controllers\Api\Owner\BranchController::class, 'index']);
         Route::post('/branches', [\App\Http\Controllers\Api\Owner\BranchController::class, 'store']);
         Route::get('/branches/{id}', [\App\Http\Controllers\Api\Owner\BranchController::class, 'show']);
@@ -109,8 +109,8 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
         Route::delete('/branches/{id}', [\App\Http\Controllers\Api\Owner\BranchController::class, 'destroy']);
     });
 
-    // Positions for Owner (Protected by 'positions')
-    Route::middleware('api.permission:positions')->group(function () {
+    // Positions for Owner (Protected by 'company_positions')
+    Route::middleware('api.permission:company_positions')->group(function () {
         Route::get('/positions', [\App\Http\Controllers\Api\Owner\PositionController::class, 'index']);
         Route::post('/positions', [\App\Http\Controllers\Api\Owner\PositionController::class, 'store']);
         Route::get('/positions/{id}', [\App\Http\Controllers\Api\Owner\PositionController::class, 'show']);
@@ -118,8 +118,8 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
         Route::delete('/positions/{id}', [\App\Http\Controllers\Api\Owner\PositionController::class, 'destroy']);
     });
 
-    // Divisions for Owner (Protected by 'divisions')
-    Route::middleware('api.permission:divisions')->group(function () {
+    // Divisions for Owner (Protected by 'company_divisions')
+    Route::middleware('api.permission:company_divisions')->group(function () {
         Route::get('/divisions', [\App\Http\Controllers\Api\Owner\DivisionController::class, 'index']);
         Route::post('/divisions', [\App\Http\Controllers\Api\Owner\DivisionController::class, 'store']);
         Route::get('/divisions/{id}', [\App\Http\Controllers\Api\Owner\DivisionController::class, 'show']);
@@ -127,22 +127,24 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
         Route::delete('/divisions/{id}', [\App\Http\Controllers\Api\Owner\DivisionController::class, 'destroy']);
     });
 
-    // Announcements & Feedbacks for Owner (Protected by 'announcements')
-    Route::middleware('api.permission:announcements')->group(function () {
+    // Announcements for Owner (Protected by 'company_announcements')
+    Route::middleware('api.permission:company_announcements')->group(function () {
         Route::get('/announcements', [\App\Http\Controllers\Api\Owner\AnnouncementController::class, 'index']);
         Route::post('/announcements', [\App\Http\Controllers\Api\Owner\AnnouncementController::class, 'store']);
         Route::get('/announcements/{id}', [\App\Http\Controllers\Api\Owner\AnnouncementController::class, 'show']);
         Route::post('/announcements/{id}', [\App\Http\Controllers\Api\Owner\AnnouncementController::class, 'update']);
         Route::delete('/announcements/{id}', [\App\Http\Controllers\Api\Owner\AnnouncementController::class, 'destroy']);
+    });
 
-        // Feedbacks (Kritik & Saran) for Owner
+    // Feedbacks (Kritik & Saran) for Owner (Protected by 'feedbacks')
+    Route::middleware('api.permission:feedbacks')->group(function () {
         Route::get('/feedbacks', [\App\Http\Controllers\Api\Owner\FeedbackController::class, 'index']);
         Route::get('/feedbacks/{id}', [\App\Http\Controllers\Api\Owner\FeedbackController::class, 'show']);
         Route::delete('/feedbacks/{id}', [\App\Http\Controllers\Api\Owner\FeedbackController::class, 'destroy']);
     });
 
-    // Holidays for Owner (Protected by 'holidays')
-    Route::middleware('api.permission:holidays')->group(function () {
+    // Holidays for Owner (Protected by 'company_holidays')
+    Route::middleware('api.permission:company_holidays')->group(function () {
         Route::get('/holidays', [\App\Http\Controllers\Api\Owner\HolidayController::class, 'index']);
         Route::post('/holidays', [\App\Http\Controllers\Api\Owner\HolidayController::class, 'store']);
         Route::get('/holidays/{id}', [\App\Http\Controllers\Api\Owner\HolidayController::class, 'show']);
@@ -151,7 +153,7 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
     });
 
     // Leaves for Owner
-    Route::middleware('api.permission:leave_categories')->group(function () {
+    Route::middleware('api.permission:company_leave_categories')->group(function () {
         Route::get('/leaves/categories', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'getCategories']);
         Route::post('/leaves/categories', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'storeCategory']);
         Route::get('/leaves/categories/{id}', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'showCategory']);
@@ -159,16 +161,13 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
         Route::delete('/leaves/categories/{id}', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'deleteCategory']);
     });
 
-    Route::middleware('api.permission:leave_balances')->group(function () {
-        Route::get('/leaves/balances', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'getBalances']);
-        Route::put('/leaves/balances/{id}', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'updateBalance']);
-    });
-
     Route::middleware('api.permission:leaves')->group(function () {
         Route::get('/leaves', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'getRequests']);
         Route::post('/leaves/{id}/approve', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'approveRequest']);
         Route::post('/leaves/{id}/reject', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'rejectRequest']);
         Route::delete('/leaves/{id}', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'deleteRequest']);
+        Route::get('/leaves/balances', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'getBalances']);
+        Route::put('/leaves/balances/{id}', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'updateBalance']);
     });
 
     // Overtimes for Owner (Protected by 'overtimes')
@@ -179,24 +178,24 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
         Route::delete('/overtimes/{id}', [\App\Http\Controllers\Api\Owner\OvertimeController::class, 'destroy']);
     });
 
-    // Agendas for Owner (Protected by 'employee_schedules')
-    Route::middleware('api.permission:employee_schedules')->group(function () {
+    // Agendas for Owner (Protected by 'agendas')
+    Route::middleware('api.permission:agendas')->group(function () {
         Route::get('/agendas', [\App\Http\Controllers\Api\Owner\AgendaController::class, 'index']);
         Route::post('/agendas', [\App\Http\Controllers\Api\Owner\AgendaController::class, 'store']);
         Route::put('/agendas/{id}', [\App\Http\Controllers\Api\Owner\AgendaController::class, 'update']);
         Route::delete('/agendas/{id}', [\App\Http\Controllers\Api\Owner\AgendaController::class, 'destroy']);
     });
 
-    // Daily Reports for Owner (Protected by 'all_daily_reports')
-    Route::middleware('api.permission:all_daily_reports')->group(function () {
+    // Daily Reports for Owner (Protected by 'daily_reports')
+    Route::middleware('api.permission:daily_reports')->group(function () {
         Route::get('/daily-reports', [\App\Http\Controllers\Api\Owner\DailyReportController::class, 'index']);
         Route::post('/daily-reports', [\App\Http\Controllers\Api\Owner\DailyReportController::class, 'store']);
         Route::post('/daily-reports/{id}', [\App\Http\Controllers\Api\Owner\DailyReportController::class, 'update']);
         Route::delete('/daily-reports/{id}', [\App\Http\Controllers\Api\Owner\DailyReportController::class, 'destroy']);
     });
 
-    // Attendances for Owner (Protected by 'all_attendances')
-    Route::middleware('api.permission:all_attendances')->group(function () {
+    // Attendances for Owner (Protected by 'attendances')
+    Route::middleware('api.permission:attendances')->group(function () {
         Route::get('/attendances', [\App\Http\Controllers\Api\Owner\AttendanceController::class, 'index']);
     });
 
@@ -219,8 +218,8 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
         Route::post('/loans/{id}/installments/{installmentId}/update', [\App\Http\Controllers\Api\Owner\LoanController::class, 'updateInstallment']);
     });
 
-    // Payrolls for Owner (Protected by 'payrolls')
-    Route::middleware('api.permission:payrolls')->group(function () {
+    // Payrolls for Owner (Protected by 'company_payrolls')
+    Route::middleware('api.permission:company_payrolls')->group(function () {
         Route::get('/payrolls', [\App\Http\Controllers\Api\Owner\PayrollController::class, 'index']);
         Route::get('/payrolls/{id}/items', [\App\Http\Controllers\Api\Owner\PayrollController::class, 'items']);
         Route::get('/payrolls/{id}/items/{itemId}', [\App\Http\Controllers\Api\Owner\PayrollController::class, 'showItem']);
@@ -229,8 +228,8 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
         Route::delete('/payrolls/{id}', [\App\Http\Controllers\Api\Owner\PayrollController::class, 'destroy']);
     });
 
-    // System Settings for Owner (Protected by 'system_settings')
-    Route::middleware('api.permission:system_settings')->group(function () {
+    // System Settings for Owner (Protected by 'company_settings')
+    Route::middleware('api.permission:company_settings')->group(function () {
         Route::get('/settings', [\App\Http\Controllers\Api\Owner\SettingController::class, 'index']);
         Route::get('/settings/attendance', [\App\Http\Controllers\Api\Owner\SettingController::class, 'getAttendance']);
         Route::put('/settings/attendance', [\App\Http\Controllers\Api\Owner\SettingController::class, 'updateAttendance']);
@@ -282,10 +281,12 @@ Route::middleware('auth:sanctum')->prefix('employee')->group(function () {
     Route::post('/overtimes/{id}/cancel', [\App\Http\Controllers\Api\Employee\OvertimeController::class, 'cancel']);
 
     // Agendas for Employee
-    Route::get('/agendas', [\App\Http\Controllers\Api\Employee\AgendaController::class, 'index']);
-    Route::post('/agendas', [\App\Http\Controllers\Api\Employee\AgendaController::class, 'store']);
-    Route::put('/agendas/{id}', [\App\Http\Controllers\Api\Employee\AgendaController::class, 'update']);
-    Route::delete('/agendas/{id}', [\App\Http\Controllers\Api\Employee\AgendaController::class, 'destroy']);
+    Route::middleware('api.permission:agendas')->group(function () {
+        Route::get('/agendas', [\App\Http\Controllers\Api\Employee\AgendaController::class, 'index']);
+        Route::post('/agendas', [\App\Http\Controllers\Api\Employee\AgendaController::class, 'store']);
+        Route::put('/agendas/{id}', [\App\Http\Controllers\Api\Employee\AgendaController::class, 'update']);
+        Route::delete('/agendas/{id}', [\App\Http\Controllers\Api\Employee\AgendaController::class, 'destroy']);
+    });
 
     // Daily Reports for Employee
     Route::get('/daily-reports', [\App\Http\Controllers\Api\Employee\DailyReportController::class, 'index']);
@@ -302,9 +303,11 @@ Route::middleware('auth:sanctum')->prefix('employee')->group(function () {
     Route::get('/presence/camera', [\App\Http\Controllers\Api\Employee\PresenceController::class, 'checkCamera']);
     Route::post('/presence', [\App\Http\Controllers\Api\Employee\PresenceController::class, 'store']);
 
-    // Payrolls (Slip Gaji) for Employee
-    Route::get('/payrolls', [\App\Http\Controllers\Api\Employee\PayrollController::class, 'index']);
-    Route::get('/payrolls/{id}/download', [\App\Http\Controllers\Api\Employee\PayrollController::class, 'download'])->name('api.employee.payrolls.download');
+    // Payrolls (Slip Gaji) for Employee (Protected by 'payslips')
+    Route::middleware('api.permission:payslips')->group(function () {
+        Route::get('/payrolls', [\App\Http\Controllers\Api\Employee\PayrollController::class, 'index']);
+        Route::get('/payrolls/{id}/download', [\App\Http\Controllers\Api\Employee\PayrollController::class, 'download'])->name('api.employee.payrolls.download');
+    });
 
     // Loans (Kasbon / Pinjaman) for Employee
     Route::get('/loans', [\App\Http\Controllers\Api\Employee\LoanController::class, 'index']);
@@ -320,11 +323,13 @@ Route::middleware('auth:sanctum')->prefix('employee')->group(function () {
     // Announcements (Pengumuman) for Employee
     Route::get('/announcements', [\App\Http\Controllers\Api\Employee\AnnouncementController::class, 'index']);
 
-    // Feedbacks (Kritik & Saran) for Employee
-    Route::get('/feedbacks', [\App\Http\Controllers\Api\Employee\FeedbackController::class, 'index']);
-    Route::post('/feedbacks', [\App\Http\Controllers\Api\Employee\FeedbackController::class, 'store']);
-    Route::get('/feedbacks/{id}', [\App\Http\Controllers\Api\Employee\FeedbackController::class, 'show']);
-    Route::delete('/feedbacks/{id}', [\App\Http\Controllers\Api\Employee\FeedbackController::class, 'destroy']);
+    // Feedbacks (Kritik & Saran) for Employee (Protected by 'feedbacks')
+    Route::middleware('api.permission:feedbacks')->group(function () {
+        Route::get('/feedbacks', [\App\Http\Controllers\Api\Employee\FeedbackController::class, 'index']);
+        Route::post('/feedbacks', [\App\Http\Controllers\Api\Employee\FeedbackController::class, 'store']);
+        Route::get('/feedbacks/{id}', [\App\Http\Controllers\Api\Employee\FeedbackController::class, 'show']);
+        Route::delete('/feedbacks/{id}', [\App\Http\Controllers\Api\Employee\FeedbackController::class, 'destroy']);
+    });
 
     // Profile & Security for Employee
     Route::get('/profile', [\App\Http\Controllers\Api\Employee\ProfileController::class, 'show']);
