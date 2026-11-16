@@ -35,9 +35,9 @@ export const CANONICAL_KEYS = [
     'company_schedules',
     'company_leave_categories',
     'company_holidays',
+    'company_payrolls',
     'company_announcements',
     'company_settings',
-    'company_payrolls',
 ];
 
 // =========================================================================
@@ -223,6 +223,12 @@ export const MOBILE_COMPANY_MENUS = [
         disabled: { view: false, create: false, edit: false, delete: false },
     },
     {
+        key: 'company_payrolls',
+        title: 'Penggajian',
+        desc: 'Kelola dan proses penggajian payroll di Tab Perusahaan Mobile.',
+        disabled: { view: false, create: false, edit: true, delete: false },
+    },
+    {
         key: 'company_announcements',
         title: 'Pengumuman',
         desc: 'Kelola siaran pengumuman kantor di Tab Perusahaan Mobile.',
@@ -233,12 +239,6 @@ export const MOBILE_COMPANY_MENUS = [
         title: 'Pengaturan',
         desc: 'Aturan toleransi keterlambatan, denda, dan kasbon di Tab Perusahaan Mobile.',
         disabled: { view: false, create: true, edit: false, delete: true },
-    },
-    {
-        key: 'company_payrolls',
-        title: 'Penggajian',
-        desc: 'Kelola dan proses penggajian payroll di Tab Perusahaan Mobile.',
-        disabled: { view: false, create: false, edit: false, delete: false },
     },
 ];
 

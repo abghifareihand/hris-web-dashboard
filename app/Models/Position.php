@@ -46,9 +46,9 @@ class Position extends Model
         'company_schedules',
         'company_leave_categories',
         'company_holidays',
+        'company_payrolls',
         'company_announcements',
         'company_settings',
-        'company_payrolls',
     ];
 
     /**
