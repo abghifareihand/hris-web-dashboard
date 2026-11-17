@@ -166,6 +166,9 @@ Route::middleware('auth:sanctum')->prefix('owner')->group(function () {
         Route::post('/leaves/{id}/approve', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'approveRequest']);
         Route::post('/leaves/{id}/reject', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'rejectRequest']);
         Route::delete('/leaves/{id}', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'deleteRequest']);
+    });
+
+    Route::middleware('api.permission:leave_balances')->group(function () {
         Route::get('/leaves/balances', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'getBalances']);
         Route::put('/leaves/balances/{id}', [\App\Http\Controllers\Api\Owner\LeaveController::class, 'updateBalance']);
     });

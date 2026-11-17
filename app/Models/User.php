@@ -107,7 +107,7 @@ class User extends Authenticatable
     /**
      * Check if user has permission for a specific menu and action.
      */
-    public function hasPermission(string $menuKey, string $action = 'view'): bool
+    public function hasPermission(string $menuKey, string $action = 'view', ?string $platform = null): bool
     {
         if ($this->isOwner() || $this->isAdmin()) {
             return true;
@@ -122,9 +122,28 @@ class User extends Authenticatable
             return false;
         }
 
-        $permissions = $this->employee->position?->permissions ?? Position::defaultPermissions();
+        $platform = $platform ?? (request()?->is('api/*') ? 'mobile' : 'web');
+        $effective = $this->getEffectivePermissions($platform);
 
-        return !empty($permissions[$menuKey][$action]);
+        // Direct check
+        if (isset($effective[$menuKey][$action])) {
+            return (bool) $effective[$menuKey][$action];
+        }
+
+        // Bi-directional alias fallback between company_* and clean web keys
+        if (str_starts_with($menuKey, 'company_')) {
+            $cleanKey = substr($menuKey, 8);
+            if (isset($effective[$cleanKey][$action])) {
+                return (bool) $effective[$cleanKey][$action];
+            }
+        } else {
+            $prefixedKey = 'company_' . $menuKey;
+            if (isset($effective[$prefixedKey][$action])) {
+                return (bool) $effective[$prefixedKey][$action];
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -164,16 +183,20 @@ class User extends Authenticatable
     }
 
     /**
-     * Get effective permissions array for Inertia Vue.
+     * Get effective permissions array for Inertia Vue or Mobile API.
      */
-    public function getEffectivePermissions(): array
+    public function getEffectivePermissions(?string $platform = null): array
     {
         if ($this->isOwner() || $this->isAdmin()) {
             return ['*' => ['view' => true, 'create' => true, 'edit' => true, 'delete' => true]];
         }
 
+        $platform = $platform ?? (request()?->is('api/*') ? 'mobile' : 'web');
+
         $raw = $this->employee?->position?->permissions ?? Position::defaultPermissions();
-        return Position::formatPermissions(is_array($raw) ? $raw : []);
+        $formatted = Position::formatPermissions(is_array($raw) ? $raw : []);
+
+        return $formatted[$platform] ?? ($formatted['mobile'] ?? []);
     }
 
     /**

@@ -539,7 +539,7 @@ class AuthController extends Controller
                 'avatar' => $user->avatar,
                 'avatar_url' => $user->avatar ? asset('storage/' . $user->avatar) : null,
                 'has_company' => $user->has_company,
-                'permissions' => $user->getEffectivePermissions(),
+                'permissions' => $user->getEffectivePermissions('mobile'),
                 'allowed_branches' => $user->getAllowedBranchIds(),
                 'allowed_divisions' => $user->getAllowedDivisionIds(),
                 'created_at' => Carbon::parse($user->created_at ?? now())->format('Y-m-d H:i:s'),
@@ -563,7 +563,7 @@ class AuthController extends Controller
             'status' => true,
             'message' => 'Profil company berhasil diambil.',
             'profile' => $user->load('company'),
-            'permissions' => $user->getEffectivePermissions(),
+            'permissions' => $user->getEffectivePermissions('mobile'),
             'allowed_branches' => $user->getAllowedBranchIds(),
             'allowed_divisions' => $user->getAllowedDivisionIds(),
         ]);
@@ -584,7 +584,7 @@ class AuthController extends Controller
             'status' => true,
             'message' => 'Profil employee berhasil diambil.',
             'profile' => $user->load(['employee.company', 'employee.position', 'employee.branch', 'employee.division']),
-            'permissions' => $user->getEffectivePermissions(),
+            'permissions' => $user->getEffectivePermissions('mobile'),
             'allowed_branches' => $user->getAllowedBranchIds(),
             'allowed_divisions' => $user->getAllowedDivisionIds(),
         ]);

@@ -75,7 +75,7 @@ class HandleInertiaRequests extends Middleware
                         'avatar' => $user->employee->avatar ?? null,
                     ] : null,
                 ] : null,
-                'permissions' => $user ? $user->getEffectivePermissions() : [],
+                'permissions' => $user ? $user->getEffectivePermissions('web') : [],
                 'is_owner' => $user ? $user->isOwner() : false,
                 'allowed_branch_ids' => $user ? $user->getAllowedBranchIds() : null,
                 'allowed_division_ids' => $user ? $user->getAllowedDivisionIds() : null,

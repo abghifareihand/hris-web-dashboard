@@ -20,7 +20,7 @@ class LeaveController extends Controller
 {
     public function pending(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }
@@ -86,7 +86,7 @@ class LeaveController extends Controller
 
     public function approve(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }
@@ -151,7 +151,7 @@ class LeaveController extends Controller
 
     public function reject(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }
@@ -180,7 +180,7 @@ class LeaveController extends Controller
 
     public function index(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }
@@ -251,7 +251,7 @@ class LeaveController extends Controller
 
     public function balance(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }
@@ -343,7 +343,7 @@ class LeaveController extends Controller
 
     public function editBalance(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }
@@ -363,7 +363,7 @@ class LeaveController extends Controller
 
     public function updateBalance(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }
@@ -401,7 +401,7 @@ class LeaveController extends Controller
 
     public function categories(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }
@@ -431,7 +431,7 @@ class LeaveController extends Controller
 
     public function storeCategory(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }
@@ -471,7 +471,7 @@ class LeaveController extends Controller
 
     public function editCategory(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }
@@ -485,7 +485,7 @@ class LeaveController extends Controller
 
     public function updateCategory(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }
@@ -508,7 +508,7 @@ class LeaveController extends Controller
 
     public function destroyCategory(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }
@@ -522,7 +522,7 @@ class LeaveController extends Controller
 
     public function destroy(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }

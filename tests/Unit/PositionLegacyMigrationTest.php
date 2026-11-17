@@ -7,7 +7,7 @@ use PHPUnit\Framework\TestCase;
 
 class PositionLegacyMigrationTest extends TestCase
 {
-    public function test_legacy_screenshot_permissions_are_migrated_to_25_canonical_keys()
+    public function test_legacy_screenshot_permissions_are_migrated_to_mobile_and_web_structures()
     {
         // Exact raw permissions from user's screenshot
         $legacyRaw = [
@@ -39,49 +39,59 @@ class PositionLegacyMigrationTest extends TestCase
 
         $migrated = Position::formatPermissions($legacyRaw);
 
-        // 1. Must have exactly 24 keys
-        $this->assertCount(24, $migrated);
-        $this->assertSame(Position::CANONICAL_MENU_KEYS, array_keys($migrated));
+        // Result must have both 'mobile' and 'web'
+        $this->assertArrayHasKey('mobile', $migrated);
+        $this->assertArrayHasKey('web', $migrated);
 
-        // 2. No old keys
-        $this->assertArrayNotHasKey('leave_balances', $migrated);
-        $this->assertArrayNotHasKey('employee_data', $migrated);
-        $this->assertArrayNotHasKey('shifts', $migrated);
-        $this->assertArrayNotHasKey('branches', $migrated);
-        $this->assertArrayNotHasKey('divisions', $migrated);
-        $this->assertArrayNotHasKey('positions', $migrated);
-        $this->assertArrayNotHasKey('holidays', $migrated);
-        $this->assertArrayNotHasKey('employee_schedules', $migrated);
-        $this->assertArrayNotHasKey('leave_categories', $migrated);
-        $this->assertArrayNotHasKey('system_settings', $migrated);
-        $this->assertArrayNotHasKey('all_attendances', $migrated);
-        $this->assertArrayNotHasKey('all_daily_reports', $migrated);
-        $this->assertArrayNotHasKey('swap_personal', $migrated);
-        $this->assertArrayNotHasKey('swap_team', $migrated);
+        $mobile = $migrated['mobile'];
+        $web = $migrated['web'];
 
-        // 3. Tab Perusahaan keys must be view: true
-        $this->assertTrue($migrated['company_profile']['view']);
-        $this->assertTrue($migrated['company_employees']['view']);
-        $this->assertTrue($migrated['company_branches']['view']);
-        $this->assertTrue($migrated['company_divisions']['view']);
-        $this->assertTrue($migrated['company_positions']['view']);
-        $this->assertTrue($migrated['company_shifts']['view']);
-        $this->assertTrue($migrated['company_schedules']['view']);
-        $this->assertTrue($migrated['company_leave_categories']['view']);
-        $this->assertTrue($migrated['company_holidays']['view']);
-        $this->assertTrue($migrated['company_announcements']['view']);
-        $this->assertTrue($migrated['company_settings']['view']);
+        // 1. MOBILE: Must have exactly 25 keys
+        $this->assertCount(25, $mobile);
+        $this->assertSame(Position::CANONICAL_MOBILE_KEYS, array_keys($mobile));
 
-        // 4. Home ESS announcements must NOT be true (it was migrated to company_announcements)
-        $this->assertFalse($migrated['announcements']['view']);
+        // 2. WEB: Must have exactly 21 clean keys
+        $this->assertCount(21, $web);
+        $this->assertSame(Position::CANONICAL_WEB_KEYS, array_keys($web));
 
-        // 5. Home ESS reimbursements create action must be preserved
-        $this->assertTrue($migrated['reimbursements']['create']);
-        $this->assertFalse($migrated['reimbursements']['view']);
+        // 3. Mobile Tab Perusahaan keys must be view: true
+        $this->assertTrue($mobile['company_profile']['view']);
+        $this->assertTrue($mobile['company_employees']['view']);
+        $this->assertTrue($mobile['company_branches']['view']);
+        $this->assertTrue($mobile['company_divisions']['view']);
+        $this->assertTrue($mobile['company_positions']['view']);
+        $this->assertTrue($mobile['company_shifts']['view']);
+        $this->assertTrue($mobile['company_schedules']['view']);
+        $this->assertTrue($mobile['company_leave_categories']['view']);
+        $this->assertTrue($mobile['company_holidays']['view']);
+        $this->assertTrue($mobile['company_announcements']['view']);
+        $this->assertTrue($mobile['company_settings']['view']);
 
-        // 6. Security guard on positions
-        $this->assertFalse($migrated['company_positions']['create']);
-        $this->assertFalse($migrated['company_positions']['edit']);
-        $this->assertFalse($migrated['company_positions']['delete']);
+        // 4. Web Clean Keys must be view: true
+        $this->assertTrue($web['company_profile']['view']);
+        $this->assertTrue($web['employees']['view']);
+        $this->assertTrue($web['branches']['view']);
+        $this->assertTrue($web['divisions']['view']);
+        $this->assertTrue($web['positions']['view']);
+        $this->assertTrue($web['shifts']['view']);
+        $this->assertTrue($web['schedules']['view']);
+        $this->assertTrue($web['leave_categories']['view']);
+        $this->assertTrue($web['holidays']['view']);
+        $this->assertTrue($web['announcements']['view']);
+        $this->assertTrue($web['settings']['view']);
+
+        // 5. Security guards on Mobile & Web
+        $this->assertFalse($mobile['company_positions']['create']);
+        $this->assertFalse($mobile['company_positions']['edit']);
+        $this->assertFalse($mobile['company_positions']['delete']);
+        $this->assertFalse($mobile['company_payrolls']['edit']); // Penggajian edit = false
+        $this->assertFalse($mobile['leave_balances']['delete']);
+
+        $this->assertFalse($web['positions']['create']);
+        $this->assertFalse($web['positions']['edit']);
+        $this->assertFalse($web['positions']['delete']);
+        $this->assertFalse($web['payrolls']['edit']); // Penggajian edit = false
+        $this->assertFalse($web['leave_balances']['create']);
+        $this->assertFalse($web['leave_balances']['delete']);
     }
 }

@@ -17,7 +17,14 @@ createInertiaApp({
             if (auth.is_owner || auth.user.role === 'owner' || auth.user.role === 'admin') {
                 return true;
             }
-            return Boolean(auth.permissions?.[menuKey]?.[action]);
+            let perm = auth.permissions?.[menuKey]?.[action];
+            if (perm === undefined && menuKey.startsWith('company_')) {
+                const cleanKey = menuKey.replace(/^company_/, '');
+                perm = auth.permissions?.[cleanKey]?.[action];
+            } else if (perm === undefined) {
+                perm = auth.permissions?.[`company_${menuKey}`]?.[action];
+            }
+            return Boolean(perm);
         };
 
         app.use(plugin)

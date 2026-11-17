@@ -215,12 +215,12 @@ class ApiRbacTest extends TestCase
 
     public function test_permissions_json_keys_are_strictly_ordered_view_create_edit_delete()
     {
-        $this->assertCount(24, Position::CANONICAL_MENU_KEYS);
+        $this->assertCount(25, Position::CANONICAL_MENU_KEYS);
         $this->assertContains('payslips', Position::CANONICAL_MENU_KEYS);
         $this->assertContains('feedbacks', Position::CANONICAL_MENU_KEYS);
         $this->assertContains('agendas', Position::CANONICAL_MENU_KEYS);
         $this->assertContains('company_payrolls', Position::CANONICAL_MENU_KEYS);
-        $this->assertNotContains('leave_balances', Position::CANONICAL_MENU_KEYS);
+        $this->assertContains('leave_balances', Position::CANONICAL_MENU_KEYS);
 
         Sanctum::actingAs($this->staffUser);
 

@@ -95,7 +95,7 @@ class CheckApiPermission
             }
         }
 
-        if (!$user->hasPermission($menuKey, $action)) {
+        if (!$user->hasPermission($menuKey, $action, 'mobile')) {
             $actionLabels = [
                 'view' => 'melihat',
                 'create' => 'menambah',

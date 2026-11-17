@@ -26,7 +26,7 @@ class DashboardController extends Controller
     public function index()
     {
         $user = auth()->user();
-        $company = $user->company;
+        $company = $user->getCompany();
 
         if (!$company) {
             abort(403, 'Akses ditolak.');
@@ -37,30 +37,31 @@ class DashboardController extends Controller
         // Karyawan tidak memiliki dashboard eksekutif - arahkan langsung ke menu pertama yang diizinkan
         if (!$isOwner) {
             $priorityRoutes = [
-                'company_employees' => 'owner.management.employees.index',
+                'employees' => 'owner.management.employees.index',
                 'company_profile' => 'owner.management.company.profile.index',
-                'company_branches' => 'owner.management.company.branches.index',
-                'company_divisions' => 'owner.management.company.divisions.index',
-                'company_positions' => 'owner.management.company.positions.index',
-                'company_shifts' => 'owner.management.schedules.shifts.index',
-                'company_holidays' => 'owner.management.schedules.holidays.index',
-                'company_schedules' => 'owner.management.schedules.work.index',
+                'branches' => 'owner.management.company.branches.index',
+                'divisions' => 'owner.management.company.divisions.index',
+                'positions' => 'owner.management.company.positions.index',
+                'shifts' => 'owner.management.schedules.shifts.index',
+                'holidays' => 'owner.management.schedules.holidays.index',
+                'schedules' => 'owner.management.schedules.work.index',
                 'swap_schedules' => 'owner.management.schedules.swap-personal.index',
                 'leaves' => 'owner.management.leaves.index',
-                'company_leave_categories' => 'owner.management.leaves.categories.index',
+                'leave_balances' => 'owner.management.leaves.balance.index',
+                'leave_categories' => 'owner.management.leaves.categories.index',
                 'overtimes' => 'owner.management.overtimes.index',
                 'reimbursements' => 'owner.finance.reimbursements.index',
                 'loans' => 'owner.finance.loans.index',
-                'company_payrolls' => 'owner.finance.payrolls.index',
+                'payrolls' => 'owner.finance.payrolls.index',
                 'attendances' => 'owner.reports.attendances.index',
                 'daily_reports' => 'owner.reports.performances.daily.index',
-                'company_announcements' => 'owner.announcements.index',
+                'announcements' => 'owner.announcements.index',
                 'feedbacks' => 'owner.feedbacks.index',
-                'company_settings' => 'owner.management.attendance.settings.index',
+                'settings' => 'owner.management.attendance.settings.index',
             ];
 
             foreach ($priorityRoutes as $menuKey => $routeName) {
-                if ($user->hasPermission($menuKey, 'view')) {
+                if ($user->hasPermission($menuKey, 'view', 'web')) {
                     return redirect()->route($routeName);
                 }
             }

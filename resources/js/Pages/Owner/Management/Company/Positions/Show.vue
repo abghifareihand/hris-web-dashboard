@@ -256,7 +256,7 @@ const permissions = computed(() => {
                                         <div class="flex items-center justify-center">
                                             <Checkbox
                                                 :id="`show-mobile-home-${item.key}-view`"
-                                                :modelValue="Boolean(permissions[item.key]?.view)"
+                                                :modelValue="Boolean(permissions.mobile?.[item.key]?.view)"
                                                 :disabled="true"
                                             />
                                         </div>
@@ -266,7 +266,7 @@ const permissions = computed(() => {
                                         <div v-if="item.hasCreate" class="flex items-center justify-center">
                                             <Checkbox
                                                 :id="`show-mobile-home-${item.key}-create`"
-                                                :modelValue="Boolean(permissions[item.key]?.create)"
+                                                :modelValue="Boolean(permissions.mobile?.[item.key]?.create)"
                                                 :disabled="true"
                                             />
                                         </div>
@@ -286,14 +286,14 @@ const permissions = computed(() => {
                         <div>
                             <div class="flex items-center gap-2">
                                 <span class="font-bold text-xs text-slate-800 tracking-wide uppercase">
-                                    2. Menu Home — Persetujuan Pengajuan (Approval)
+                                    2. Menu Home — Persetujuan & Kelola Karyawan
                                 </span>
                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                                    Persetujuan & Hapus
+                                    Approval & Kelola Karyawan
                                 </span>
                             </div>
                             <p class="text-[11px] text-slate-500 mt-0.5">
-                                Persetujuan, penolakan, atau penghapusan permohonan pengajuan staf / rekan kerja.
+                                Persetujuan pengajuan staf serta pengelolaan presensi, laporan harian, dan kuota sisa cuti karyawan langsung dari Home Mobile.
                             </p>
                         </div>
                     </div>
@@ -302,7 +302,7 @@ const permissions = computed(() => {
                         <table class="w-full text-left border-collapse">
                             <thead>
                                 <tr class="bg-slate-50/70 border-b border-slate-200 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
-                                    <th class="py-3 px-4 min-w-[300px]">Modul Persetujuan</th>
+                                    <th class="py-3 px-4 min-w-[300px]">Modul Persetujuan & Kelola Karyawan</th>
                                     <th class="py-3 px-3 text-center w-24">Edit</th>
                                     <th class="py-3 px-3 text-center w-24">Delete</th>
                                 </tr>
@@ -319,23 +319,25 @@ const permissions = computed(() => {
                                     </td>
                                     <!-- Approval Edit Checkbox -->
                                     <td class="py-3 px-3 text-center align-middle">
-                                        <div class="flex items-center justify-center">
+                                        <div v-if="!item.disabled?.edit" class="flex items-center justify-center">
                                             <Checkbox
                                                 :id="`show-mobile-approval-${item.key}-edit`"
-                                                :modelValue="Boolean(permissions[item.key]?.edit)"
+                                                :modelValue="Boolean(permissions.mobile?.[item.key]?.edit)"
                                                 :disabled="true"
                                             />
                                         </div>
+                                        <div v-else class="text-slate-300 text-center text-xs">—</div>
                                     </td>
                                     <!-- Approval Delete Checkbox -->
                                     <td class="py-3 px-3 text-center align-middle">
-                                        <div class="flex items-center justify-center">
+                                        <div v-if="!item.disabled?.delete" class="flex items-center justify-center">
                                             <Checkbox
                                                 :id="`show-mobile-approval-${item.key}-delete`"
-                                                :modelValue="Boolean(permissions[item.key]?.delete)"
+                                                :modelValue="Boolean(permissions.mobile?.[item.key]?.delete)"
                                                 :disabled="true"
                                             />
                                         </div>
+                                        <div v-else class="text-slate-300 text-center text-xs">—</div>
                                     </td>
                                 </tr>
                             </tbody>
@@ -387,7 +389,7 @@ const permissions = computed(() => {
                                         <div v-if="!item.disabled?.view" class="flex items-center justify-center">
                                             <Checkbox
                                                 :id="`show-mobile-company-${item.key}-view`"
-                                                :modelValue="Boolean(permissions[item.key]?.view)"
+                                                :modelValue="Boolean(permissions.mobile?.[item.key]?.view)"
                                                 :disabled="true"
                                             />
                                         </div>
@@ -398,7 +400,7 @@ const permissions = computed(() => {
                                         <div v-if="!item.disabled?.create" class="flex items-center justify-center">
                                             <Checkbox
                                                 :id="`show-mobile-company-${item.key}-create`"
-                                                :modelValue="Boolean(permissions[item.key]?.create)"
+                                                :modelValue="Boolean(permissions.mobile?.[item.key]?.create)"
                                                 :disabled="true"
                                             />
                                         </div>
@@ -409,7 +411,7 @@ const permissions = computed(() => {
                                         <div v-if="!item.disabled?.edit" class="flex items-center justify-center">
                                             <Checkbox
                                                 :id="`show-mobile-company-${item.key}-edit`"
-                                                :modelValue="Boolean(permissions[item.key]?.edit)"
+                                                :modelValue="Boolean(permissions.mobile?.[item.key]?.edit)"
                                                 :disabled="true"
                                             />
                                         </div>
@@ -420,7 +422,7 @@ const permissions = computed(() => {
                                         <div v-if="!item.disabled?.delete" class="flex items-center justify-center">
                                             <Checkbox
                                                 :id="`show-mobile-company-${item.key}-delete`"
-                                                :modelValue="Boolean(permissions[item.key]?.delete)"
+                                                :modelValue="Boolean(permissions.mobile?.[item.key]?.delete)"
                                                 :disabled="true"
                                             />
                                         </div>
@@ -478,7 +480,7 @@ const permissions = computed(() => {
                                         <div v-if="!item.disabled?.view" class="flex items-center justify-center">
                                             <Checkbox
                                                 :id="`show-web-${item.key}-view`"
-                                                :modelValue="Boolean(permissions[item.key]?.view)"
+                                                :modelValue="Boolean(permissions.web?.[item.key]?.view)"
                                                 :disabled="true"
                                             />
                                         </div>
@@ -489,7 +491,7 @@ const permissions = computed(() => {
                                         <div v-if="!item.disabled?.create" class="flex items-center justify-center">
                                             <Checkbox
                                                 :id="`show-web-${item.key}-create`"
-                                                :modelValue="Boolean(permissions[item.key]?.create)"
+                                                :modelValue="Boolean(permissions.web?.[item.key]?.create)"
                                                 :disabled="true"
                                             />
                                         </div>
@@ -500,7 +502,7 @@ const permissions = computed(() => {
                                         <div v-if="!item.disabled?.edit" class="flex items-center justify-center">
                                             <Checkbox
                                                 :id="`show-web-${item.key}-edit`"
-                                                :modelValue="Boolean(permissions[item.key]?.edit)"
+                                                :modelValue="Boolean(permissions.web?.[item.key]?.edit)"
                                                 :disabled="true"
                                             />
                                         </div>
@@ -511,7 +513,7 @@ const permissions = computed(() => {
                                         <div v-if="!item.disabled?.delete" class="flex items-center justify-center">
                                             <Checkbox
                                                 :id="`show-web-${item.key}-delete`"
-                                                :modelValue="Boolean(permissions[item.key]?.delete)"
+                                                :modelValue="Boolean(permissions.web?.[item.key]?.delete)"
                                                 :disabled="true"
                                             />
                                         </div>

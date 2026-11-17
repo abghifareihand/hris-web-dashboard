@@ -53,7 +53,7 @@ class CheckWebPermission
             }
         }
 
-        if (!$user->hasPermission($menuKey, $action)) {
+        if (!$user->hasPermission($menuKey, $action, 'web')) {
             if ($request->expectsJson() || $request->header('X-Inertia')) {
                 abort(403, "Anda tidak memiliki izin ({$action}) untuk menu ini.");
             }

@@ -41,17 +41,36 @@ const form = useForm({
     permissions: normalizePermissions(props.position.permissions),
 });
 
-// Update specific checkbox action
-const updateAction = (menuKey, action, checked) => {
-    if (!form.permissions[menuKey]) {
-        form.permissions[menuKey] = {
+// Update specific checkbox on Mobile
+const updateMobileAction = (menuKey, action, checked) => {
+    if (!form.permissions.mobile) {
+        form.permissions.mobile = {};
+    }
+    if (!form.permissions.mobile[menuKey]) {
+        form.permissions.mobile[menuKey] = {
             view: false,
             create: false,
             edit: false,
             delete: false,
         };
     }
-    form.permissions[menuKey][action] = checked;
+    form.permissions.mobile[menuKey][action] = checked;
+};
+
+// Update specific checkbox on Web
+const updateWebAction = (menuKey, action, checked) => {
+    if (!form.permissions.web) {
+        form.permissions.web = {};
+    }
+    if (!form.permissions.web[menuKey]) {
+        form.permissions.web[menuKey] = {
+            view: false,
+            create: false,
+            edit: false,
+            delete: false,
+        };
+    }
+    form.permissions.web[menuKey][action] = checked;
 };
 
 const submit = () => {
@@ -239,8 +258,8 @@ const submit = () => {
                                                 <div class="flex items-center justify-center">
                                                     <Checkbox
                                                         :id="`mobile-home-${item.key}-view`"
-                                                        :modelValue="Boolean(form.permissions[item.key]?.view)"
-                                                        @update:modelValue="(val) => updateAction(item.key, 'view', val)"
+                                                        :modelValue="Boolean(form.permissions.mobile?.[item.key]?.view)"
+                                                        @update:modelValue="(val) => updateMobileAction(item.key, 'view', val)"
                                                     />
                                                 </div>
                                             </td>
@@ -249,8 +268,8 @@ const submit = () => {
                                                 <div v-if="item.hasCreate" class="flex items-center justify-center">
                                                     <Checkbox
                                                         :id="`mobile-home-${item.key}-create`"
-                                                        :modelValue="Boolean(form.permissions[item.key]?.create)"
-                                                        @update:modelValue="(val) => updateAction(item.key, 'create', val)"
+                                                        :modelValue="Boolean(form.permissions.mobile?.[item.key]?.create)"
+                                                        @update:modelValue="(val) => updateMobileAction(item.key, 'create', val)"
                                                     />
                                                 </div>
                                                 <div v-else class="text-slate-300 text-center text-xs">
@@ -269,14 +288,14 @@ const submit = () => {
                                 <div>
                                     <div class="flex items-center gap-2">
                                         <span class="font-bold text-xs text-slate-800 tracking-wide uppercase">
-                                            2. Menu Home — Persetujuan Pengajuan (Approval)
+                                            2. Menu Home — Persetujuan & Kelola Karyawan
                                         </span>
                                         <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                                            Persetujuan & Hapus
+                                            Approval & Kelola Karyawan
                                         </span>
                                     </div>
                                     <p class="text-[11px] text-slate-500 mt-0.5">
-                                        Persetujuan, penolakan, atau penghapusan permohonan pengajuan staf / rekan kerja.
+                                        Persetujuan pengajuan staf serta pengelolaan presensi, laporan harian, dan kuota sisa cuti karyawan langsung dari Home Mobile.
                                     </p>
                                 </div>
                             </div>
@@ -285,7 +304,7 @@ const submit = () => {
                                 <table class="w-full text-left border-collapse">
                                     <thead>
                                         <tr class="bg-slate-50/70 border-b border-slate-200 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
-                                            <th class="py-3 px-4 min-w-[300px]">Modul Persetujuan</th>
+                                            <th class="py-3 px-4 min-w-[300px]">Modul Persetujuan & Kelola Karyawan</th>
                                             <th class="py-3 px-3 text-center w-24">Edit</th>
                                             <th class="py-3 px-3 text-center w-24">Delete</th>
                                         </tr>
@@ -302,29 +321,31 @@ const submit = () => {
                                             </td>
                                             <!-- Approval Edit Checkbox -->
                                             <td class="py-3 px-3 text-center align-middle">
-                                                <div class="flex items-center justify-center">
+                                                <div v-if="!item.disabled?.edit" class="flex items-center justify-center">
                                                     <Checkbox
                                                         :id="`mobile-approval-${item.key}-edit`"
-                                                        :modelValue="Boolean(form.permissions[item.key]?.edit)"
+                                                        :modelValue="Boolean(form.permissions.mobile?.[item.key]?.edit)"
                                                         @update:modelValue="(val) => {
-                                                            updateAction(item.key, 'edit', val);
-                                                            if (val) updateAction(item.key, 'view', true);
+                                                            updateMobileAction(item.key, 'edit', val);
+                                                            if (val) updateMobileAction(item.key, 'view', true);
                                                         }"
                                                     />
                                                 </div>
+                                                <div v-else class="text-slate-300 text-center text-xs">—</div>
                                             </td>
                                             <!-- Approval Delete Checkbox -->
                                             <td class="py-3 px-3 text-center align-middle">
-                                                <div class="flex items-center justify-center">
+                                                <div v-if="!item.disabled?.delete" class="flex items-center justify-center">
                                                     <Checkbox
                                                         :id="`mobile-approval-${item.key}-delete`"
-                                                        :modelValue="Boolean(form.permissions[item.key]?.delete)"
+                                                        :modelValue="Boolean(form.permissions.mobile?.[item.key]?.delete)"
                                                         @update:modelValue="(val) => {
-                                                            updateAction(item.key, 'delete', val);
-                                                            if (val) updateAction(item.key, 'view', true);
+                                                            updateMobileAction(item.key, 'delete', val);
+                                                            if (val) updateMobileAction(item.key, 'view', true);
                                                         }"
                                                     />
                                                 </div>
+                                                <div v-else class="text-slate-300 text-center text-xs">—</div>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -376,8 +397,8 @@ const submit = () => {
                                                 <div v-if="!item.disabled?.view" class="flex items-center justify-center">
                                                     <Checkbox
                                                         :id="`mobile-company-${item.key}-view`"
-                                                        :modelValue="Boolean(form.permissions[item.key]?.view)"
-                                                        @update:modelValue="(val) => updateAction(item.key, 'view', val)"
+                                                        :modelValue="Boolean(form.permissions.mobile?.[item.key]?.view)"
+                                                        @update:modelValue="(val) => updateMobileAction(item.key, 'view', val)"
                                                     />
                                                 </div>
                                                 <div v-else class="text-slate-300 text-center text-xs">—</div>
@@ -387,8 +408,8 @@ const submit = () => {
                                                 <div v-if="!item.disabled?.create" class="flex items-center justify-center">
                                                     <Checkbox
                                                         :id="`mobile-company-${item.key}-create`"
-                                                        :modelValue="Boolean(form.permissions[item.key]?.create)"
-                                                        @update:modelValue="(val) => updateAction(item.key, 'create', val)"
+                                                        :modelValue="Boolean(form.permissions.mobile?.[item.key]?.create)"
+                                                        @update:modelValue="(val) => updateMobileAction(item.key, 'create', val)"
                                                     />
                                                 </div>
                                                 <div v-else class="text-slate-300 text-center text-xs">—</div>
@@ -398,8 +419,8 @@ const submit = () => {
                                                 <div v-if="!item.disabled?.edit" class="flex items-center justify-center">
                                                     <Checkbox
                                                         :id="`mobile-company-${item.key}-edit`"
-                                                        :modelValue="Boolean(form.permissions[item.key]?.edit)"
-                                                        @update:modelValue="(val) => updateAction(item.key, 'edit', val)"
+                                                        :modelValue="Boolean(form.permissions.mobile?.[item.key]?.edit)"
+                                                        @update:modelValue="(val) => updateMobileAction(item.key, 'edit', val)"
                                                     />
                                                 </div>
                                                 <div v-else class="text-slate-300 text-center text-xs">—</div>
@@ -409,8 +430,8 @@ const submit = () => {
                                                 <div v-if="!item.disabled?.delete" class="flex items-center justify-center">
                                                     <Checkbox
                                                         :id="`mobile-company-${item.key}-delete`"
-                                                        :modelValue="Boolean(form.permissions[item.key]?.delete)"
-                                                        @update:modelValue="(val) => updateAction(item.key, 'delete', val)"
+                                                        :modelValue="Boolean(form.permissions.mobile?.[item.key]?.delete)"
+                                                        @update:modelValue="(val) => updateMobileAction(item.key, 'delete', val)"
                                                     />
                                                 </div>
                                                 <div v-else class="text-slate-300 text-center text-xs">—</div>
@@ -467,8 +488,8 @@ const submit = () => {
                                                 <div v-if="!item.disabled?.view" class="flex items-center justify-center">
                                                     <Checkbox
                                                         :id="`web-${item.key}-view`"
-                                                        :modelValue="Boolean(form.permissions[item.key]?.view)"
-                                                        @update:modelValue="(val) => updateAction(item.key, 'view', val)"
+                                                        :modelValue="Boolean(form.permissions.web?.[item.key]?.view)"
+                                                        @update:modelValue="(val) => updateWebAction(item.key, 'view', val)"
                                                     />
                                                 </div>
                                                 <div v-else class="text-slate-300 text-center text-xs">—</div>
@@ -478,8 +499,8 @@ const submit = () => {
                                                 <div v-if="!item.disabled?.create" class="flex items-center justify-center">
                                                     <Checkbox
                                                         :id="`web-${item.key}-create`"
-                                                        :modelValue="Boolean(form.permissions[item.key]?.create)"
-                                                        @update:modelValue="(val) => updateAction(item.key, 'create', val)"
+                                                        :modelValue="Boolean(form.permissions.web?.[item.key]?.create)"
+                                                        @update:modelValue="(val) => updateWebAction(item.key, 'create', val)"
                                                     />
                                                 </div>
                                                 <div v-else class="text-slate-300 text-center text-xs">—</div>
@@ -489,8 +510,8 @@ const submit = () => {
                                                 <div v-if="!item.disabled?.edit" class="flex items-center justify-center">
                                                     <Checkbox
                                                         :id="`web-${item.key}-edit`"
-                                                        :modelValue="Boolean(form.permissions[item.key]?.edit)"
-                                                        @update:modelValue="(val) => updateAction(item.key, 'edit', val)"
+                                                        :modelValue="Boolean(form.permissions.web?.[item.key]?.edit)"
+                                                        @update:modelValue="(val) => updateWebAction(item.key, 'edit', val)"
                                                     />
                                                 </div>
                                                 <div v-else class="text-slate-300 text-center text-xs">—</div>
@@ -500,8 +521,8 @@ const submit = () => {
                                                 <div v-if="!item.disabled?.delete" class="flex items-center justify-center">
                                                     <Checkbox
                                                         :id="`web-${item.key}-delete`"
-                                                        :modelValue="Boolean(form.permissions[item.key]?.delete)"
-                                                        @update:modelValue="(val) => updateAction(item.key, 'delete', val)"
+                                                        :modelValue="Boolean(form.permissions.web?.[item.key]?.delete)"
+                                                        @update:modelValue="(val) => updateWebAction(item.key, 'delete', val)"
                                                     />
                                                 </div>
                                                 <div v-else class="text-slate-300 text-center text-xs">—</div>
