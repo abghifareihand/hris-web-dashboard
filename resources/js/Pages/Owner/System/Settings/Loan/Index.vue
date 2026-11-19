@@ -51,6 +51,22 @@ const submit = () => {
             </p>
         </div>
 
+        <!-- Read-only Banner for View-Only Users -->
+        <div
+            v-if="!$can('company_settings', 'edit')"
+            class="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-3 shadow-xs"
+        >
+            <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+                <p class="text-sm font-semibold text-amber-900">Mode Pratinjau (Hanya Lihat)</p>
+                <p class="text-xs text-amber-700 mt-0.5">
+                    Anda hanya memiliki hak akses untuk melihat konfigurasi pinjaman ini. Hubungi pemilik akun (owner) atau administrator untuk melakukan perubahan data.
+                </p>
+            </div>
+        </div>
+
         <form @submit.prevent="submit" class="space-y-6">
             <!-- Card 1: Plafon Maksimal Pinjaman per Siklus Gaji -->
             <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 space-y-6">
@@ -71,6 +87,7 @@ const submit = () => {
                             v-model="form.max_loan_amount"
                             :currency="true"
                             placeholder="Contoh: 10.000.000"
+                            :disabled="!$can('company_settings', 'edit')"
                             :error="form.errors.max_loan_amount"
                         />
                     </div>
@@ -84,6 +101,7 @@ const submit = () => {
                             v-model="form.max_loan_amount_weekly"
                             :currency="true"
                             placeholder="Contoh: 2.000.000"
+                            :disabled="!$can('company_settings', 'edit')"
                             :error="form.errors.max_loan_amount_weekly"
                         />
                     </div>
@@ -97,6 +115,7 @@ const submit = () => {
                             v-model="form.max_loan_amount_daily"
                             :currency="true"
                             placeholder="Contoh: 500.000"
+                            :disabled="!$can('company_settings', 'edit')"
                             :error="form.errors.max_loan_amount_daily"
                         />
                     </div>
@@ -125,6 +144,7 @@ const submit = () => {
                             max="60"
                             suffix="Bulan"
                             placeholder="Contoh: 12"
+                            :disabled="!$can('company_settings', 'edit')"
                             :error="form.errors.max_tenor_months"
                         />
                     </div>
@@ -141,6 +161,7 @@ const submit = () => {
                             max="52"
                             suffix="Minggu"
                             placeholder="Contoh: 4"
+                            :disabled="!$can('company_settings', 'edit')"
                             :error="form.errors.max_tenor_weeks"
                         />
                     </div>
@@ -157,6 +178,7 @@ const submit = () => {
                             max="90"
                             suffix="Hari"
                             placeholder="Contoh: 14"
+                            :disabled="!$can('company_settings', 'edit')"
                             :error="form.errors.max_tenor_days"
                         />
                     </div>
@@ -192,6 +214,7 @@ const submit = () => {
                             max="31"
                             suffix="Setiap Bulan"
                             placeholder="Contoh: 25"
+                            :disabled="!$can('company_settings', 'edit')"
                             :error="form.errors.due_date_day"
                         />
                         <p class="text-xs text-slate-500 leading-relaxed">
@@ -218,7 +241,7 @@ const submit = () => {
             </div>
 
             <!-- Bottom Save Bar -->
-            <div class="flex items-center justify-end gap-3 pt-2">
+            <div v-if="$can('company_settings', 'edit')" class="flex items-center justify-end gap-3 pt-2">
                 <Button
                     variant="primary"
                     type="submit"

@@ -15,6 +15,11 @@ class DivisionController extends Controller
         $company = Auth::user()->company;
         $query = Division::where('company_id', $company->id)->withCount('employees');
 
+        $allowedDivisions = $this->getAllowedDivisionIds();
+        if ($allowedDivisions !== null) {
+            $query->whereIn('id', $allowedDivisions);
+        }
+
         if ($request->filled('search')) {
             $query->where('name', 'like', '%' . $request->search . '%');
         }
@@ -68,6 +73,7 @@ class DivisionController extends Controller
     public function edit(Division $division)
     {
         abort_if($division->company_id !== Auth::user()->company->id, 403);
+        abort_if(!$this->canAccessDivision($division->id), 403);
 
         return Inertia::render('Owner/Management/Company/Divisions/Edit', [
             'division' => $division,
@@ -77,6 +83,7 @@ class DivisionController extends Controller
     public function update(Request $request, Division $division)
     {
         abort_if($division->company_id !== Auth::user()->company->id, 403);
+        abort_if(!$this->canAccessDivision($division->id), 403);
 
         $request->validate([
             'name' => 'required|string|max:255',
@@ -97,6 +104,7 @@ class DivisionController extends Controller
     public function destroy(Division $division)
     {
         abort_if($division->company_id !== Auth::user()->company->id, 403);
+        abort_if(!$this->canAccessDivision($division->id), 403);
         $division->delete();
 
         return redirect()->route('owner.management.company.divisions.index')

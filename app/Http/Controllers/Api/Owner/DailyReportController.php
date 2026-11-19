@@ -18,16 +18,18 @@ class DailyReportController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $company = $user->company;
+        $company = $user->getCompany();
 
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
-        $employeeUserIds = \App\Models\Employee::where('company_id', $company->id)->pluck('user_id')->toArray();
+        $employeeQuery = \App\Models\Employee::where('company_id', $company->id);
+        $this->scopeBranchDivision($employeeQuery);
+        $employeeUserIds = $employeeQuery->pluck('user_id')->toArray();
 
         $query = DailyReport::with(['attachments', 'user.employee']);
 
@@ -136,16 +138,18 @@ class DailyReportController extends Controller
     public function update(Request $request, $id)
     {
         $user = $request->user();
-        $company = $user->company;
+        $company = $user->getCompany();
 
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
-        $employeeUserIds = \App\Models\Employee::where('company_id', $company->id)->pluck('user_id')->toArray();
+        $employeeQuery = \App\Models\Employee::where('company_id', $company->id);
+        $this->scopeBranchDivision($employeeQuery);
+        $employeeUserIds = $employeeQuery->pluck('user_id')->toArray();
         $allowedUserIds = array_merge([$user->id], $employeeUserIds);
 
         $report = DailyReport::whereIn('user_id', $allowedUserIds)->find($id);
@@ -214,16 +218,18 @@ class DailyReportController extends Controller
     public function destroy(Request $request, $id)
     {
         $user = $request->user();
-        $company = $user->company;
+        $company = $user->getCompany();
 
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
-        $employeeUserIds = \App\Models\Employee::where('company_id', $company->id)->pluck('user_id')->toArray();
+        $employeeQuery = \App\Models\Employee::where('company_id', $company->id);
+        $this->scopeBranchDivision($employeeQuery);
+        $employeeUserIds = $employeeQuery->pluck('user_id')->toArray();
         $allowedUserIds = array_merge([$user->id], $employeeUserIds);
 
         $report = DailyReport::with('attachments')->whereIn('user_id', $allowedUserIds)->find($id);

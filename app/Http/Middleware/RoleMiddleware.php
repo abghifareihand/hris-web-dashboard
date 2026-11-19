@@ -32,10 +32,8 @@ class RoleMiddleware
             // Redirect based on their actual role
             if ($user->role === 'admin') {
                 return redirect()->route('admin.dashboard');
-            } elseif ($user->role === 'owner') {
+            } elseif ($user->role === 'owner' || $user->role === 'employee') {
                 return redirect()->route('owner.dashboard');
-            } elseif ($user->role === 'employee') {
-                return redirect()->route('employee.dashboard');
             }
 
             abort(403, 'Unauthorized action.');

@@ -160,6 +160,22 @@ const submit = () => {
             </p>
         </div>
 
+        <!-- Read-Only Banner if user has only view permission -->
+        <div
+            v-if="!$can('company_profile', 'edit')"
+            class="p-4 bg-sky-50 border border-sky-200/80 rounded-2xl flex items-center gap-3 text-sky-900 shadow-2xs"
+        >
+            <div class="w-8 h-8 rounded-xl bg-sky-100 flex items-center justify-center shrink-0 text-sky-600">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div>
+                <span class="text-xs font-bold block">Mode Lihat Saja (Read-Only)</span>
+                <span class="text-xs text-sky-700">Anda hanya memiliki hak akses untuk melihat data profil perusahaan. Anda tidak dapat mengubah informasi ini.</span>
+            </div>
+        </div>
+
         <form @submit.prevent="submit" class="space-y-6">
             <!-- Main Card -->
             <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6">
@@ -181,6 +197,7 @@ const submit = () => {
                                 />
                                 <!-- Delete / Cancel button (Icon X) -->
                                 <button
+                                    v-if="$can('company_profile', 'edit')"
                                     type="button"
                                     @click.stop="removeLogo"
                                     title="Hapus Logo"
@@ -201,6 +218,7 @@ const submit = () => {
 
                         <!-- Hidden File Input -->
                         <input
+                            v-if="$can('company_profile', 'edit')"
                             ref="fileInputRef"
                             type="file"
                             accept="image/jpeg,image/png,image/jpg,image/svg+xml"
@@ -210,6 +228,7 @@ const submit = () => {
 
                         <!-- Button "Pilih Logo" / "Ganti Logo" -->
                         <button
+                            v-if="$can('company_profile', 'edit')"
                             type="button"
                             @click="fileInputRef?.click()"
                             class="w-36 inline-flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold text-emerald-600 bg-white hover:bg-emerald-50/60 border border-emerald-500 rounded-lg transition-colors cursor-pointer select-none"
@@ -220,7 +239,7 @@ const submit = () => {
                             {{ currentLogo ? 'Ganti Logo' : 'Pilih Logo' }}
                         </button>
 
-                        <p class="text-[11px] text-slate-400">
+                        <p v-if="$can('company_profile', 'edit')" class="text-[11px] text-slate-400">
                             Format: JPG, PNG, SVG. Maks 2MB
                         </p>
 
@@ -236,6 +255,7 @@ const submit = () => {
                             v-model="form.name_company"
                             placeholder="PT Nama Perusahaan"
                             required
+                            :disabled="!$can('company_profile', 'edit')"
                             :error="form.errors.name_company"
                         />
 
@@ -246,6 +266,7 @@ const submit = () => {
                             placeholder="Pilih Bidang Usaha"
                             searchable
                             required
+                            :disabled="!$can('company_profile', 'edit')"
                             :error="form.errors.business_type"
                         />
 
@@ -255,6 +276,7 @@ const submit = () => {
                             type="email"
                             placeholder="info@perusahaan.com"
                             required
+                            :disabled="!$can('company_profile', 'edit')"
                             :error="form.errors.email"
                         />
 
@@ -262,6 +284,7 @@ const submit = () => {
                             label="No. Telepon"
                             v-model="form.phone"
                             placeholder="081234567890"
+                            :disabled="!$can('company_profile', 'edit')"
                             :error="form.errors.phone"
                         />
 
@@ -272,6 +295,7 @@ const submit = () => {
                             placeholder="Pilih Provinsi"
                             searchable
                             required
+                            :disabled="!$can('company_profile', 'edit')"
                             :error="form.errors.province"
                             @change="handleProvinceChange"
                         />
@@ -281,7 +305,7 @@ const submit = () => {
                             v-model="form.city"
                             :options="cityOptions"
                             :placeholder="form.province ? 'Pilih Kota / Kabupaten' : 'Pilih Provinsi terlebih dahulu'"
-                            :disabled="!form.province || cityOptions.length === 0"
+                            :disabled="!$can('company_profile', 'edit') || !form.province || cityOptions.length === 0"
                             searchable
                             required
                             :error="form.errors.city"
@@ -293,6 +317,7 @@ const submit = () => {
                                 v-model="form.address"
                                 placeholder="Masukkan alamat lengkap kantor / perusahaan..."
                                 :rows="3"
+                                :disabled="!$can('company_profile', 'edit')"
                                 :error="form.errors.address"
                             />
                         </div>
@@ -300,17 +325,17 @@ const submit = () => {
                 </div>
             </div>
 
-        <!-- Submit Section -->
-        <div class="flex items-center justify-end pt-2 pb-8">
-            <Button
-                variant="primary"
-                type="submit"
-                :loading="form.processing"
-                :disabled="form.processing"
-            >
-                Simpan
-            </Button>
-        </div>
-    </form>
+            <!-- Submit Section -->
+            <div v-if="$can('company_profile', 'edit')" class="flex items-center justify-end pt-2 pb-8">
+                <Button
+                    variant="primary"
+                    type="submit"
+                    :loading="form.processing"
+                    :disabled="form.processing"
+                >
+                    Simpan
+                </Button>
+            </div>
+        </form>
 </div>
 </template>

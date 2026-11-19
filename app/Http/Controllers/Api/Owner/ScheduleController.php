@@ -20,9 +20,9 @@ class ScheduleController extends Controller
      */
     public function getShifts(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
         $shifts = Shift::where('company_id', $company->id)->get(['id', 'name', 'clock_in', 'clock_out']);
@@ -39,9 +39,9 @@ class ScheduleController extends Controller
      */
     public function getSchedules(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -62,9 +62,11 @@ class ScheduleController extends Controller
         $month = $request->month;
         $year = $request->year;
 
-        $query = WorkSchedule::with(['employee:id,name,email', 'shift:id,name,clock_in,clock_out'])
+        $query = WorkSchedule::with(['employee:id,name,email,branch_id,division_id', 'shift:id,name,clock_in,clock_out'])
             ->where('company_id', $company->id)
             ->whereYear('date', $year);
+
+        $this->scopeByEmployeeRelation($query);
 
         if ($request->filled('month')) {
             $query->whereMonth('date', $month);
@@ -151,9 +153,9 @@ class ScheduleController extends Controller
      */
     public function bulkStore(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -183,6 +185,13 @@ class ScheduleController extends Controller
                 'status' => false,
                 'message' => 'Karyawan tidak ditemukan di perusahaan Anda.'
             ], 404);
+        }
+
+        if (!$this->canAccessEmployee($employee)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Anda tidak memiliki akses ke cabang/divisi karyawan ini.'
+            ], 403);
         }
 
         try {
@@ -241,14 +250,21 @@ class ScheduleController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
-        $schedule = WorkSchedule::where('company_id', $company->id)->find($id);
+        $schedule = WorkSchedule::with('employee')->where('company_id', $company->id)->find($id);
         if (!$schedule) {
             return response()->json(['status' => false, 'message' => 'Jadwal kerja tidak ditemukan.'], 404);
+        }
+
+        if (!$this->canAccessEmployee($schedule->employee)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Anda tidak memiliki akses ke cabang/divisi karyawan ini.'
+            ], 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -294,14 +310,21 @@ class ScheduleController extends Controller
      */
     public function destroy(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
-        $schedule = WorkSchedule::where('company_id', $company->id)->find($id);
+        $schedule = WorkSchedule::with('employee')->where('company_id', $company->id)->find($id);
         if (!$schedule) {
             return response()->json(['status' => false, 'message' => 'Jadwal kerja tidak ditemukan.'], 404);
+        }
+
+        if (!$this->canAccessEmployee($schedule->employee)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Anda tidak memiliki akses ke cabang/divisi karyawan ini.'
+            ], 403);
         }
 
         $schedule->delete();
@@ -317,13 +340,15 @@ class ScheduleController extends Controller
      */
     public function getPersonalSwaps(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
-        $query = SwapPersonal::with(['employee:id,name', 'approver:id,name'])
+        $query = SwapPersonal::with(['employee:id,name,branch_id,division_id', 'approver:id,name'])
             ->where('company_id', $company->id);
+
+        $this->scopeByEmployeeRelation($query);
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -356,14 +381,18 @@ class ScheduleController extends Controller
      */
     public function getPersonalSwapDetail(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
-        $swap = SwapPersonal::with(['employee:id,name', 'approver:id,name'])->where('company_id', $company->id)->find($id);
+        $swap = SwapPersonal::with(['employee', 'approver:id,name'])->where('company_id', $company->id)->find($id);
         if (!$swap) {
             return response()->json(['status' => false, 'message' => 'Data pertukaran jadwal tidak ditemukan.'], 404);
+        }
+
+        if (!$this->canAccessEmployee($swap->employee)) {
+            return response()->json(['status' => false, 'message' => 'Anda tidak memiliki akses ke cabang/divisi karyawan ini.'], 403);
         }
 
         // Get schedules for original date and target date
@@ -435,14 +464,18 @@ class ScheduleController extends Controller
      */
     public function approvePersonalSwap(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
-        $swap = SwapPersonal::where('company_id', $company->id)->find($id);
+        $swap = SwapPersonal::with('employee')->where('company_id', $company->id)->find($id);
         if (!$swap) {
             return response()->json(['status' => false, 'message' => 'Data pertukaran jadwal tidak ditemukan.'], 404);
+        }
+
+        if (!$this->canAccessEmployee($swap->employee)) {
+            return response()->json(['status' => false, 'message' => 'Anda tidak memiliki akses ke cabang/divisi karyawan ini.'], 403);
         }
 
         if ($swap->status !== 'pending') {
@@ -511,14 +544,18 @@ class ScheduleController extends Controller
      */
     public function rejectPersonalSwap(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
-        $swap = SwapPersonal::where('company_id', $company->id)->find($id);
+        $swap = SwapPersonal::with('employee')->where('company_id', $company->id)->find($id);
         if (!$swap) {
             return response()->json(['status' => false, 'message' => 'Data pertukaran jadwal tidak ditemukan.'], 404);
+        }
+
+        if (!$this->canAccessEmployee($swap->employee)) {
+            return response()->json(['status' => false, 'message' => 'Anda tidak memiliki akses ke cabang/divisi karyawan ini.'], 403);
         }
 
         if ($swap->status !== 'pending') {
@@ -556,14 +593,18 @@ class ScheduleController extends Controller
      */
     public function destroyPersonalSwap(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
-        $swap = SwapPersonal::where('company_id', $company->id)->find($id);
+        $swap = SwapPersonal::with('employee')->where('company_id', $company->id)->find($id);
         if (!$swap) {
             return response()->json(['status' => false, 'message' => 'Data pertukaran jadwal personal tidak ditemukan.'], 404);
+        }
+
+        if (!$this->canAccessEmployee($swap->employee)) {
+            return response()->json(['status' => false, 'message' => 'Anda tidak memiliki akses ke cabang/divisi karyawan ini.'], 403);
         }
 
         if ($swap->status === 'approved') {
@@ -600,13 +641,15 @@ class ScheduleController extends Controller
      */
     public function getTeamSwaps(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
-        $query = SwapTeam::with(['requestor:id,name', 'targetEmployee:id,name', 'approver:id,name'])
+        $query = SwapTeam::with(['requestor:id,name,branch_id,division_id', 'targetEmployee:id,name,branch_id,division_id', 'approver:id,name'])
             ->where('company_id', $company->id);
+
+        $this->scopeByEmployeeRelation($query, 'requestor');
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -639,14 +682,18 @@ class ScheduleController extends Controller
      */
     public function getTeamSwapDetail(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
-        $swap = SwapTeam::with(['requestor:id,name', 'targetEmployee:id,name', 'approver:id,name'])->where('company_id', $company->id)->find($id);
+        $swap = SwapTeam::with(['requestor', 'targetEmployee', 'approver:id,name'])->where('company_id', $company->id)->find($id);
         if (!$swap) {
             return response()->json(['status' => false, 'message' => 'Data pertukaran jadwal tim tidak ditemukan.'], 404);
+        }
+
+        if (!$this->canAccessEmployee($swap->requestor)) {
+            return response()->json(['status' => false, 'message' => 'Anda tidak memiliki akses ke cabang/divisi karyawan ini.'], 403);
         }
 
         // Get schedules for requestor date and target employee's target date
@@ -726,14 +773,18 @@ class ScheduleController extends Controller
      */
     public function approveTeamSwap(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
         $swap = SwapTeam::with(['requestor', 'targetEmployee'])->where('company_id', $company->id)->find($id);
         if (!$swap) {
             return response()->json(['status' => false, 'message' => 'Data pertukaran jadwal tim tidak ditemukan.'], 404);
+        }
+
+        if (!$this->canAccessEmployee($swap->requestor)) {
+            return response()->json(['status' => false, 'message' => 'Anda tidak memiliki akses ke cabang/divisi karyawan ini.'], 403);
         }
 
         if ($swap->status !== 'pending') {
@@ -842,14 +893,18 @@ class ScheduleController extends Controller
      */
     public function rejectTeamSwap(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
         $swap = SwapTeam::with(['requestor', 'targetEmployee'])->where('company_id', $company->id)->find($id);
         if (!$swap) {
             return response()->json(['status' => false, 'message' => 'Data pertukaran jadwal tim tidak ditemukan.'], 404);
+        }
+
+        if (!$this->canAccessEmployee($swap->requestor)) {
+            return response()->json(['status' => false, 'message' => 'Anda tidak memiliki akses ke cabang/divisi karyawan ini.'], 403);
         }
 
         if ($swap->status !== 'pending') {
@@ -884,14 +939,18 @@ class ScheduleController extends Controller
      */
     public function destroyTeamSwap(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
-        $swap = SwapTeam::where('company_id', $company->id)->find($id);
+        $swap = SwapTeam::with('requestor')->where('company_id', $company->id)->find($id);
         if (!$swap) {
             return response()->json(['status' => false, 'message' => 'Data pertukaran jadwal tim tidak ditemukan.'], 404);
+        }
+
+        if (!$this->canAccessEmployee($swap->requestor)) {
+            return response()->json(['status' => false, 'message' => 'Anda tidak memiliki akses ke cabang/divisi karyawan ini.'], 403);
         }
 
         if ($swap->status === 'approved') {

@@ -15,16 +15,18 @@ class AttendanceController extends Controller
      */
     public function index(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
         $query = Attendance::with(['shift', 'employee.user'])
             ->where('company_id', $company->id);
+
+        $this->scopeByEmployeeRelation($query);
 
         if ($request->filled('employee_id')) {
             $query->where('employee_id', $request->employee_id);

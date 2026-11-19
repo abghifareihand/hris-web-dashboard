@@ -105,7 +105,7 @@ const formatTime = (timeStr) => {
                     Kelola jam operasional kerja, jam masuk presensi, dan jam pulang karyawan.
                 </p>
             </div>
-            <div class="flex items-center gap-3">
+            <div v-if="$can('company_shifts', 'create')" class="flex items-center gap-3">
                 <Link :href="route('owner.management.schedules.shifts.create')">
                     <Button variant="primary">
                         <svg
@@ -219,6 +219,7 @@ const formatTime = (timeStr) => {
                     <td class="px-5 py-3.5 whitespace-nowrap text-right">
                         <div class="inline-flex items-center gap-1">
                             <Link
+                                v-if="$can('company_shifts', 'edit')"
                                 :href="route('owner.management.schedules.shifts.edit', shift.id)"
                                 class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
                                 title="Edit Shift"
@@ -238,9 +239,10 @@ const formatTime = (timeStr) => {
                                 </svg>
                             </Link>
                             <button
+                                v-if="$can('company_shifts', 'delete')"
                                 type="button"
                                 @click="confirmDelete(shift)"
-                                class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                                class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
                                 title="Hapus Shift"
                             >
                                 <svg

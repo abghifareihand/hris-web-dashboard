@@ -318,7 +318,7 @@ const formatCurrency = (val) => {
 
                     <!-- Aksi (Sesuai gaya Employees/Pending.vue) -->
                     <td class="px-5 py-3.5 whitespace-nowrap text-right">
-                        <div class="inline-flex items-center justify-end gap-2">
+                        <div v-if="$can('reimbursements', 'edit')" class="inline-flex items-center justify-end gap-2">
                             <button
                                 type="button"
                                 @click="openReject(item)"
@@ -356,6 +356,7 @@ const formatCurrency = (val) => {
                                 <span>Setujui</span>
                             </button>
                         </div>
+                        <span v-else class="text-xs text-slate-400 italic">Hanya lihat</span>
                     </td>
                 </tr>
             </template>

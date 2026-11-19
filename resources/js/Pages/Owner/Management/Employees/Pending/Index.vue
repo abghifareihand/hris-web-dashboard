@@ -376,7 +376,7 @@ const formatDate = (dateStr) => {
 
                     <!-- Action -->
                     <td class="px-5 py-3.5 whitespace-nowrap text-right">
-                        <div class="inline-flex items-center gap-2">
+                        <div v-if="$can('company_employees', 'edit')" class="inline-flex items-center gap-2">
                             <button
                                 type="button"
                                 @click="openRejectModal(pendingEmployee)"
@@ -414,6 +414,7 @@ const formatDate = (dateStr) => {
                                 <span>Setujui</span>
                             </button>
                         </div>
+                        <span v-else class="text-xs text-slate-400 italic">Hanya lihat</span>
                     </td>
                 </tr>
             </template>

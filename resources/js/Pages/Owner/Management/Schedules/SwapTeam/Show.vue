@@ -180,7 +180,7 @@ const executeDelete = () => {
             </div>
 
             <!-- Action Buttons -->
-            <div v-if="swap.status === 'pending'" class="flex items-center gap-2.5 shrink-0 flex-wrap">
+            <div v-if="swap.status === 'pending' && $can('swap_schedules', 'edit')" class="flex items-center gap-2.5 shrink-0 flex-wrap">
                 <button
                     type="button"
                     @click="isRejectModalOpen = true"
@@ -204,7 +204,7 @@ const executeDelete = () => {
                 </button>
             </div>
 
-            <div v-else-if="['rejected', 'cancelled'].includes(swap.status)" class="flex items-center gap-2.5 shrink-0 flex-wrap">
+            <div v-else-if="['rejected', 'cancelled'].includes(swap.status) && $can('swap_schedules', 'delete')" class="flex items-center gap-2.5 shrink-0 flex-wrap">
                 <button
                     type="button"
                     @click="isDeleteModalOpen = true"

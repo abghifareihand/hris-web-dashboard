@@ -19,6 +19,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'permission' => \App\Http\Middleware\CheckWebPermission::class,
+            'api.permission' => \App\Http\Middleware\CheckApiPermission::class,
         ]);
 
         $middleware->redirectUsersTo(function (Request $request) {
@@ -26,10 +28,8 @@ return Application::configure(basePath: dirname(__DIR__))
                 $role = \Illuminate\Support\Facades\Auth::user()->role;
                 if ($role === 'admin') {
                     return route('admin.dashboard');
-                } elseif ($role === 'owner') {
+                } elseif ($role === 'owner' || $role === 'employee') {
                     return route('owner.dashboard');
-                } elseif ($role === 'employee') {
-                    return route('employee.dashboard');
                 }
             }
             return '/';

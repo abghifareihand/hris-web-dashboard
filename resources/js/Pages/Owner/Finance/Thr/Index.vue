@@ -67,7 +67,7 @@ const formatCurrency = (val) => {
                         Kalkulasi, pembagian, dan pencetakan slip THR karyawan sesuai masa kerja.
                     </p>
                 </div>
-                <div class="flex items-center gap-3">
+                <div v-if="$can('payrolls', 'create')" class="flex items-center gap-3">
                     <Link :href="route('owner.finance.thr.create')">
                         <Button variant="primary" size="md">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -165,7 +165,7 @@ const formatCurrency = (val) => {
                                     </svg>
                                 </Link>
                                 <button
-                                    v-if="item.status === 'process'"
+                                    v-if="item.status === 'process' && $can('payrolls', 'delete')"
                                     type="button"
                                     class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition inline-flex items-center justify-center cursor-pointer"
                                     title="Hapus Draft THR"

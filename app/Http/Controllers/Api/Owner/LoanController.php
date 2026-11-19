@@ -18,20 +18,22 @@ class LoanController extends Controller
      */
     public function index(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
         $query = Loan::with([
-            'employee:id,name,payroll_cycle',
+            'employee:id,name,payroll_cycle,branch_id,division_id',
             'installments' => function ($q) {
                 $q->orderBy('due_date', 'asc');
             }
         ])->where('company_id', $company->id);
+
+        $this->scopeByEmployeeRelation($query);
 
         if ($request->filled('employee_id')) {
             $query->where('employee_id', $request->employee_id);
@@ -108,11 +110,11 @@ class LoanController extends Controller
      */
     public function store(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
@@ -140,6 +142,13 @@ class LoanController extends Controller
 
         $employee = Employee::where('company_id', $company->id)->findOrFail($request->employee_id);
 
+        if (!$this->canAccessEmployee($employee)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Anda tidak memiliki akses ke cabang/divisi karyawan ini.'
+            ], 403);
+        }
+
         $loan = Loan::create([
             'company_id' => $company->id,
             'employee_id' => $employee->id,
@@ -163,15 +172,15 @@ class LoanController extends Controller
      */
     public function approve(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
-        $loan = Loan::where('company_id', $company->id)
+        $loan = Loan::with('employee')->where('company_id', $company->id)
             ->where('status', 'pending')
             ->find($id);
 
@@ -180,6 +189,13 @@ class LoanController extends Controller
                 'status' => false,
                 'message' => 'Pengajuan pinjaman pending tidak ditemukan.'
             ], 404);
+        }
+
+        if (!$this->canAccessEmployee($loan->employee)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Anda tidak memiliki akses ke cabang/divisi karyawan ini.'
+            ], 403);
         }
 
         $loan->update(['status' => 'approved']);
@@ -209,15 +225,15 @@ class LoanController extends Controller
      */
     public function reject(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
-        $loan = Loan::where('company_id', $company->id)
+        $loan = Loan::with('employee')->where('company_id', $company->id)
             ->where('status', 'pending')
             ->find($id);
 
@@ -226,6 +242,13 @@ class LoanController extends Controller
                 'status' => false,
                 'message' => 'Pengajuan pinjaman pending tidak ditemukan.'
             ], 404);
+        }
+
+        if (!$this->canAccessEmployee($loan->employee)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Anda tidak memiliki akses ke cabang/divisi karyawan ini.'
+            ], 403);
         }
 
         $loan->update(['status' => 'rejected']);
@@ -253,20 +276,27 @@ class LoanController extends Controller
      */
     public function destroy(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
-        $loan = Loan::where('company_id', $company->id)->find($id);
+        $loan = Loan::with('employee')->where('company_id', $company->id)->find($id);
         if (!$loan) {
             return response()->json([
                 'status' => false,
                 'message' => 'Data pinjaman tidak ditemukan.'
             ], 404);
+        }
+
+        if (!$this->canAccessEmployee($loan->employee)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Anda tidak memiliki akses ke cabang/divisi karyawan ini.'
+            ], 403);
         }
 
         if ($loan->status === 'approved' || $loan->status === 'paid') {
@@ -321,20 +351,27 @@ class LoanController extends Controller
      */
     public function updateInstallment(Request $request, $id, $installmentId)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
-        $loan = Loan::where('company_id', $company->id)->find($id);
+        $loan = Loan::with('employee')->where('company_id', $company->id)->find($id);
         if (!$loan) {
             return response()->json([
                 'status' => false,
                 'message' => 'Data pinjaman tidak ditemukan.'
             ], 404);
+        }
+
+        if (!$this->canAccessEmployee($loan->employee)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Anda tidak memiliki akses ke cabang/divisi karyawan ini.'
+            ], 403);
         }
 
         $installment = LoanInstallment::where('loan_id', $loan->id)->find($installmentId);

@@ -20,7 +20,7 @@ class LeaveController extends Controller
 {
     public function pending(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }
@@ -57,17 +57,14 @@ class LeaveController extends Controller
             });
         }
 
+        $this->scopeByEmployeeRelation($query);
+
         $pendingLeaves = $query->latest()
             ->paginate($request->input('per_page', 10))
             ->withQueryString();
 
-        $branches = Branch::where('company_id', $company->id)
-            ->orderBy('name')
-            ->get(['id', 'name']);
-
-        $divisions = Division::where('company_id', $company->id)
-            ->orderBy('name')
-            ->get(['id', 'name']);
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
 
         $leaveCategories = LeaveCategory::where('company_id', $company->id)
             ->orderBy('name')
@@ -89,14 +86,18 @@ class LeaveController extends Controller
 
     public function approve(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }
 
-        $leaveRequest = LeaveRequest::where('company_id', $company->id)
+        $leaveRequest = LeaveRequest::with('employee')->where('company_id', $company->id)
             ->where('status', 'pending')
             ->findOrFail($id);
+
+        if (!$this->canAccessEmployee($leaveRequest->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menyetujui pengajuan cuti ini.');
+        }
 
         try {
             DB::transaction(function () use ($leaveRequest, $request) {
@@ -150,7 +151,7 @@ class LeaveController extends Controller
 
     public function reject(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }
@@ -159,9 +160,13 @@ class LeaveController extends Controller
             'reject_reason' => 'required|string|max:500',
         ]);
 
-        $leaveRequest = LeaveRequest::where('company_id', $company->id)
+        $leaveRequest = LeaveRequest::with('employee')->where('company_id', $company->id)
             ->where('status', 'pending')
             ->findOrFail($id);
+
+        if (!$this->canAccessEmployee($leaveRequest->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menolak pengajuan cuti ini.');
+        }
 
         $leaveRequest->update([
             'status' => 'rejected',
@@ -175,7 +180,7 @@ class LeaveController extends Controller
 
     public function index(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }
@@ -220,12 +225,14 @@ class LeaveController extends Controller
             });
         }
 
+        $this->scopeByEmployeeRelation($query);
+
         $leaves = $query->latest('start_date')
             ->paginate($request->input('per_page', 10))
             ->withQueryString();
 
-        $branches = Branch::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
-        $divisions = Division::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
 
         return Inertia::render('Owner/Management/Leaves/Index', [
             'leaves' => $leaves,
@@ -244,7 +251,7 @@ class LeaveController extends Controller
 
     public function balance(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }
@@ -309,11 +316,13 @@ class LeaveController extends Controller
             });
         }
 
+        $this->scopeByEmployeeRelation($query);
+
         $balances = $query->paginate($request->input('per_page', 10))
             ->withQueryString();
 
-        $branches = Branch::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
-        $divisions = Division::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
         $leaveCategories = LeaveCategory::where('company_id', $company->id)->orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('Owner/Management/Leaves/Balance/Index', [
@@ -334,14 +343,18 @@ class LeaveController extends Controller
 
     public function editBalance(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }
 
-        $balance = LeaveBalance::with(['employee:id,name,nip', 'leaveCategory:id,name,default_quota'])
+        $balance = LeaveBalance::with(['employee:id,name,nip,branch_id,division_id,company_id', 'leaveCategory:id,name,default_quota'])
             ->where('company_id', $company->id)
             ->findOrFail($id);
+
+        if (!$this->canAccessEmployee($balance->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mengubah saldo cuti karyawan ini.');
+        }
 
         return Inertia::render('Owner/Management/Leaves/Balance/Edit', [
             'balance' => $balance,
@@ -350,14 +363,18 @@ class LeaveController extends Controller
 
     public function updateBalance(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }
 
-        $balance = LeaveBalance::with('leaveCategory:id,name,default_quota')
+        $balance = LeaveBalance::with(['employee:id,name,nip,branch_id,division_id,company_id', 'leaveCategory:id,name,default_quota'])
             ->where('company_id', $company->id)
             ->findOrFail($id);
+
+        if (!$this->canAccessEmployee($balance->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mengubah saldo cuti karyawan ini.');
+        }
 
         $defaultQuota = $balance->leaveCategory?->default_quota ?? 365;
         $used = $balance->used ?? 0;
@@ -384,7 +401,7 @@ class LeaveController extends Controller
 
     public function categories(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }
@@ -414,7 +431,7 @@ class LeaveController extends Controller
 
     public function storeCategory(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }
@@ -454,7 +471,7 @@ class LeaveController extends Controller
 
     public function editCategory(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }
@@ -468,7 +485,7 @@ class LeaveController extends Controller
 
     public function updateCategory(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }
@@ -491,7 +508,7 @@ class LeaveController extends Controller
 
     public function destroyCategory(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }
@@ -505,14 +522,18 @@ class LeaveController extends Controller
 
     public function destroy(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             abort(403, 'Akses ditolak.');
         }
 
-        $leave = LeaveRequest::where('company_id', $company->id)->find($id);
+        $leave = LeaveRequest::with('employee')->where('company_id', $company->id)->find($id);
         if (!$leave) {
             return redirect()->back()->with('error', 'Data pengajuan cuti tidak ditemukan.');
+        }
+
+        if (!$this->canAccessEmployee($leave->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menghapus pengajuan cuti ini.');
         }
 
         if ($leave->status === 'approved') {

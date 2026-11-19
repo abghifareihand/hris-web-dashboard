@@ -226,7 +226,7 @@ const formatCurrency = (val) => {
                             Export Rekap
                         </Button>
                     </a>
-                    <Button variant="primary" size="md" @click="openGenerateModal">
+                    <Button v-if="$can('company_payrolls', 'create')" variant="primary" size="md" @click="openGenerateModal">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                         </svg>
@@ -431,7 +431,7 @@ const formatCurrency = (val) => {
                                     </svg>
                                 </Link>
                                 <button
-                                    v-if="payroll.status !== 'paid'"
+                                    v-if="payroll.status !== 'paid' && $can('company_payrolls', 'delete')"
                                     type="button"
                                     class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition inline-flex items-center justify-center cursor-pointer"
                                     title="Hapus Penggajian"

@@ -15,16 +15,18 @@ class OvertimeController extends Controller
      */
     public function index(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
         $query = Overtime::with(['employee', 'approvedBy'])
             ->where('company_id', $company->id);
+
+        $this->scopeByEmployeeRelation($query);
 
         if ($request->filled('employee_id')) {
             $query->where('employee_id', $request->employee_id);
@@ -69,11 +71,11 @@ class OvertimeController extends Controller
      */
     public function approve(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
@@ -86,6 +88,13 @@ class OvertimeController extends Controller
                 'status' => false,
                 'message' => 'Pengajuan lembur pending tidak ditemukan.'
             ], 404);
+        }
+
+        if (!$this->canAccessEmployee($overtime->employee)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Anda tidak memiliki hak akses untuk karyawan ini.'
+            ], 403);
         }
 
         $overtime->update([
@@ -118,11 +127,11 @@ class OvertimeController extends Controller
      */
     public function reject(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
@@ -135,6 +144,13 @@ class OvertimeController extends Controller
                 'status' => false,
                 'message' => 'Pengajuan lembur pending tidak ditemukan.'
             ], 404);
+        }
+
+        if (!$this->canAccessEmployee($overtime->employee)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Anda tidak memiliki hak akses untuk karyawan ini.'
+            ], 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -180,11 +196,11 @@ class OvertimeController extends Controller
      */
     public function destroy(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
@@ -195,6 +211,13 @@ class OvertimeController extends Controller
                 'status' => false,
                 'message' => 'Pengajuan lembur tidak ditemukan.'
             ], 404);
+        }
+
+        if (!$this->canAccessEmployee($overtime->employee)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Anda tidak memiliki hak akses untuk karyawan ini.'
+            ], 403);
         }
 
         if ($overtime->status === 'approved') {

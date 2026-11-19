@@ -391,7 +391,7 @@ const getAttachmentUrl = (path) => {
                     <td
                         class="px-5 py-3.5 whitespace-nowrap text-right"
                     >
-                        <div class="inline-flex items-center gap-2">
+                        <div v-if="$can('leaves', 'edit')" class="inline-flex items-center gap-2">
                             <button
                                 type="button"
                                 @click="openReject(item)"
@@ -429,6 +429,7 @@ const getAttachmentUrl = (path) => {
                                 <span>Setujui</span>
                             </button>
                         </div>
+                        <span v-else class="text-xs text-slate-400 italic">Hanya lihat</span>
                     </td>
                 </tr>
             </template>

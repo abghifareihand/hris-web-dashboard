@@ -101,6 +101,22 @@ const submit = () => {
                 </div>
             </div>
 
+            <!-- Read-only Banner for View-Only Users -->
+            <div
+                v-if="!$can('company_payrolls', 'edit')"
+                class="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-3 shadow-xs"
+            >
+                <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                    <p class="text-sm font-semibold text-amber-900">Mode Pratinjau (Hanya Lihat)</p>
+                    <p class="text-xs text-amber-700 mt-0.5">
+                        Anda hanya memiliki hak akses untuk melihat konfigurasi BPJS Kesehatan ini. Hubungi pemilik akun (owner) atau administrator untuk melakukan perubahan data.
+                    </p>
+                </div>
+            </div>
+
             <!-- 4 Summary / Stat Cards -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <!-- Card 1: Iuran Perusahaan -->
@@ -168,7 +184,7 @@ const submit = () => {
                     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs">
                         <div class="px-6 py-4 border-b border-slate-100 rounded-t-2xl flex items-center justify-between">
                             <h2 class="text-base font-bold text-slate-900">Tarif Iuran BPJS Kesehatan</h2>
-                            <Checkbox v-model="form.is_active" label="Aktif" />
+                            <Checkbox v-model="form.is_active" :disabled="!$can('company_payrolls', 'edit')" label="Aktif" />
                         </div>
 
                         <div class="p-6">
@@ -183,7 +199,7 @@ const submit = () => {
                                         step="0.01"
                                         v-model="form.company_percent"
                                         label="Perusahaan (%)"
-                                        :disabled="!form.is_active"
+                                        :disabled="!form.is_active || !$can('company_payrolls', 'edit')"
                                         placeholder="4"
                                     />
                                     <Input
@@ -191,7 +207,7 @@ const submit = () => {
                                         step="0.01"
                                         v-model="form.employee_percent"
                                         label="Karyawan (%)"
-                                        :disabled="!form.is_active"
+                                        :disabled="!form.is_active || !$can('company_payrolls', 'edit')"
                                         placeholder="1"
                                     />
                                 </div>
@@ -215,12 +231,14 @@ const submit = () => {
                                     currency
                                     v-model="form.minimum_wage"
                                     label="Upah Minimum"
+                                    :disabled="!$can('company_payrolls', 'edit')"
                                     placeholder="2.500.000"
                                 />
                                 <Input
                                     currency
                                     v-model="form.maximum_wage"
                                     label="Upah Maksimum"
+                                    :disabled="!$can('company_payrolls', 'edit')"
                                     placeholder="12.000.000"
                                 />
                             </div>
@@ -244,12 +262,14 @@ const submit = () => {
                                 type="text"
                                 v-model="form.effective_year"
                                 label="Tahun Efektif"
+                                :disabled="!$can('company_payrolls', 'edit')"
                                 placeholder="2026"
                             />
                             <Textarea
                                 v-model="form.notes"
                                 label="Catatan"
                                 :rows="3"
+                                :disabled="!$can('company_payrolls', 'edit')"
                                 placeholder="Konfigurasi BPJS Kesehatan sesuai Perpres No. 64 Tahun 2020. Berlaku untuk seluruh karyawan tetap dan kontrak."
                             />
                         </div>
@@ -257,7 +277,7 @@ const submit = () => {
                 </div>
 
                 <!-- Tombol Simpan Berada di Luar Card (Di Bawah) Sesuai Permintaan User -->
-                <div class="flex items-center justify-end pt-1">
+                <div v-if="$can('company_payrolls', 'edit')" class="flex items-center justify-end pt-1">
                     <Button
                         variant="primary"
                         size="md"

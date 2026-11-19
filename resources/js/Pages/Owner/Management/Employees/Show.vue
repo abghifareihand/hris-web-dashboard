@@ -93,7 +93,7 @@ const perDayAlphaCut = computed(() => {
             </div>
 
             <!-- Actions -->
-            <div class="flex items-center gap-2.5 shrink-0">
+            <div v-if="$can('company_employees', 'edit')" class="flex items-center gap-2.5 shrink-0">
                 <Link :href="route('owner.management.employees.edit', employee.id)">
                     <Button variant="primary">
                         <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

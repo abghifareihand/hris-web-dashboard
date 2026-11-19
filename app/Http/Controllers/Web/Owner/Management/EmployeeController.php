@@ -56,12 +56,14 @@ class EmployeeController extends Controller
             $query->where('position_id', $request->input('position_id'));
         }
 
+        $this->scopeBranchDivision($query);
+
         $employees = $query->orderBy('name', 'asc')
             ->paginate($request->input('per_page', 10))
             ->withQueryString();
 
-        $branches = $company->branches()->orderBy('name')->get(['id', 'name']);
-        $divisions = $company->divisions()->orderBy('name')->get(['id', 'name']);
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
         $positions = $company->positions()->orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('Owner/Management/Employees/Index', [
@@ -82,8 +84,8 @@ class EmployeeController extends Controller
     public function create()
     {
         $company = auth()->user()->company;
-        $branches = $company->branches()->orderBy('name')->get(['id', 'name']);
-        $divisions = $company->divisions()->orderBy('name')->get(['id', 'name']);
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
         $positions = $company->positions()->orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('Owner/Management/Employees/Create', [
@@ -99,6 +101,14 @@ class EmployeeController extends Controller
 
         if (!$company) {
             abort(403, 'Anda tidak memiliki akses perusahaan.');
+        }
+
+        if ($request->filled('branch_id') && !$this->canAccessBranch($request->input('branch_id'))) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menambahkan karyawan di cabang ini.');
+        }
+
+        if ($request->filled('division_id') && !$this->canAccessDivision($request->input('division_id'))) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menambahkan karyawan di divisi ini.');
         }
 
         $request->validate([
@@ -220,8 +230,8 @@ class EmployeeController extends Controller
     {
         $company = auth()->user()->company;
         
-        if (!$company || $employee->company_id !== $company->id) {
-            abort(403, 'Akses ditolak.');
+        if (!$company || !$this->canAccessEmployee($employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk melihat data karyawan ini.');
         }
 
         $employee->load(['branch', 'division', 'position', 'user']);
@@ -235,14 +245,14 @@ class EmployeeController extends Controller
     {
         $company = auth()->user()->company;
         
-        if (!$company || $employee->company_id !== $company->id) {
-            abort(403, 'Akses ditolak.');
+        if (!$company || !$this->canAccessEmployee($employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mengubah data karyawan ini.');
         }
 
         $employee->load(['branch', 'division', 'position', 'user']);
 
-        $branches = $company->branches()->orderBy('name')->get(['id', 'name']);
-        $divisions = $company->divisions()->orderBy('name')->get(['id', 'name']);
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
         $positions = $company->positions()->orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('Owner/Management/Employees/Edit', [
@@ -257,8 +267,16 @@ class EmployeeController extends Controller
     {
         $company = auth()->user()->company;
 
-        if (!$company || $employee->company_id !== $company->id) {
-            abort(403, 'Akses ditolak.');
+        if (!$company || !$this->canAccessEmployee($employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mengubah data karyawan ini.');
+        }
+
+        if ($request->filled('branch_id') && !$this->canAccessBranch($request->input('branch_id'))) {
+            abort(403, 'Anda tidak memiliki hak akses untuk memindahkan karyawan ke cabang ini.');
+        }
+
+        if ($request->filled('division_id') && !$this->canAccessDivision($request->input('division_id'))) {
+            abort(403, 'Anda tidak memiliki hak akses untuk memindahkan karyawan ke divisi ini.');
         }
 
         $user = $employee->user;
@@ -379,8 +397,8 @@ class EmployeeController extends Controller
     {
         $company = auth()->user()->company;
 
-        if (!$company || $employee->company_id !== $company->id) {
-            abort(403, 'Akses ditolak.');
+        if (!$company || !$this->canAccessEmployee($employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menghapus karyawan ini.');
         }
 
         DB::transaction(function () use ($employee) {

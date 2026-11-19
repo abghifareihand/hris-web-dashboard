@@ -20,9 +20,9 @@ class LeaveController extends Controller
 
     public function getCategories(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
         $query = LeaveCategory::where('company_id', $company->id)->latest();
@@ -53,9 +53,9 @@ class LeaveController extends Controller
 
     public function storeCategory(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -116,9 +116,9 @@ class LeaveController extends Controller
 
     public function showCategory(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
         $category = LeaveCategory::where('company_id', $company->id)->find($id);
@@ -135,9 +135,9 @@ class LeaveController extends Controller
 
     public function updateCategory(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
         $category = LeaveCategory::where('company_id', $company->id)->find($id);
@@ -170,9 +170,9 @@ class LeaveController extends Controller
 
     public function deleteCategory(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
         $category = LeaveCategory::where('company_id', $company->id)->find($id);
@@ -222,9 +222,9 @@ class LeaveController extends Controller
 
     public function getBalances(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
         $currentYear = (int) $request->input('year', date('Y'));
@@ -257,6 +257,8 @@ class LeaveController extends Controller
 
         $query = Employee::select('id', 'name', 'email')
             ->where('company_id', $company->id);
+
+        $this->scopeBranchDivision($query);
 
         if ($request->filled('branch_id')) {
             $query->where('branch_id', $request->branch_id);
@@ -317,9 +319,9 @@ class LeaveController extends Controller
 
     public function updateBalance(Request $request, $employeeId)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
         $employee = Employee::where('company_id', $company->id)->find($employeeId);
@@ -390,13 +392,15 @@ class LeaveController extends Controller
 
     public function getRequests(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
-        $query = LeaveRequest::with(['employee:id,name,email', 'leaveCategory:id,name'])
+        $query = LeaveRequest::with(['employee:id,name,email,branch_id,division_id', 'leaveCategory:id,name'])
             ->where('company_id', $company->id);
+
+        $this->scopeByEmployeeRelation($query);
 
         if ($request->filled('branch_id')) {
             $query->whereHas('employee', function ($q) use ($request) {
@@ -472,9 +476,9 @@ class LeaveController extends Controller
 
     public function approveRequest(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
         $leaveRequest = LeaveRequest::where('company_id', $company->id)
@@ -486,6 +490,13 @@ class LeaveController extends Controller
                 'status' => false, 
                 'message' => 'Pengajuan cuti pending tidak ditemukan.'
             ], 404);
+        }
+
+        if (!$this->canAccessEmployee($leaveRequest->employee)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Anda tidak memiliki hak akses untuk karyawan ini.'
+            ], 403);
         }
 
         try {
@@ -569,9 +580,9 @@ class LeaveController extends Controller
 
     public function rejectRequest(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -594,6 +605,13 @@ class LeaveController extends Controller
                 'status' => false, 
                 'message' => 'Pengajuan cuti pending tidak ditemukan.'
             ], 404);
+        }
+
+        if (!$this->canAccessEmployee($leaveRequest->employee)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Anda tidak memiliki hak akses untuk karyawan ini.'
+            ], 403);
         }
 
         $leaveRequest->update([
@@ -627,9 +645,9 @@ class LeaveController extends Controller
 
     public function deleteRequest(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
-            return response()->json(['status' => false, 'message' => 'Hanya owner perusahaan yang bisa mengakses.'], 403);
+            return response()->json(['status' => false, 'message' => 'Perusahaan tidak ditemukan.'], 403);
         }
 
         $leaveRequest = LeaveRequest::where('company_id', $company->id)->find($id);

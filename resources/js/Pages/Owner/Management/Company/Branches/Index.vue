@@ -111,7 +111,7 @@ const executeDelete = () => {
                     Kelola lokasi kantor, zona waktu, dan radius geolokasi absensi karyawan.
                 </p>
             </div>
-            <div class="flex items-center gap-3">
+            <div v-if="$can('company_branches', 'create')" class="flex items-center gap-3">
                 <Link :href="route('owner.management.company.branches.create')">
                     <Button variant="primary">
                         <svg
@@ -286,6 +286,7 @@ const executeDelete = () => {
                                 </svg>
                             </Link>
                             <Link
+                                v-if="$can('company_branches', 'edit')"
                                 :href="route('owner.management.company.branches.edit', branch.id)"
                                 class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
                                 title="Edit Cabang"
@@ -305,6 +306,7 @@ const executeDelete = () => {
                                 </svg>
                             </Link>
                             <button
+                                v-if="$can('company_branches', 'delete')"
                                 type="button"
                                 @click="confirmDelete(branch)"
                                 class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"

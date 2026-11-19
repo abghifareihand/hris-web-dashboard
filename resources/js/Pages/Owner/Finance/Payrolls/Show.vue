@@ -402,7 +402,7 @@ const getInitials = (name) => {
 
                     <!-- Tombol Perubahan Status -->
                     <Button
-                        v-if="payroll.status === 'process'"
+                        v-if="payroll.status === 'process' && $can('company_payrolls', 'edit')"
                         variant="primary"
                         size="md"
                         @click="openConfirmStatusModal('paid')"
@@ -414,7 +414,7 @@ const getInitials = (name) => {
                     </Button>
 
                     <Button
-                        v-if="payroll.status === 'paid'"
+                        v-if="payroll.status === 'paid' && $can('company_payrolls', 'edit')"
                         variant="secondary"
                         size="md"
                         @click="openConfirmStatusModal('process')"
@@ -603,7 +603,7 @@ const getInitials = (name) => {
                                 <div class="inline-flex items-center justify-center gap-1">
                                     <!-- Button Adjust (jika belum paid) -->
                                     <button
-                                        v-if="payroll.status !== 'paid'"
+                                        v-if="payroll.status !== 'paid' && $can('company_payrolls', 'edit')"
                                         type="button"
                                         class="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition cursor-pointer"
                                         title="Penyesuaian Bonus / Potongan"

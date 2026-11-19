@@ -118,7 +118,7 @@ const executeDelete = () => {
                     Kelola divisi kerja serta aturan absensi dan radius per departemen.
                 </p>
             </div>
-            <div class="flex items-center gap-3">
+            <div v-if="$can('company_divisions', 'create')" class="flex items-center gap-3">
                 <Link :href="route('owner.management.company.divisions.create')">
                     <Button variant="primary">
                         <svg
@@ -278,6 +278,7 @@ const executeDelete = () => {
                     <td class="px-5 py-3.5 whitespace-nowrap text-right">
                         <div class="inline-flex items-center gap-1">
                             <Link
+                                v-if="$can('company_divisions', 'edit')"
                                 :href="route('owner.management.company.divisions.edit', division.id)"
                                 class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
                                 title="Edit Divisi"
@@ -297,6 +298,7 @@ const executeDelete = () => {
                                 </svg>
                             </Link>
                             <button
+                                v-if="$can('company_divisions', 'delete')"
                                 type="button"
                                 @click="confirmDelete(division)"
                                 class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"

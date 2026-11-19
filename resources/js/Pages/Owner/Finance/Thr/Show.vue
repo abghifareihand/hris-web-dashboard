@@ -151,7 +151,7 @@ const formatCurrency = (val) => {
 
                     <!-- Tombol Perubahan Status -->
                     <Button
-                        v-if="thr.status === 'process'"
+                        v-if="thr.status === 'process' && $can('payrolls', 'edit')"
                         variant="primary"
                         size="md"
                         @click="openConfirmStatusModal"

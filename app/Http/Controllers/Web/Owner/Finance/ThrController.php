@@ -21,10 +21,13 @@ class ThrController extends Controller
     public function index()
     {
         $company = auth()->user()->company;
-        $thrs = Thr::with('branch:id,name')
+        $query = Thr::with('branch:id,name')
             ->where('company_id', $company->id)
-            ->latest()
-            ->paginate(10);
+            ->latest();
+
+        $this->scopeBranchDivision($query);
+
+        $thrs = $query->paginate(10);
 
         return Inertia::render('Owner/Finance/Thr/Index', [
             'thrs' => $thrs,
@@ -60,7 +63,7 @@ class ThrController extends Controller
         $monthlyWorkingDays = (int) ($payrollSetting->monthly_working_days ?: 25);
         $weeklyWorkingDays = (int) ($payrollSetting->weekly_working_days ?: 6);
 
-        $branches = Branch::where('company_id', $company->id)->select('id', 'name')->get();
+        $branches = $this->getAllowedBranches($company->id);
 
         $previewData = null;
         if ($request->filled('payment_date') && $request->filled('year')) {
@@ -78,6 +81,8 @@ class ThrController extends Controller
             if ($branchId) {
                 $query->where('branch_id', $branchId);
             }
+
+            $this->scopeBranchDivision($query);
 
             $employees = $query->get();
 
@@ -155,6 +160,10 @@ class ThrController extends Controller
             ? (int) $request->branch_id
             : null;
 
+        if ($branchId && !$this->canAccessBranch($branchId)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk cabang yang dipilih.');
+        }
+
         if ($branchId && !Branch::where('company_id', $company->id)->where('id', $branchId)->exists()) {
             return redirect()->back()->with('error', 'Cabang yang dipilih tidak valid.');
         }
@@ -169,6 +178,12 @@ class ThrController extends Controller
 
         if ($employees->isEmpty()) {
             return redirect()->back()->with('error', 'Karyawan yang dipilih tidak valid.');
+        }
+
+        foreach ($employees as $employee) {
+            if (!$this->canAccessEmployee($employee)) {
+                abort(403, 'Anda tidak memiliki hak akses untuk memproses THR karyawan ' . $employee->name);
+            }
         }
 
         DB::beginTransaction();
@@ -247,6 +262,14 @@ class ThrController extends Controller
                 'items.employee.branch:id,name'
             ])
             ->findOrFail($id);
+
+        if ($thr->branch_id && !$this->canAccessBranch($thr->branch_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk melihat data THR cabang ini.');
+        }
+
+        $thr->setRelation('items', $thr->items->filter(function ($item) {
+            return $this->canAccessEmployee($item->employee);
+        })->values());
         
         return Inertia::render('Owner/Finance/Thr/Show', [
             'thr' => $thr,
@@ -262,6 +285,14 @@ class ThrController extends Controller
                 'items.employee.position'
             ])
             ->findOrFail($id);
+
+        if ($thr->branch_id && !$this->canAccessBranch($thr->branch_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mencetak THR cabang ini.');
+        }
+
+        $thr->setRelation('items', $thr->items->filter(function ($item) {
+            return $this->canAccessEmployee($item->employee);
+        })->values());
 
         $pdf = Pdf::loadView('pdf.thr-slip', compact('thr', 'company'));
         $pdf->setPaper('a4', 'portrait');
@@ -281,6 +312,10 @@ class ThrController extends Controller
             ])
             ->findOrFail($itemId);
 
+        if (!$this->canAccessEmployee($item->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mencetak slip THR karyawan ini.');
+        }
+
         $thr->setRelation('items', collect([$item]));
 
         $pdf = Pdf::loadView('pdf.thr-slip', compact('thr', 'company'));
@@ -294,6 +329,13 @@ class ThrController extends Controller
     {
         $company = auth()->user()->company;
         $thr = Thr::where('company_id', $company->id)->findOrFail($id);
+
+        if ($thr->branch_id && !$this->canAccessBranch($thr->branch_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk memproses pembayaran THR cabang ini.');
+        }
+        if ($thr->branch_id === null && ($this->getAllowedBranchIds() !== null)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk memproses pembayaran THR seluruh perusahaan.');
+        }
         
         if ($thr->status !== 'process') {
             return redirect()->back()->with('error', 'THR ini sudah dibayar.');
@@ -308,6 +350,13 @@ class ThrController extends Controller
     {
         $company = auth()->user()->company;
         $thr = Thr::where('company_id', $company->id)->findOrFail($id);
+
+        if ($thr->branch_id && !$this->canAccessBranch($thr->branch_id)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menghapus data THR cabang ini.');
+        }
+        if ($thr->branch_id === null && ($this->getAllowedBranchIds() !== null)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menghapus data THR seluruh perusahaan.');
+        }
         
         if ($thr->status !== 'process') {
             return redirect()->back()->with('error', 'Hanya THR berstatus DRAFT/PROCESS yang dapat dihapus.');

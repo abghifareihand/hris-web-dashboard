@@ -15,11 +15,11 @@ class PositionController extends Controller
      */
     public function index(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Data perusahaan tidak ditemukan atau Anda bukan owner.',
+                'message' => 'Perusahaan tidak ditemukan.',
             ], 403);
         }
 
@@ -76,11 +76,11 @@ class PositionController extends Controller
      */
     public function store(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Data perusahaan tidak ditemukan atau Anda bukan owner.',
+                'message' => 'Perusahaan tidak ditemukan.',
             ], 403);
         }
 
@@ -90,6 +90,7 @@ class PositionController extends Controller
             'branches.*' => 'exists:branches,id',
             'divisions' => 'nullable|array',
             'divisions.*' => 'exists:divisions,id',
+            'permissions' => 'nullable|array',
         ], [
             'name.required' => 'Nama jabatan wajib diisi.',
             'branches.*.exists' => 'Cabang yang dipilih tidak valid.',
@@ -107,6 +108,7 @@ class PositionController extends Controller
         $position = Position::create([
             'company_id' => $company->id,
             'name' => $request->name,
+            'permissions' => $request->permissions,
         ]);
 
         if ($request->filled('branches')) {
@@ -131,11 +133,11 @@ class PositionController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Data perusahaan tidak ditemukan atau Anda bukan owner.',
+                'message' => 'Perusahaan tidak ditemukan.',
             ], 403);
         }
 
@@ -163,11 +165,11 @@ class PositionController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Data perusahaan tidak ditemukan atau Anda bukan owner.',
+                'message' => 'Perusahaan tidak ditemukan.',
             ], 403);
         }
 
@@ -185,6 +187,7 @@ class PositionController extends Controller
             'branches.*' => 'exists:branches,id',
             'divisions' => 'nullable|array',
             'divisions.*' => 'exists:divisions,id',
+            'permissions' => 'nullable|array',
         ], [
             'name.required' => 'Nama jabatan wajib diisi.',
             'branches.*.exists' => 'Cabang yang dipilih tidak valid.',
@@ -201,6 +204,7 @@ class PositionController extends Controller
 
         $position->update([
             'name' => $request->name,
+            'permissions' => $request->has('permissions') ? $request->permissions : $position->permissions,
         ]);
 
         if ($request->has('branches')) {
@@ -222,11 +226,11 @@ class PositionController extends Controller
      */
     public function destroy(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Data perusahaan tidak ditemukan atau Anda bukan owner.',
+                'message' => 'Perusahaan tidak ditemukan.',
             ], 403);
         }
 
@@ -273,6 +277,7 @@ class PositionController extends Controller
                 return ['id' => $d->id, 'name' => $d->name];
             })->values()->all() : [],
             'division_ids' => $position->divisions ? $position->divisions->pluck('id')->all() : [],
+            'permissions' => $position->permissions ?? null,
             'created_at' => Carbon::parse($position->created_at ?? now())->format('Y-m-d H:i:s'),
             'updated_at' => Carbon::parse($position->updated_at ?? $position->created_at ?? now())->format('Y-m-d H:i:s'),
         ];

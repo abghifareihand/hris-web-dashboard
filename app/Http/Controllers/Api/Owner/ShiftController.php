@@ -15,11 +15,11 @@ class ShiftController extends Controller
      */
     public function index(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Data perusahaan tidak ditemukan atau Anda bukan owner.',
+                'message' => 'Perusahaan tidak ditemukan.',
             ], 403);
         }
 
@@ -59,11 +59,11 @@ class ShiftController extends Controller
      */
     public function store(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Data perusahaan tidak ditemukan atau Anda bukan owner.',
+                'message' => 'Perusahaan tidak ditemukan.',
             ], 403);
         }
 
@@ -108,11 +108,11 @@ class ShiftController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Data perusahaan tidak ditemukan atau Anda bukan owner.',
+                'message' => 'Perusahaan tidak ditemukan.',
             ], 403);
         }
 
@@ -139,11 +139,11 @@ class ShiftController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Data perusahaan tidak ditemukan atau Anda bukan owner.',
+                'message' => 'Perusahaan tidak ditemukan.',
             ], 403);
         }
 
@@ -192,11 +192,11 @@ class ShiftController extends Controller
      */
     public function destroy(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Data perusahaan tidak ditemukan atau Anda bukan owner.',
+                'message' => 'Perusahaan tidak ditemukan.',
             ], 403);
         }
 

@@ -39,7 +39,12 @@ class HandleInertiaRequests extends Middleware
         $user = $request->user();
 
         if ($user) {
-            $user->loadMissing(['company', 'employee.company', 'employee.position']);
+            $user->loadMissing([
+                'company',
+                'employee.company',
+                'employee.position.branches',
+                'employee.position.divisions',
+            ]);
         }
 
         $company = $user ? ($user->company ?? $user->employee?->company) : null;
@@ -70,6 +75,10 @@ class HandleInertiaRequests extends Middleware
                         'avatar' => $user->employee->avatar ?? null,
                     ] : null,
                 ] : null,
+                'permissions' => $user ? $user->getEffectivePermissions('web') : [],
+                'is_owner' => $user ? $user->isOwner() : false,
+                'allowed_branch_ids' => $user ? $user->getAllowedBranchIds() : null,
+                'allowed_division_ids' => $user ? $user->getAllowedDivisionIds() : null,
                 'unreadNotificationsCount' => $user ? $user->unreadNotifications()->count() : 0,
                 'recentNotifications' => $user ? $user->notifications()->latest()->take(5)->get()->map(function ($n) use ($user) {
                     return [

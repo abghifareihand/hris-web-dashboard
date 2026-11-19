@@ -329,7 +329,7 @@ const getAttachmentUrl = (path) => {
                     </td>
                     <td class="px-5 py-3.5 whitespace-nowrap text-right">
                         <button
-                            v-if="['rejected', 'cancelled'].includes(item.status)"
+                            v-if="['rejected', 'cancelled'].includes(item.status) && $can('leaves', 'delete')"
                             type="button"
                             @click="openDeleteModal(item)"
                             class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"

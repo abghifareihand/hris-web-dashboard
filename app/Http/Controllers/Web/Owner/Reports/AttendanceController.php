@@ -88,10 +88,12 @@ class AttendanceController extends Controller
             });
         }
 
+        $this->scopeByEmployeeRelation($query);
+
         $attendances = $query->latest('date')->paginate($request->input('per_page', 10))->withQueryString();
 
-        $branches = Branch::where('company_id', $company->id)->select('id', 'name')->get();
-        $divisions = Division::where('company_id', $company->id)->select('id', 'name')->get();
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
 
         $filters = array_merge(
             $request->only(['branch_id', 'division_id', 'status', 'search']),
@@ -137,6 +139,10 @@ class AttendanceController extends Controller
         ])
         ->where('company_id', $company->id)
         ->findOrFail($id);
+
+        if (!$this->canAccessEmployee($attendance->employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk melihat data presensi ini.');
+        }
 
         $schedule = WorkSchedule::where('employee_id', $attendance->employee_id)
             ->where('date', $attendance->date)
@@ -185,8 +191,8 @@ class AttendanceController extends Controller
 
         $recapData = $this->calculateEmployeeRecap($employees->items(), $startDate, $endDate);
 
-        $branches = Branch::where('company_id', $company->id)->select('id', 'name')->get();
-        $divisions = Division::where('company_id', $company->id)->select('id', 'name')->get();
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
         $positions = Position::where('company_id', $company->id)->select('id', 'name')->get();
         $setting = AttendanceSetting::where('company_id', $company->id)->first();
 
@@ -296,8 +302,8 @@ class AttendanceController extends Controller
 
         $recapList = $this->calculateEmployeeRecap($employees->items(), $startDate, $endDate);
 
-        $branches = Branch::where('company_id', $company->id)->select('id', 'name')->get();
-        $divisions = Division::where('company_id', $company->id)->select('id', 'name')->get();
+        $branches = $this->getAllowedBranches($company->id);
+        $divisions = $this->getAllowedDivisions($company->id);
         $setting = AttendanceSetting::where('company_id', $company->id)->first();
 
         $statusLabels = [
@@ -308,10 +314,9 @@ class AttendanceController extends Controller
         ];
 
         // Calculate all active employees recap for global metrics & per-branch statistics
-        $allActiveEmployees = Employee::with(['branch:id,name', 'division:id,name', 'position:id,name', 'user:id,avatar'])
+        $allActiveEmployees = $this->scopeBranchDivision(Employee::with(['branch:id,name', 'division:id,name', 'position:id,name', 'user:id,avatar'])
             ->where('company_id', $company->id)
-            ->where('is_active', true)
-            ->get();
+            ->where('is_active', true))->get();
 
         $allRecapList = $this->calculateEmployeeRecap($allActiveEmployees, $startDate, $endDate);
 
@@ -653,6 +658,10 @@ class AttendanceController extends Controller
             ->where('company_id', $company->id)
             ->findOrFail($employeeId);
 
+        if (!$this->canAccessEmployee($employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk melihat data lembur karyawan ini.');
+        }
+
         $startDate = $request->input('start_date', now()->startOfMonth()->format('Y-m-d'));
         $endDate = $request->input('end_date', now()->format('Y-m-d'));
 
@@ -678,6 +687,11 @@ class AttendanceController extends Controller
         if (!$company) abort(403);
 
         $employee = Employee::where('company_id', $company->id)->findOrFail($employeeId);
+
+        if (!$this->canAccessEmployee($employee)) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mengekspor data lembur karyawan ini.');
+        }
+
         $startDate = $request->input('start_date', now()->startOfMonth()->format('Y-m-d'));
         $endDate = $request->input('end_date', now()->format('Y-m-d'));
 
@@ -728,6 +742,8 @@ class AttendanceController extends Controller
                   ->orWhere('nip', 'like', "%{$search}%");
             });
         }
+
+        $this->scopeBranchDivision($query);
 
         $query->orderBy('name', 'asc');
 

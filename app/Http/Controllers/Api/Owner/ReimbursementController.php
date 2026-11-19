@@ -17,16 +17,18 @@ class ReimbursementController extends Controller
      */
     public function index(Request $request)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
         $query = Reimbursement::with(['employee.user', 'approvedBy:id,name'])
             ->where('company_id', $company->id);
+
+        $this->scopeByEmployeeRelation($query);
 
         if ($request->filled('employee_id')) {
             $query->where('employee_id', $request->employee_id);
@@ -81,11 +83,11 @@ class ReimbursementController extends Controller
      */
     public function approve(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
@@ -98,6 +100,13 @@ class ReimbursementController extends Controller
                 'status' => false,
                 'message' => 'Pengajuan klaim biaya pending tidak ditemukan.'
             ], 404);
+        }
+
+        if (!$this->canAccessEmployee($reimbursement->employee)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Anda tidak memiliki hak akses untuk karyawan ini.'
+            ], 403);
         }
 
         $payoutMethod = $request->input('payout_method', 'payroll');
@@ -137,11 +146,11 @@ class ReimbursementController extends Controller
      */
     public function reject(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
@@ -154,6 +163,13 @@ class ReimbursementController extends Controller
                 'status' => false,
                 'message' => 'Pengajuan klaim biaya pending tidak ditemukan.'
             ], 404);
+        }
+
+        if (!$this->canAccessEmployee($reimbursement->employee)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Anda tidak memiliki hak akses untuk karyawan ini.'
+            ], 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -200,11 +216,11 @@ class ReimbursementController extends Controller
      */
     public function destroy(Request $request, $id)
     {
-        $company = $request->user()->company;
+        $company = $request->user()->getCompany();
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Hanya owner perusahaan yang bisa mengakses.'
+                'message' => 'Perusahaan tidak ditemukan.'
             ], 403);
         }
 
@@ -215,6 +231,13 @@ class ReimbursementController extends Controller
                 'status' => false,
                 'message' => 'Data klaim biaya tidak ditemukan.'
             ], 404);
+        }
+
+        if (!$this->canAccessEmployee($reimbursement->employee)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Anda tidak memiliki hak akses untuk karyawan ini.'
+            ], 403);
         }
 
         if ($reimbursement->status === 'approved' || $reimbursement->status === 'paid' || !empty($reimbursement->payroll_item_id)) {

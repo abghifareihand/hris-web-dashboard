@@ -73,9 +73,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
     // =========================================================================
-    // Owner Routes
+    // Unified Management Web Routes (Owner & Authorized Employees via RBAC)
     // =========================================================================
-    Route::middleware('role:owner')->prefix('owner')->name('owner.')->group(function () {
+    Route::middleware(['role:owner,employee'])->name('owner.')->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\Web\Owner\DashboardController::class, 'index'])->name('dashboard');
 
         // Notifications
@@ -96,28 +96,31 @@ Route::middleware('auth')->group(function () {
             Route::put('/password', [OwnerProfileController::class, 'password'])->name('password.update');
         });
 
-        // Management (Batch 1: Organization & Employees)
+        // Management (Organization & Employees)
         Route::prefix('management')->name('management.')->group(function () {
-            // Pending Employees (defined before employees resource)
-            Route::get('/employees/pending', [PendingEmployeeController::class, 'index'])->name('employees.pending.index');
-            Route::post('/employees/pending/{id}/approve', [PendingEmployeeController::class, 'approve'])->name('employees.pending.approve');
-            Route::post('/employees/pending/{id}/reject', [PendingEmployeeController::class, 'reject'])->name('employees.pending.reject');
-            Route::delete('/employees/pending/{id}', [PendingEmployeeController::class, 'destroy'])->name('employees.pending.destroy');
-
-            // Employees CRUD
-            Route::resource('employees', EmployeeController::class);
+            // Employees Management (Protected by 'employees')
+            Route::middleware('permission:employees')->group(function () {
+                Route::get('/employees/pending', [PendingEmployeeController::class, 'index'])->name('employees.pending.index');
+                Route::post('/employees/pending/{id}/approve', [PendingEmployeeController::class, 'approve'])->name('employees.pending.approve');
+                Route::post('/employees/pending/{id}/reject', [PendingEmployeeController::class, 'reject'])->name('employees.pending.reject');
+                Route::delete('/employees/pending/{id}', [PendingEmployeeController::class, 'destroy'])->name('employees.pending.destroy');
+                Route::resource('employees', EmployeeController::class);
+            });
 
             // Company Organization
             Route::prefix('company')->name('company.')->group(function () {
-                Route::get('/profile', [CompanyProfileController::class, 'index'])->name('profile.index');
-                Route::match(['put', 'post'], '/profile', [CompanyProfileController::class, 'update'])->name('profile.update');
-                Route::resource('branches', BranchController::class);
-                Route::resource('divisions', DivisionController::class)->except(['show']);
-                Route::resource('positions', PositionController::class);
+                Route::middleware('permission:company_profile')->group(function () {
+                    Route::get('/profile', [CompanyProfileController::class, 'index'])->name('profile.index');
+                    Route::match(['put', 'post'], '/profile', [CompanyProfileController::class, 'update'])->name('profile.update');
+                });
+
+                Route::resource('branches', BranchController::class)->middleware('permission:branches');
+                Route::resource('divisions', DivisionController::class)->except(['show'])->middleware('permission:divisions');
+                Route::resource('positions', PositionController::class)->middleware('permission:positions');
             });
 
             // Attendance Settings
-            Route::prefix('attendance')->name('attendance.')->group(function () {
+            Route::prefix('attendance')->name('attendance.')->middleware('permission:settings')->group(function () {
                 Route::get('/settings', [AttendanceSettingController::class, 'index'])->name('settings.index');
                 Route::put('/settings', [AttendanceSettingController::class, 'update'])->name('settings.update');
                 Route::post('/settings/status', [AttendanceSettingController::class, 'updateStatus'])->name('settings.update-status');
@@ -126,69 +129,84 @@ Route::middleware('auth')->group(function () {
             // Schedules
             Route::prefix('schedules')->name('schedules.')->group(function () {
                 // Shifts
-                Route::get('/shifts', [ScheduleController::class, 'shifts'])->name('shifts.index');
-                Route::get('/shifts/create', [ScheduleController::class, 'createShifts'])->name('shifts.create');
-                Route::post('/shifts', [ScheduleController::class, 'storeShift'])->name('shifts.store');
-                Route::get('/shifts/{id}/edit', [ScheduleController::class, 'editShift'])->name('shifts.edit');
-                Route::put('/shifts/{id}', [ScheduleController::class, 'updateShift'])->name('shifts.update');
-                Route::delete('/shifts/{id}', [ScheduleController::class, 'destroyShift'])->name('shifts.destroy');
+                Route::middleware('permission:shifts')->group(function () {
+                    Route::get('/shifts', [ScheduleController::class, 'shifts'])->name('shifts.index');
+                    Route::get('/shifts/create', [ScheduleController::class, 'createShifts'])->name('shifts.create');
+                    Route::post('/shifts', [ScheduleController::class, 'storeShift'])->name('shifts.store');
+                    Route::get('/shifts/{id}/edit', [ScheduleController::class, 'editShift'])->name('shifts.edit');
+                    Route::put('/shifts/{id}', [ScheduleController::class, 'updateShift'])->name('shifts.update');
+                    Route::delete('/shifts/{id}', [ScheduleController::class, 'destroyShift'])->name('shifts.destroy');
+                });
 
                 // Holidays
-                Route::get('/holidays', [ScheduleController::class, 'holidays'])->name('holidays.index');
-                Route::get('/holidays/create', [ScheduleController::class, 'createHolidays'])->name('holidays.create');
-                Route::post('/holidays', [ScheduleController::class, 'storeHoliday'])->name('holidays.store');
-                Route::get('/holidays/{id}/edit', [ScheduleController::class, 'editHoliday'])->name('holidays.edit');
-                Route::put('/holidays/{id}', [ScheduleController::class, 'updateHoliday'])->name('holidays.update');
-                Route::delete('/holidays/{id}', [ScheduleController::class, 'destroyHoliday'])->name('holidays.destroy');
+                Route::middleware('permission:holidays')->group(function () {
+                    Route::get('/holidays', [ScheduleController::class, 'holidays'])->name('holidays.index');
+                    Route::get('/holidays/create', [ScheduleController::class, 'createHolidays'])->name('holidays.create');
+                    Route::post('/holidays', [ScheduleController::class, 'storeHoliday'])->name('holidays.store');
+                    Route::get('/holidays/{id}/edit', [ScheduleController::class, 'editHoliday'])->name('holidays.edit');
+                    Route::put('/holidays/{id}', [ScheduleController::class, 'updateHoliday'])->name('holidays.update');
+                    Route::delete('/holidays/{id}', [ScheduleController::class, 'destroyHoliday'])->name('holidays.destroy');
+                });
 
                 // Work Schedules
-                Route::get('/work', [ScheduleController::class, 'work'])->name('work.index');
-                Route::get('/work/create', [ScheduleController::class, 'createWork'])->name('work.create');
-                Route::post('/work/create', [ScheduleController::class, 'storeWork'])->name('work.store');
-                Route::post('/work', [ScheduleController::class, 'storeWork']);
-                Route::get('/work/api-employees', [ScheduleController::class, 'apiEmployees'])->name('work.api.employees');
-                Route::get('/work/{schedule}/edit', [ScheduleController::class, 'editWork'])->name('work.edit');
-                Route::put('/work/{schedule}', [ScheduleController::class, 'updateWork'])->name('work.update');
-                Route::delete('/work/{schedule}', [ScheduleController::class, 'destroyWork'])->name('work.destroy');
+                Route::middleware('permission:schedules')->group(function () {
+                    Route::get('/work', [ScheduleController::class, 'work'])->name('work.index');
+                    Route::get('/work/create', [ScheduleController::class, 'createWork'])->name('work.create');
+                    Route::post('/work/create', [ScheduleController::class, 'storeWork'])->name('work.store');
+                    Route::post('/work', [ScheduleController::class, 'storeWork']);
+                    Route::get('/work/api-employees', [ScheduleController::class, 'apiEmployees'])->name('work.api.employees');
+                    Route::get('/work/{schedule}/edit', [ScheduleController::class, 'editWork'])->name('work.edit');
+                    Route::put('/work/{schedule}', [ScheduleController::class, 'updateWork'])->name('work.update');
+                    Route::delete('/work/{schedule}', [ScheduleController::class, 'destroyWork'])->name('work.destroy');
+                });
 
                 // Swap Personal
-                Route::get('/swap-personal', [ScheduleController::class, 'swapPersonal'])->name('swap-personal.index');
-                Route::get('/swap-personal/{id}', [ScheduleController::class, 'showSwapPersonal'])->name('swap-personal.show');
-                Route::post('/swap-personal/{id}/approve', [ScheduleController::class, 'approveSwapPersonal'])->name('swap-personal.approve');
-                Route::post('/swap-personal/{id}/reject', [ScheduleController::class, 'rejectSwapPersonal'])->name('swap-personal.reject');
-                Route::delete('/swap-personal/{id}', [ScheduleController::class, 'destroySwapPersonal'])->name('swap-personal.destroy');
+                Route::middleware('permission:swap_schedules')->group(function () {
+                    Route::get('/swap-personal', [ScheduleController::class, 'swapPersonal'])->name('swap-personal.index');
+                    Route::get('/swap-personal/{id}', [ScheduleController::class, 'showSwapPersonal'])->name('swap-personal.show');
+                    Route::post('/swap-personal/{id}/approve', [ScheduleController::class, 'approveSwapPersonal'])->name('swap-personal.approve');
+                    Route::post('/swap-personal/{id}/reject', [ScheduleController::class, 'rejectSwapPersonal'])->name('swap-personal.reject');
+                    Route::delete('/swap-personal/{id}', [ScheduleController::class, 'destroySwapPersonal'])->name('swap-personal.destroy');
+                });
 
                 // Swap Team
-                Route::get('/swap-team', [ScheduleController::class, 'swapTeam'])->name('swap-team.index');
-                Route::get('/swap-team/{id}', [ScheduleController::class, 'showSwapTeam'])->name('swap-team.show');
-                Route::post('/swap-team/{id}/approve', [ScheduleController::class, 'approveSwapTeam'])->name('swap-team.approve');
-                Route::post('/swap-team/{id}/reject', [ScheduleController::class, 'rejectSwapTeam'])->name('swap-team.reject');
-                Route::delete('/swap-team/{id}', [ScheduleController::class, 'destroySwapTeam'])->name('swap-team.destroy');
+                Route::middleware('permission:swap_schedules')->group(function () {
+                    Route::get('/swap-team', [ScheduleController::class, 'swapTeam'])->name('swap-team.index');
+                    Route::get('/swap-team/{id}', [ScheduleController::class, 'showSwapTeam'])->name('swap-team.show');
+                    Route::post('/swap-team/{id}/approve', [ScheduleController::class, 'approveSwapTeam'])->name('swap-team.approve');
+                    Route::post('/swap-team/{id}/reject', [ScheduleController::class, 'rejectSwapTeam'])->name('swap-team.reject');
+                    Route::delete('/swap-team/{id}', [ScheduleController::class, 'destroySwapTeam'])->name('swap-team.destroy');
+                });
             });
 
             // Leaves
             Route::prefix('leaves')->name('leaves.')->group(function () {
-                Route::get('/pending', [LeaveController::class, 'pending'])->name('pending.index');
-                Route::post('/pending/{id}/approve', [LeaveController::class, 'approve'])->name('pending.approve');
-                Route::post('/pending/{id}/reject', [LeaveController::class, 'reject'])->name('pending.reject');
+                Route::middleware('permission:leaves')->group(function () {
+                    Route::get('/pending', [LeaveController::class, 'pending'])->name('pending.index');
+                    Route::post('/pending/{id}/approve', [LeaveController::class, 'approve'])->name('pending.approve');
+                    Route::post('/pending/{id}/reject', [LeaveController::class, 'reject'])->name('pending.reject');
+                    Route::get('/', [LeaveController::class, 'index'])->name('index');
+                    Route::delete('/{id}', [LeaveController::class, 'destroy'])->name('destroy');
+                });
 
-                Route::get('/', [LeaveController::class, 'index'])->name('index');
-                Route::delete('/{id}', [LeaveController::class, 'destroy'])->name('destroy');
+                Route::middleware('permission:leave_balances')->group(function () {
+                    Route::get('/balance', [LeaveController::class, 'balance'])->name('balance.index');
+                    Route::get('/balance/{id}/edit', [LeaveController::class, 'editBalance'])->name('balance.edit');
+                    Route::put('/balance/{id}', [LeaveController::class, 'updateBalance'])->name('balance.update');
+                });
 
-                Route::get('/balance', [LeaveController::class, 'balance'])->name('balance.index');
-                Route::get('/balance/{id}/edit', [LeaveController::class, 'editBalance'])->name('balance.edit');
-                Route::put('/balance/{id}', [LeaveController::class, 'updateBalance'])->name('balance.update');
-
-                Route::get('/categories', [LeaveController::class, 'categories'])->name('categories.index');
-                Route::get('/categories/create', [LeaveController::class, 'createCategory'])->name('categories.create');
-                Route::post('/categories', [LeaveController::class, 'storeCategory'])->name('categories.store');
-                Route::get('/categories/{id}/edit', [LeaveController::class, 'editCategory'])->name('categories.edit');
-                Route::put('/categories/{id}', [LeaveController::class, 'updateCategory'])->name('categories.update');
-                Route::delete('/categories/{id}', [LeaveController::class, 'destroyCategory'])->name('categories.destroy');
+                Route::middleware('permission:leave_categories')->group(function () {
+                    Route::get('/categories', [LeaveController::class, 'categories'])->name('categories.index');
+                    Route::get('/categories/create', [LeaveController::class, 'createCategory'])->name('categories.create');
+                    Route::post('/categories', [LeaveController::class, 'storeCategory'])->name('categories.store');
+                    Route::get('/categories/{id}/edit', [LeaveController::class, 'editCategory'])->name('categories.edit');
+                    Route::put('/categories/{id}', [LeaveController::class, 'updateCategory'])->name('categories.update');
+                    Route::delete('/categories/{id}', [LeaveController::class, 'destroyCategory'])->name('categories.destroy');
+                });
             });
 
             // Overtimes
-            Route::prefix('overtimes')->name('overtimes.')->group(function () {
+            Route::prefix('overtimes')->name('overtimes.')->middleware('permission:overtimes')->group(function () {
                 Route::get('/pending', [OvertimeController::class, 'pending'])->name('pending.index');
                 Route::post('/pending/{id}/approve', [OvertimeController::class, 'approve'])->name('pending.approve');
                 Route::post('/pending/{id}/reject', [OvertimeController::class, 'reject'])->name('pending.reject');
@@ -199,7 +217,7 @@ Route::middleware('auth')->group(function () {
 
         Route::prefix('finance')->name('finance.')->group(function () {
             // Reimbursements
-            Route::prefix('reimbursements')->name('reimbursements.')->group(function () {
+            Route::prefix('reimbursements')->name('reimbursements.')->middleware('permission:reimbursements')->group(function () {
                 Route::get('/pending', [ReimbursementController::class, 'pending'])->name('pending.index');
                 Route::post('/pending/{id}/approve', [ReimbursementController::class, 'approve'])->name('pending.approve');
                 Route::post('/pending/{id}/reject', [ReimbursementController::class, 'reject'])->name('pending.reject');
@@ -211,43 +229,53 @@ Route::middleware('auth')->group(function () {
 
             // Loans
             Route::prefix('loans')->name('loans.')->group(function () {
-                Route::get('/settings', [LoanSettingController::class, 'index'])->name('settings.index');
-                Route::post('/settings', [LoanSettingController::class, 'store'])->name('settings.store');
-                Route::get('/pending', [LoanController::class, 'pending'])->name('pending.index');
-                Route::post('/pending/{id}/approve', [LoanController::class, 'approve'])->name('pending.approve');
-                Route::post('/pending/{id}/reject', [LoanController::class, 'reject'])->name('pending.reject');
-                Route::get('/', [LoanController::class, 'index'])->name('index');
-                Route::get('/create', [LoanController::class, 'create'])->name('create');
-                Route::post('/', [LoanController::class, 'store'])->name('store');
-                Route::get('/{id}', [LoanController::class, 'show'])->name('show');
-                Route::delete('/{id}', [LoanController::class, 'destroy'])->name('destroy');
-                Route::patch('/{id}/installments/{installmentId}', [LoanController::class, 'updateInstallment'])->name('update-installment');
+                Route::middleware('permission:settings')->group(function () {
+                    Route::get('/settings', [LoanSettingController::class, 'index'])->name('settings.index');
+                    Route::post('/settings', [LoanSettingController::class, 'store'])->name('settings.store');
+                });
+
+                Route::middleware('permission:loans')->group(function () {
+                    Route::get('/pending', [LoanController::class, 'pending'])->name('pending.index');
+                    Route::post('/pending/{id}/approve', [LoanController::class, 'approve'])->name('pending.approve');
+                    Route::post('/pending/{id}/reject', [LoanController::class, 'reject'])->name('pending.reject');
+                    Route::get('/', [LoanController::class, 'index'])->name('index');
+                    Route::get('/create', [LoanController::class, 'create'])->name('create');
+                    Route::post('/', [LoanController::class, 'store'])->name('store');
+                    Route::get('/{id}', [LoanController::class, 'show'])->name('show');
+                    Route::delete('/{id}', [LoanController::class, 'destroy'])->name('destroy');
+                    Route::patch('/{id}/installments/{installmentId}', [LoanController::class, 'updateInstallment'])->name('update-installment');
+                });
             });
 
             // Payrolls
             Route::prefix('payrolls')->name('payrolls.')->group(function () {
-                Route::get('/settings', [PayrollSettingController::class, 'index'])->name('settings.index');
-                Route::post('/settings', [PayrollSettingController::class, 'store'])->name('settings.store');
-                Route::get('/check-employees', [PayrollController::class, 'checkEmployees'])->name('check');
-                Route::get('/master', [PayrollController::class, 'master'])->name('master.index');
-                Route::get('/', [PayrollController::class, 'index'])->name('index');
-                Route::get('/export-excel', [PayrollController::class, 'exportExcel'])->name('export-excel');
-                Route::post('/', [PayrollController::class, 'store'])->name('store');
-                Route::get('/{id}', [PayrollController::class, 'show'])->name('show');
-                Route::get('/{id}/slips', [PayrollController::class, 'printSlips'])->name('slips');
-                Route::get('/{id}/slips-f4', [PayrollController::class, 'printSlipsF4'])->name('slips-f4');
-                Route::get('/{id}/slips-f4-grid8', [PayrollController::class, 'printSlipsF4Grid8'])->name('slips-f4-grid8');
-                Route::get('/{id}/slips/{itemId}', [PayrollController::class, 'printSingleSlip'])->name('slip-single');
-                Route::get('/{id}/items/{itemId}', [PayrollController::class, 'showItem'])->name('items.show');
-                Route::get('/{id}/export-bank-excel', [PayrollController::class, 'exportBankExcel'])->name('export-bank-excel');
-                Route::get('/{id}/export-bank-csv', [PayrollController::class, 'exportBankExcel'])->name('export-bank-csv');
-                Route::patch('/{id}/status', [PayrollController::class, 'updateStatus'])->name('update-status');
-                Route::patch('/{id}/items', [PayrollController::class, 'updateItems'])->name('update-items');
-                Route::delete('/{id}', [PayrollController::class, 'destroy'])->name('destroy');
+                Route::middleware('permission:settings')->group(function () {
+                    Route::get('/settings', [PayrollSettingController::class, 'index'])->name('settings.index');
+                    Route::post('/settings', [PayrollSettingController::class, 'store'])->name('settings.store');
+                });
+
+                Route::middleware('permission:payrolls')->group(function () {
+                    Route::get('/check-employees', [PayrollController::class, 'checkEmployees'])->name('check');
+                    Route::get('/master', [PayrollController::class, 'master'])->name('master.index');
+                    Route::get('/', [PayrollController::class, 'index'])->name('index');
+                    Route::get('/export-excel', [PayrollController::class, 'exportExcel'])->name('export-excel');
+                    Route::post('/', [PayrollController::class, 'store'])->name('store');
+                    Route::get('/{id}', [PayrollController::class, 'show'])->name('show');
+                    Route::get('/{id}/slips', [PayrollController::class, 'printSlips'])->name('slips');
+                    Route::get('/{id}/slips-f4', [PayrollController::class, 'printSlipsF4'])->name('slips-f4');
+                    Route::get('/{id}/slips-f4-grid8', [PayrollController::class, 'printSlipsF4Grid8'])->name('slips-f4-grid8');
+                    Route::get('/{id}/slips/{itemId}', [PayrollController::class, 'printSingleSlip'])->name('slip-single');
+                    Route::get('/{id}/items/{itemId}', [PayrollController::class, 'showItem'])->name('items.show');
+                    Route::get('/{id}/export-bank-excel', [PayrollController::class, 'exportBankExcel'])->name('export-bank-excel');
+                    Route::get('/{id}/export-bank-csv', [PayrollController::class, 'exportBankExcel'])->name('export-bank-csv');
+                    Route::patch('/{id}/status', [PayrollController::class, 'updateStatus'])->name('update-status');
+                    Route::patch('/{id}/items', [PayrollController::class, 'updateItems'])->name('update-items');
+                    Route::delete('/{id}', [PayrollController::class, 'destroy'])->name('destroy');
+                });
             });
 
-            // Taxes & BPJS
-            Route::prefix('taxes')->name('taxes.')->group(function () {
+            // Taxes & BPJS (Protected by 'payrolls')
+            Route::prefix('taxes')->name('taxes.')->middleware('permission:payrolls')->group(function () {
                 Route::get('/pph21', [TaxController::class, 'pph21'])->name('pph21');
                 Route::get('/bpjs-tk', [TaxController::class, 'bpjsKetenagakerjaan'])->name('bpjs-tk');
                 Route::post('/bpjs-tk', [TaxController::class, 'updateBpjsKetenagakerjaan'])->name('bpjs-tk.update');
@@ -255,8 +283,8 @@ Route::middleware('auth')->group(function () {
                 Route::post('/bpjs-kes', [TaxController::class, 'updateBpjsKesehatan'])->name('bpjs-kes.update');
             });
 
-            // THR (Tunjangan Hari Raya)
-            Route::prefix('thr')->name('thr.')->group(function () {
+            // THR (Protected by 'payrolls')
+            Route::prefix('thr')->name('thr.')->middleware('permission:payrolls')->group(function () {
                 Route::get('/settings', [ThrSettingController::class, 'index'])->name('settings.index');
                 Route::post('/settings', [ThrSettingController::class, 'store'])->name('settings.store');
                 Route::get('/', [ThrController::class, 'index'])->name('index');
@@ -273,33 +301,37 @@ Route::middleware('auth')->group(function () {
 
         // REPORTS
         Route::prefix('reports')->name('reports.')->group(function () {
-            // Attendances
-            Route::get('/attendances', [OwnerAttendanceReportController::class, 'index'])->name('attendances.index');
-            Route::get('/attendances/recap', [OwnerAttendanceReportController::class, 'recap'])->name('attendances.recap.index');
-            Route::get('/attendances/recap/export', [OwnerAttendanceReportController::class, 'recapExport'])->name('attendances.recap.export');
-            Route::get('/attendances/rate', [OwnerAttendanceReportController::class, 'rate'])->name('attendances.rate.index');
-            Route::get('/attendances/rate/export', [OwnerAttendanceReportController::class, 'rateExport'])->name('attendances.rate.export');
-            Route::get('/attendances/overtime-recap', [OwnerAttendanceReportController::class, 'overtimeRecap'])->name('attendances.overtime-recap.index');
-            Route::get('/attendances/overtime-recap/export', [OwnerAttendanceReportController::class, 'overtimeRecapExport'])->name('attendances.overtime-recap.export');
-            Route::get('/attendances/overtime-recap/{employee}', [OwnerAttendanceReportController::class, 'overtimeRecapDetail'])->whereNumber('employee')->name('attendances.overtime-recap.detail');
-            Route::get('/attendances/overtime-recap/{employee}/export', [OwnerAttendanceReportController::class, 'overtimeRecapDetailExport'])->whereNumber('employee')->name('attendances.overtime-recap.detail-export');
-            Route::get('/attendances/{id}', [OwnerAttendanceReportController::class, 'show'])->whereNumber('id')->name('attendances.show');
+            // Attendances (Protected by 'attendances')
+            Route::middleware('permission:attendances')->group(function () {
+                Route::get('/attendances', [OwnerAttendanceReportController::class, 'index'])->name('attendances.index');
+                Route::get('/attendances/recap', [OwnerAttendanceReportController::class, 'recap'])->name('attendances.recap.index');
+                Route::get('/attendances/recap/export', [OwnerAttendanceReportController::class, 'recapExport'])->name('attendances.recap.export');
+                Route::get('/attendances/rate', [OwnerAttendanceReportController::class, 'rate'])->name('attendances.rate.index');
+                Route::get('/attendances/rate/export', [OwnerAttendanceReportController::class, 'rateExport'])->name('attendances.rate.export');
+                Route::get('/attendances/overtime-recap', [OwnerAttendanceReportController::class, 'overtimeRecap'])->name('attendances.overtime-recap.index');
+                Route::get('/attendances/overtime-recap/export', [OwnerAttendanceReportController::class, 'overtimeRecapExport'])->name('attendances.overtime-recap.export');
+                Route::get('/attendances/overtime-recap/{employee}', [OwnerAttendanceReportController::class, 'overtimeRecapDetail'])->whereNumber('employee')->name('attendances.overtime-recap.detail');
+                Route::get('/attendances/overtime-recap/{employee}/export', [OwnerAttendanceReportController::class, 'overtimeRecapDetailExport'])->whereNumber('employee')->name('attendances.overtime-recap.detail-export');
+                Route::get('/attendances/{id}', [OwnerAttendanceReportController::class, 'show'])->whereNumber('id')->name('attendances.show');
+            });
 
-            // Performances
-            Route::get('/performances/daily', [OwnerPerformanceReportController::class, 'daily'])->name('performances.daily.index');
-            Route::get('/performances/daily/export', [OwnerPerformanceReportController::class, 'dailyExport'])->name('performances.daily.export');
-            Route::get('/performances/daily/{id}', [OwnerPerformanceReportController::class, 'dailyShow'])->whereNumber('id')->name('performances.daily.show');
-            Route::get('/performances/employee', [OwnerPerformanceReportController::class, 'employee'])->name('performances.employee.index');
-            Route::get('/performances/employee/export', [OwnerPerformanceReportController::class, 'employeeExport'])->name('performances.employee.export');
-            Route::get('/performances/branch', [OwnerPerformanceReportController::class, 'branch'])->name('performances.branch.index');
-            Route::get('/performances/branch/export', [OwnerPerformanceReportController::class, 'branchExport'])->name('performances.branch.export');
+            // Performances (Protected by 'daily_reports')
+            Route::middleware('permission:daily_reports')->group(function () {
+                Route::get('/performances/daily', [OwnerPerformanceReportController::class, 'daily'])->name('performances.daily.index');
+                Route::get('/performances/daily/export', [OwnerPerformanceReportController::class, 'dailyExport'])->name('performances.daily.export');
+                Route::get('/performances/daily/{id}', [OwnerPerformanceReportController::class, 'dailyShow'])->whereNumber('id')->name('performances.daily.show');
+                Route::get('/performances/employee', [OwnerPerformanceReportController::class, 'employee'])->name('performances.employee.index');
+                Route::get('/performances/employee/export', [OwnerPerformanceReportController::class, 'employeeExport'])->name('performances.employee.export');
+                Route::get('/performances/branch', [OwnerPerformanceReportController::class, 'branch'])->name('performances.branch.index');
+                Route::get('/performances/branch/export', [OwnerPerformanceReportController::class, 'branchExport'])->name('performances.branch.export');
+            });
         });
 
-        // Announcements
-        Route::resource('announcements', OwnerAnnouncementController::class);
+        // Announcements (Protected by 'announcements')
+        Route::resource('announcements', OwnerAnnouncementController::class)->middleware('permission:announcements');
 
-        // Feedbacks (Kritik & Saran Karyawan)
-        Route::resource('feedbacks', OwnerFeedbackController::class)->only(['index', 'show', 'destroy']);
+        // Feedbacks (Kritik & Saran Karyawan - Protected by 'feedbacks')
+        Route::resource('feedbacks', OwnerFeedbackController::class)->only(['index', 'show', 'destroy'])->middleware('permission:feedbacks');
     });
 
     // =========================================================================

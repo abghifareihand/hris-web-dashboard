@@ -292,7 +292,7 @@ const formatTime = (timeStr) => {
                         {{ item.notes || item.reason || '-' }}
                     </td>
                     <td class="px-5 py-3.5 text-right whitespace-nowrap">
-                        <div class="inline-flex items-center justify-end gap-2">
+                        <div v-if="$can('overtimes', 'edit')" class="inline-flex items-center justify-end gap-2">
                             <button
                                 type="button"
                                 @click="openReject(item)"
@@ -330,6 +330,7 @@ const formatTime = (timeStr) => {
                                 <span>Setujui</span>
                             </button>
                         </div>
+                        <span v-else class="text-xs text-slate-400 italic">Hanya lihat</span>
                     </td>
                 </tr>
             </template>

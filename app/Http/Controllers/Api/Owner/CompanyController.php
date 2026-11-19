@@ -17,12 +17,12 @@ class CompanyController extends Controller
     public function show(Request $request)
     {
         $user = $request->user();
-        $company = $user->company;
+        $company = $user->getCompany();
 
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Data perusahaan tidak ditemukan atau Anda bukan owner.',
+                'message' => 'Perusahaan tidak ditemukan.',
             ], 404);
         }
 
@@ -59,12 +59,12 @@ class CompanyController extends Controller
     public function update(Request $request)
     {
         $user = $request->user();
-        $company = $user->company;
+        $company = $user->getCompany();
 
         if (!$company) {
             return response()->json([
                 'status' => false,
-                'message' => 'Data perusahaan tidak ditemukan atau Anda bukan owner.',
+                'message' => 'Perusahaan tidak ditemukan.',
             ], 404);
         }
 
@@ -153,11 +153,11 @@ class CompanyController extends Controller
             ], 403);
         }
 
-        if ($user->company) {
+        if ($user->getCompany()) {
             return response()->json([
                 'status' => false,
                 'message' => 'Anda sudah memiliki profil perusahaan.',
-                'data' => $user->company,
+                'data' => $user->getCompany(),
             ], 400);
         }
 

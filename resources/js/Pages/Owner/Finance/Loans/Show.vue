@@ -173,7 +173,7 @@ const monthlyInstallment = computed(() => {
                 </div>
 
                 <!-- Action Button -->
-                <div v-if="['rejected', 'cancelled'].includes(loan.status)" class="flex items-center gap-2.5 shrink-0">
+                <div v-if="['rejected', 'cancelled'].includes(loan.status) && $can('loans', 'delete')" class="flex items-center gap-2.5 shrink-0">
                     <button
                         type="button"
                         @click="isDeleteModalOpen = true"
@@ -421,31 +421,34 @@ const monthlyInstallment = computed(() => {
 
                                 <!-- Action Button -->
                                 <td class="px-6 py-4 whitespace-nowrap text-center">
-                                    <Button
-                                        v-if="inst.status !== 'paid'"
-                                        variant="primary"
-                                        size="sm"
-                                        class="shadow-xs cursor-pointer"
-                                        @click="openConfirmModal(inst, idx + 1)"
-                                    >
-                                        <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                        </svg>
-                                        Tandai Lunas
-                                    </Button>
+                                    <template v-if="$can('loans', 'edit')">
+                                        <Button
+                                            v-if="inst.status !== 'paid'"
+                                            variant="primary"
+                                            size="sm"
+                                            class="shadow-xs cursor-pointer"
+                                            @click="openConfirmModal(inst, idx + 1)"
+                                        >
+                                            <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            Tandai Lunas
+                                        </Button>
 
-                                    <Button
-                                        v-else
-                                        variant="secondary"
-                                        size="sm"
-                                        class="text-amber-700 hover:text-amber-800 hover:bg-amber-50 border-amber-200 cursor-pointer"
-                                        @click="openConfirmModal(inst, idx + 1)"
-                                    >
-                                        <svg class="w-3.5 h-3.5 mr-1.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                        </svg>
-                                        Ubah Status
-                                    </Button>
+                                        <Button
+                                            v-else
+                                            variant="secondary"
+                                            size="sm"
+                                            class="text-amber-700 hover:text-amber-800 hover:bg-amber-50 border-amber-200 cursor-pointer"
+                                            @click="openConfirmModal(inst, idx + 1)"
+                                        >
+                                            <svg class="w-3.5 h-3.5 mr-1.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                            </svg>
+                                            Ubah Status
+                                        </Button>
+                                    </template>
+                                    <span v-else class="text-xs text-slate-400">-</span>
                                 </td>
                             </tr>
                         </tbody>
